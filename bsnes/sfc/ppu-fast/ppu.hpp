@@ -16,7 +16,9 @@ struct PPUfast : Thread, PPUcounter {
   alwaysinline auto hdPerspective() const -> bool;
   alwaysinline auto hdSupersample() const -> bool;
   alwaysinline auto hdMosaic() const -> bool;
-  alwaysinline auto widescreen() const -> int;
+  alwaysinline auto widescreen() const -> uint;
+  alwaysinline auto wsbg(uint bg) const -> uint;
+  alwaysinline auto wsobj() const -> bool;
 
   //ppu.cpp
   PPUfast();
@@ -275,9 +277,9 @@ public:
     auto pixel(uint x, Pixel above, Pixel below) const -> uint15;
     auto blend(uint x, uint y, bool halve) const -> uint15;
     alwaysinline auto directColor(uint paletteIndex, uint paletteColor) const -> uint15;
-    alwaysinline auto plotAbove(uint x, uint source, uint priority, uint color) -> void;
-    alwaysinline auto plotBelow(uint x, uint source, uint priority, uint color) -> void;
-    alwaysinline auto plotHD(Pixel*, uint x, uint source, uint priority, uint color, bool hires, bool subpixel) -> void;
+    alwaysinline auto plotAbove(int x, uint source, uint priority, uint color) -> void;
+    alwaysinline auto plotBelow(int x, uint source, uint priority, uint color) -> void;
+    alwaysinline auto plotHD(Pixel*, int x, uint source, uint priority, uint color, bool hires, bool subpixel) -> void;
 
     //background.cpp
     auto renderBackground(PPUfast::IO::Background&, uint source) -> void;

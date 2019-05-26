@@ -37,8 +37,16 @@ auto PPUfast::Line::renderBackground(PPUfast::IO::Background& self, uint source)
   uint mosaicPriority = 0;
   uint mosaicColor = 0;
 
-  int x = 0 - (hscroll & 7);
-  while(x < width) {
+  int ws = (int)ppufast.widescreen();
+  if(ws > 0) {
+    uint wsConf = ppufast.wsbg(source);
+    if(((wsConf % 2) != 0) == (y < (((int)(wsConf / 2)) * 40))) {
+      ws = 0;
+    }
+  }
+
+  int x = 0 - (hscroll & 7) - ws;
+  while(x < (width + ws)) {
     uint hoffset = x + hscroll;
     uint voffset = y + vscroll;
     if(offsetPerTileMode) {
@@ -83,7 +91,7 @@ auto PPUfast::Line::renderBackground(PPUfast::IO::Background& self, uint source)
     tiledata += (voffset & 7 ^ mirrorY) << 3;
 
     for(uint tileX = 0; tileX < 8; tileX++, x++) {
-      if(x & width) continue;  //x < 0 || x >= width
+      if(x < -ws || x >= width + ws) continue;   //if(x & width) continue;  //x < 0 || x >= width
       if(!self.mosaicEnable || --mosaicCounter == 0) {
         mosaicCounter = 1 + io.mosaicSize;
         mosaicPalette = tiledata[tileX ^ mirrorX];
@@ -97,8 +105,11 @@ auto PPUfast::Line::renderBackground(PPUfast::IO::Background& self, uint source)
       if(!mosaicPalette) continue;
 
       if(!hires) {
-        if(self.aboveEnable && !windowAbove[x]) plotAbove(x, source, mosaicPriority, mosaicColor);
-        if(self.belowEnable && !windowBelow[x]) plotBelow(x, source, mosaicPriority, mosaicColor);
+        int wx = x;
+        if (wx <   0) wx = 0;
+        if (wx > 255) wx = 255;
+        if(self.aboveEnable && !windowAbove[wx]) plotAbove(x, source, mosaicPriority, mosaicColor);
+        if(self.belowEnable && !windowBelow[wx]) plotBelow(x, source, mosaicPriority, mosaicColor);
       } else {
         uint X = x >> 1;
         if(!ppufast.hd()) {

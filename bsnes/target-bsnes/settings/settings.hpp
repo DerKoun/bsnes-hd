@@ -81,9 +81,14 @@ struct Settings : Markup::Node {
         struct Mode7 {
           uint scale = 1;
           bool perspective = true;
-          bool widescreen = true;
           bool supersample = false;
           bool mosaic = true;
+          uint widescreen = 64;
+          uint wsbg1 = 1;
+          uint wsbg2 = 1;
+          uint wsbg3 = 1;
+          uint wsbg4 = 1;
+          bool wsobj = false;
         } mode7;
       } ppu;
       struct DSP {
@@ -272,9 +277,20 @@ public:
       Label mode7ScaleLabel{&mode7Layout, Size{0, 0}};
       ComboButton mode7Scale{&mode7Layout, Size{0, 0}};
       CheckLabel mode7Perspective{&mode7Layout, Size{0, 0}};
-      CheckLabel mode7Widescreen{&mode7Layout, Size{0, 0}};
+      CheckLabel mode7Mosaic{&mode7Layout, Size{0, 0}};      
       CheckLabel mode7Supersample{&mode7Layout, Size{0, 0}};
-      CheckLabel mode7Mosaic{&mode7Layout, Size{0, 0}};
+    HorizontalLayout widescreenLayout{&layout, Size{~0, 0}};
+      Label mode7WidescreenLabel{&widescreenLayout, Size{0, 0}};
+      ComboButton mode7Widescreen{&widescreenLayout, Size{0, 0}};
+      Label wsBG1Label{&widescreenLayout, Size{0, 0}};
+      ComboButton wsBG1{&widescreenLayout, Size{0, 0}};
+      Label wsBG2Label{&widescreenLayout, Size{0, 0}};
+      ComboButton wsBG2{&widescreenLayout, Size{0, 0}};
+      Label wsBG3Label{&widescreenLayout, Size{0, 0}};
+      ComboButton wsBG3{&widescreenLayout, Size{0, 0}};
+      Label wsBG4Label{&widescreenLayout, Size{0, 0}};
+      ComboButton wsBG4{&widescreenLayout, Size{0, 0}};
+      CheckLabel wsObj{&widescreenLayout, Size{0, 0}};
     Label dspLabel{&layout, Size{~0, 0}, 2};
     HorizontalLayout dspLayout{&layout, Size{~0, 0}};
       CheckLabel fastDSP{&dspLayout, Size{0, 0}};

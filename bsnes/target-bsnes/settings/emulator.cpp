@@ -72,18 +72,118 @@ auto EmulatorSettings::create() -> void {
     settings.emulator.hack.ppu.mode7.perspective = mode7Perspective.checked();
     emulator->configure("Hacks/PPU/Mode7/Perspective", settings.emulator.hack.ppu.mode7.perspective);
   });
-  mode7Widescreen.setText("Widescreen").setChecked(settings.emulator.hack.ppu.mode7.widescreen).onToggle([&] {
-    settings.emulator.hack.ppu.mode7.widescreen = mode7Widescreen.checked();
-    emulator->configure("Hacks/PPU/Mode7/Widescreen", settings.emulator.hack.ppu.mode7.widescreen);
-    presentation.resizeViewport();
+  mode7Mosaic.setText("HD->SD Mosaic").setChecked(settings.emulator.hack.ppu.mode7.mosaic).onToggle([&] {
+    settings.emulator.hack.ppu.mode7.mosaic = mode7Mosaic.checked();
+    emulator->configure("Hacks/PPU/Mode7/Mosaic", settings.emulator.hack.ppu.mode7.mosaic);
   });
   mode7Supersample.setText("Supersample").setChecked(settings.emulator.hack.ppu.mode7.supersample).onToggle([&] {
     settings.emulator.hack.ppu.mode7.supersample = mode7Supersample.checked();
     emulator->configure("Hacks/PPU/Mode7/Supersample", settings.emulator.hack.ppu.mode7.supersample);
   });
-  mode7Mosaic.setText("HD->SD Mosaic").setChecked(settings.emulator.hack.ppu.mode7.mosaic).onToggle([&] {
-    settings.emulator.hack.ppu.mode7.mosaic = mode7Mosaic.checked();
-    emulator->configure("Hacks/PPU/Mode7/Mosaic", settings.emulator.hack.ppu.mode7.mosaic);
+  mode7WidescreenLabel.setText("Widescreen:");
+  mode7Widescreen.append(ComboButtonItem().setText("none ").setProperty("adval",   0));
+  mode7Widescreen.append(ComboButtonItem().setText("16:10").setProperty("adval",  40));
+  mode7Widescreen.append(ComboButtonItem().setText("16:9 ").setProperty("adval",  64));
+  mode7Widescreen.append(ComboButtonItem().setText(" 1.93").setProperty("adval",  80));
+  mode7Widescreen.append(ComboButtonItem().setText(" 2.15").setProperty("adval", 104));
+  mode7Widescreen.append(ComboButtonItem().setText("21:9 ").setProperty("adval", 120));
+  mode7Widescreen.append(ComboButtonItem().setText(" 2.44").setProperty("adval", 136));
+  for(uint n = 0; n < 7; n++) {
+    if(mode7Widescreen.item(n).property("adval").natural() == settings.emulator.hack.ppu.mode7.widescreen)
+       mode7Widescreen.item(n).setSelected();
+  }
+  mode7Widescreen.onChange([&] {
+    settings.emulator.hack.ppu.mode7.widescreen = mode7Widescreen.selected().property("adval").natural();
+    emulator->configure("Hacks/PPU/Mode7/Widescreen", settings.emulator.hack.ppu.mode7.widescreen);
+    presentation.resizeViewport();
+  });
+  wsBG1Label.setText("BG1:");
+  wsBG1.append(ComboButtonItem().setText(" off").setProperty("wsbgmode",  0));
+  wsBG1.append(ComboButtonItem().setText(" on ").setProperty("wsbgmode",  1));
+  wsBG1.append(ComboButtonItem().setText("< 40").setProperty("wsbgmode",  2));
+  wsBG1.append(ComboButtonItem().setText("> 40").setProperty("wsbgmode",  3));
+  wsBG1.append(ComboButtonItem().setText("< 80").setProperty("wsbgmode",  4));
+  wsBG1.append(ComboButtonItem().setText("> 80").setProperty("wsbgmode",  5));
+  wsBG1.append(ComboButtonItem().setText("<120").setProperty("wsbgmode",  6));
+  wsBG1.append(ComboButtonItem().setText(">120").setProperty("wsbgmode",  7));
+  wsBG1.append(ComboButtonItem().setText("<160").setProperty("wsbgmode",  8));
+  wsBG1.append(ComboButtonItem().setText(">160").setProperty("wsbgmode",  9));
+  wsBG1.append(ComboButtonItem().setText("<200").setProperty("wsbgmode", 10));
+  wsBG1.append(ComboButtonItem().setText(">200").setProperty("wsbgmode", 11));
+  for(uint n = 0; n < 12; n++) {
+    if(wsBG1.item(n).property("wsbgmode").natural() == settings.emulator.hack.ppu.mode7.wsbg1)
+       wsBG1.item(n).setSelected();
+  }
+  wsBG1.onChange([&] {
+    settings.emulator.hack.ppu.mode7.wsbg1 = wsBG1.selected().property("wsbgmode").natural();
+    emulator->configure("Hacks/PPU/Mode7/Wsbg1", settings.emulator.hack.ppu.mode7.wsbg1);
+  });
+  wsBG2Label.setText("BG2:");
+  wsBG2.append(ComboButtonItem().setText(" off").setProperty("wsbgmode",  0));
+  wsBG2.append(ComboButtonItem().setText(" on ").setProperty("wsbgmode",  1));
+  wsBG2.append(ComboButtonItem().setText("< 40").setProperty("wsbgmode",  2));
+  wsBG2.append(ComboButtonItem().setText("> 40").setProperty("wsbgmode",  3));
+  wsBG2.append(ComboButtonItem().setText("< 80").setProperty("wsbgmode",  4));
+  wsBG2.append(ComboButtonItem().setText("> 80").setProperty("wsbgmode",  5));
+  wsBG2.append(ComboButtonItem().setText("<120").setProperty("wsbgmode",  6));
+  wsBG2.append(ComboButtonItem().setText(">120").setProperty("wsbgmode",  7));
+  wsBG2.append(ComboButtonItem().setText("<160").setProperty("wsbgmode",  8));
+  wsBG2.append(ComboButtonItem().setText(">160").setProperty("wsbgmode",  9));
+  wsBG2.append(ComboButtonItem().setText("<200").setProperty("wsbgmode", 10));
+  wsBG2.append(ComboButtonItem().setText(">200").setProperty("wsbgmode", 11));
+  for(uint n = 0; n < 12; n++) {
+    if(wsBG2.item(n).property("wsbgmode").natural() == settings.emulator.hack.ppu.mode7.wsbg2)
+       wsBG2.item(n).setSelected();
+  }
+  wsBG2.onChange([&] {
+    settings.emulator.hack.ppu.mode7.wsbg2 = wsBG2.selected().property("wsbgmode").natural();
+    emulator->configure("Hacks/PPU/Mode7/Wsbg2", settings.emulator.hack.ppu.mode7.wsbg2);
+  });
+  wsBG3Label.setText("BG3:");
+  wsBG3.append(ComboButtonItem().setText(" off").setProperty("wsbgmode",  0));
+  wsBG3.append(ComboButtonItem().setText(" on ").setProperty("wsbgmode",  1));
+  wsBG3.append(ComboButtonItem().setText("< 40").setProperty("wsbgmode",  2));
+  wsBG3.append(ComboButtonItem().setText("> 40").setProperty("wsbgmode",  3));
+  wsBG3.append(ComboButtonItem().setText("< 80").setProperty("wsbgmode",  4));
+  wsBG3.append(ComboButtonItem().setText("> 80").setProperty("wsbgmode",  5));
+  wsBG3.append(ComboButtonItem().setText("<120").setProperty("wsbgmode",  6));
+  wsBG3.append(ComboButtonItem().setText(">120").setProperty("wsbgmode",  7));
+  wsBG3.append(ComboButtonItem().setText("<160").setProperty("wsbgmode",  8));
+  wsBG3.append(ComboButtonItem().setText(">160").setProperty("wsbgmode",  9));
+  wsBG3.append(ComboButtonItem().setText("<200").setProperty("wsbgmode", 10));
+  wsBG3.append(ComboButtonItem().setText(">200").setProperty("wsbgmode", 11));
+  for(uint n = 0; n < 12; n++) {
+    if(wsBG3.item(n).property("wsbgmode").natural() == settings.emulator.hack.ppu.mode7.wsbg3)
+       wsBG3.item(n).setSelected();
+  }
+  wsBG3.onChange([&] {
+    settings.emulator.hack.ppu.mode7.wsbg3 = wsBG3.selected().property("wsbgmode").natural();
+    emulator->configure("Hacks/PPU/Mode7/Wsbg3", settings.emulator.hack.ppu.mode7.wsbg3);
+  });
+  wsBG4Label.setText("BG4:");
+  wsBG4.append(ComboButtonItem().setText(" off").setProperty("wsbgmode",  0));
+  wsBG4.append(ComboButtonItem().setText(" on ").setProperty("wsbgmode",  1));
+  wsBG4.append(ComboButtonItem().setText("< 40").setProperty("wsbgmode",  2));
+  wsBG4.append(ComboButtonItem().setText("> 40").setProperty("wsbgmode",  3));
+  wsBG4.append(ComboButtonItem().setText("< 80").setProperty("wsbgmode",  4));
+  wsBG4.append(ComboButtonItem().setText("> 80").setProperty("wsbgmode",  5));
+  wsBG4.append(ComboButtonItem().setText("<120").setProperty("wsbgmode",  6));
+  wsBG4.append(ComboButtonItem().setText(">120").setProperty("wsbgmode",  7));
+  wsBG4.append(ComboButtonItem().setText("<160").setProperty("wsbgmode",  8));
+  wsBG4.append(ComboButtonItem().setText(">160").setProperty("wsbgmode",  9));
+  wsBG4.append(ComboButtonItem().setText("<200").setProperty("wsbgmode", 10));
+  wsBG4.append(ComboButtonItem().setText(">200").setProperty("wsbgmode", 11));
+  for(uint n = 0; n < 12; n++) {
+    if(wsBG4.item(n).property("wsbgmode").natural() == settings.emulator.hack.ppu.mode7.wsbg4)
+       wsBG4.item(n).setSelected();
+  }
+  wsBG4.onChange([&] {
+    settings.emulator.hack.ppu.mode7.wsbg4 = wsBG4.selected().property("wsbgmode").natural();
+    emulator->configure("Hacks/PPU/Mode7/Wsbg4", settings.emulator.hack.ppu.mode7.wsbg4);
+  });
+  wsObj.setText("unsafe sprites").setChecked(settings.emulator.hack.ppu.mode7.wsobj).onToggle([&] {
+    settings.emulator.hack.ppu.mode7.wsobj = wsObj.checked();
+    emulator->configure("Hacks/PPU/Mode7/Wsobj", settings.emulator.hack.ppu.mode7.wsobj);
   });
   dspLabel.setText("DSP (audio)").setFont(Font().setBold());
   fastDSP.setText("Fast mode").setChecked(settings.emulator.hack.dsp.fast).onToggle([&] {
@@ -115,7 +215,12 @@ auto EmulatorSettings::updateConfiguration() -> void {
   emulator->configure("Hacks/PPU/NoSpriteLimit", noSpriteLimit.checked());
   emulator->configure("Hacks/PPU/Mode7/Scale", mode7Scale.selected().property("multiplier").natural());
   emulator->configure("Hacks/PPU/Mode7/Perspective", mode7Perspective.checked());
-  emulator->configure("Hacks/PPU/Mode7/Widescreen", mode7Widescreen.checked());
+  emulator->configure("Hacks/PPU/Mode7/Widescreen", mode7Widescreen.property("addval").natural());
+  emulator->configure("Hacks/PPU/Mode7/Wsbg1", wsBG1.property("wsbgmode").natural());
+  emulator->configure("Hacks/PPU/Mode7/Wsbg2", wsBG2.property("wsbgmode").natural());
+  emulator->configure("Hacks/PPU/Mode7/Wsbg3", wsBG3.property("wsbgmode").natural());
+  emulator->configure("Hacks/PPU/Mode7/Wsbg4", wsBG4.property("wsbgmode").natural()); 
+  emulator->configure("Hacks/PPU/Mode7/Wsobj", wsObj.checked());
   emulator->configure("Hacks/PPU/Mode7/Supersample", mode7Supersample.checked());
   emulator->configure("Hacks/PPU/Mode7/Mosaic", mode7Mosaic.checked());
   emulator->configure("Hacks/DSP/Fast", fastDSP.checked());

@@ -28,7 +28,8 @@ auto PPUfast::Line::renderObject(PPUfast::IO::Object& self) -> void {
       item.height = heights[self.baseSize];
     }
 
-    if(object.x > 256 && object.x + item.width - 1 < 512) continue;
+    if(!ppufast.wsobj()
+        && object.x > 256 && object.x + item.width - 1 < 512) continue; //!! //#config
     uint height = item.height >> self.interlace;
     if((y >= object.y && y < object.y + height)
     || (object.y + height >= 256 && y < (object.y + height & 255))
@@ -72,7 +73,7 @@ auto PPUfast::Line::renderObject(PPUfast::IO::Object& self) -> void {
 
     for(uint tileX : range(tileWidth)) {
       uint objectX = x + (tileX << 3) & 511;
-      if(x != 256 && objectX >= 256 && objectX + 7 < 512) continue;
+      //if(x != 256 && objectX >= 256 && objectX + 7 < 512) continue;
 
       ObjectTile tile{true};
       tile.x = objectX;
@@ -93,8 +94,8 @@ auto PPUfast::Line::renderObject(PPUfast::IO::Object& self) -> void {
   ppufast.io.obj.rangeOver |= itemCount > ppufast.ItemLimit;
   ppufast.io.obj.timeOver  |= tileCount > ppufast.TileLimit;
 
-  uint8 palette[256];
-  uint8 priority[256];
+  uint8 palette[512];//
+  uint8 priority[512];//
 
   for(uint n : range(ppufast.TileLimit)) {
     const auto& tile = tiles[n];
@@ -105,21 +106,26 @@ auto PPUfast::Line::renderObject(PPUfast::IO::Object& self) -> void {
     uint mirrorX = tile.hflip ? 7 : 0;
     for(uint x : range(8)) {
       tileX &= 511;
-      if(tileX < 256) {
+      //if(tileX < 256) {
         if(uint color = tiledata[x ^ mirrorX]) {
           palette[tileX] = tile.palette + color;
           priority[tileX] = self.priority[tile.priority];
         }
-      }
+      //}
       tileX++;
     }
   }
 
-  for(uint x : range(256)) {
+  int wsl = -((int)ppufast.widescreen());
+  int wsr = 256 + ((int)ppufast.widescreen());
+  for(uint x : range(512)) {//
     if(!priority[x]) continue;
     uint source = palette[x] < 192 ? Source::OBJ1 : Source::OBJ2;
-    if(self.aboveEnable && !windowAbove[x]) plotAbove(x, source, priority[x], cgram[palette[x]]);
-    if(self.belowEnable && !windowBelow[x]) plotBelow(x, source, priority[x], cgram[palette[x]]);
+    int xc = x;//
+    if(xc > 384) xc -= 512; // 256+256/2
+    if(xc < wsl || xc >= wsr) continue;
+    if(self.aboveEnable && !windowAbove[x]) plotAbove(xc, source, priority[x], cgram[palette[x]]);//
+    if(self.belowEnable && !windowBelow[x]) plotBelow(xc, source, priority[x], cgram[palette[x]]);//
   }
 }
 

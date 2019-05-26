@@ -20,7 +20,12 @@ auto Configuration::process(Markup::Node document, bool load) -> void {
   bind(boolean, "Hacks/PPU/NoSpriteLimit", hacks.ppu.noSpriteLimit);
   bind(natural, "Hacks/PPU/Mode7/Scale", hacks.ppu.mode7.scale);
   bind(boolean, "Hacks/PPU/Mode7/Perspective", hacks.ppu.mode7.perspective);
-  bind(boolean, "Hacks/PPU/Mode7/Widescreen", hacks.ppu.mode7.widescreen);
+  bind(natural, "Hacks/PPU/Mode7/Widescreen", hacks.ppu.mode7.widescreen);
+  bind(natural, "Hacks/PPU/Mode7/Wsbg1", hacks.ppu.mode7.wsbg1);
+  bind(natural, "Hacks/PPU/Mode7/Wsbg2", hacks.ppu.mode7.wsbg2);
+  bind(natural, "Hacks/PPU/Mode7/Wsbg3", hacks.ppu.mode7.wsbg3);
+  bind(natural, "Hacks/PPU/Mode7/Wsbg4", hacks.ppu.mode7.wsbg4);
+  bind(boolean, "Hacks/PPU/Mode7/Wsobj", hacks.ppu.mode7.wsobj);
   bind(boolean, "Hacks/PPU/Mode7/Supersample", hacks.ppu.mode7.supersample);
   bind(boolean, "Hacks/PPU/Mode7/Mosaic", hacks.ppu.mode7.mosaic);
   bind(boolean, "Hacks/DSP/Fast", hacks.dsp.fast);

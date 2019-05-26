@@ -24,7 +24,15 @@ auto PPUfast::hdScale() const -> uint { return configuration.hacks.ppu.mode7.sca
 auto PPUfast::hdPerspective() const -> bool { return configuration.hacks.ppu.mode7.perspective; }
 auto PPUfast::hdSupersample() const -> bool { return configuration.hacks.ppu.mode7.supersample; }
 auto PPUfast::hdMosaic() const -> bool { return configuration.hacks.ppu.mode7.mosaic; }
-auto PPUfast::widescreen() const -> int { return configuration.hacks.ppu.mode7.widescreen ? 64 : 0; } // 64 / 0 #widescreenextension
+auto PPUfast::widescreen() const -> uint { return configuration.hacks.ppu.mode7.widescreen; } // 64 / 0 #widescreenextension
+auto PPUfast::wsbg(uint bg) const -> uint {
+  if (bg == Source::BG1) return configuration.hacks.ppu.mode7.wsbg1;
+  if (bg == Source::BG2) return configuration.hacks.ppu.mode7.wsbg2;
+  if (bg == Source::BG3) return configuration.hacks.ppu.mode7.wsbg3;
+  if (bg == Source::BG4) return configuration.hacks.ppu.mode7.wsbg4;
+  return 0;
+}
+auto PPUfast::wsobj() const -> bool { return configuration.hacks.ppu.mode7.wsobj; }
 
 PPUfast::PPUfast() {
   output = new uint32[2304 * 2304] + 72 * 2304;  //overscan offset

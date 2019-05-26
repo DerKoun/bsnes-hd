@@ -101,33 +101,33 @@ auto PPUfast::Line::directColor(uint paletteIndex, uint paletteColor) const -> u
        + (paletteColor << 7 & 0x6000) + (paletteIndex << 10 & 0x1000);  //B
 }
 
-auto PPUfast::Line::plotAbove(uint x, uint source, uint priority, uint color) -> void {
+auto PPUfast::Line::plotAbove(int x, uint source, uint priority, uint color) -> void {
   if(ppufast.hd()) return plotHD(above, x, source, priority, color, false, false);
   if(priority > above[x].priority) above[x] = {source, priority, color};
 }
 
-auto PPUfast::Line::plotBelow(uint x, uint source, uint priority, uint color) -> void {
+auto PPUfast::Line::plotBelow(int x, uint source, uint priority, uint color) -> void {
   if(ppufast.hd()) return plotHD(below, x, source, priority, color, false, false);
   if(priority > below[x].priority) below[x] = {source, priority, color};
 }
 
 //todo: name these variables more clearly ...
-auto PPUfast::Line::plotHD(Pixel* pixel, uint x, uint source, uint priority, uint color, bool hires, bool subpixel) -> void {
-  auto scale = ppufast.hdScale();
-  pixel += ppufast.widescreen() * scale;
+auto PPUfast::Line::plotHD(Pixel* pixel, int x, uint source, uint priority, uint color, bool hires, bool subpixel) -> void {
+  int scale = ppufast.hdScale();
+  int wss = ppufast.widescreen() * scale;
   int xss = hires && subpixel ? scale / 2 : 0;
   int ys = ppufast.interlace() && ppufast.field() ? scale / 2 : 0;
-  if(priority > pixel[x * scale + xss + ys * 256 * scale].priority) {
+  if(priority > pixel[x * scale + xss + ys * 256 * scale + wss].priority) {
     Pixel p = {source, priority, color};
     int xsm = hires && !subpixel ? scale / 2 : scale;
     int ysm = ppufast.interlace() && !ppufast.field() ? scale / 2 : scale;
     for(int xs = xss; xs < xsm; xs++) {
-      pixel[x * scale + xs + ys * 256 * scale] = p;
+      pixel[x * scale + xs + ys * 256 * scale + wss] = p;
     }
     int size = sizeof(Pixel) * (xsm - xss);
-    Pixel* source = &pixel[x * scale + xss + ys * 256 * scale];
+    Pixel* source = &pixel[x * scale + xss + ys * 256 * scale + wss];
     for(int yst = ys + 1; yst < ysm; yst++) {
-      memcpy(&pixel[x * scale + xss + yst * (256+2*ppufast.widescreen()) * scale], source, size);
+      memcpy(&pixel[x * scale + xss + yst * (256+2*ppufast.widescreen()) * scale + wss], source, size);
     }
   }
 }
