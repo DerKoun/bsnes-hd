@@ -218,8 +218,10 @@ auto Program::videoFrame(const uint32* data, uint pitch, uint width, uint height
 
   pitch >>= 2;
   if(!presentation.showOverscanArea.checked()) {
-    if(height == 240) data +=  8 * pitch, height -= 16;
-    if(height == 480) data += 16 * pitch, height -= 32;
+    //#HDmode7>
+    data  += (height / 30) * pitch; // if(height == 240) data +=  8 * pitch, height -= 16;
+    height -= height / 15;          // if(height == 480) data += 16 * pitch, height -= 32;
+    //#HDmode7<
   }
 
   if(auto [output, length] = video.acquire(width, height); output) {

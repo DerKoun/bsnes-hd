@@ -1,4 +1,11 @@
 auto PPU::Line::renderMode7(PPU::IO::Background& self, uint source) -> void {
+  //#HDmode7>
+  if (ppu.hdEnabled()) {
+    renderMode7HD(self, source);
+    return;
+  }
+  //#HDmode7<
+  
   int Y = this->y - (self.mosaicEnable ? this->y % (1 + io.mosaicSize) : 0);
   int y = !io.mode7.vflip ? Y : 255 - Y;
 
@@ -101,3 +108,149 @@ auto PPU::Line::renderMode7(PPU::IO::Background& self, uint source) -> void {
     }
   }
 }
+
+//#HDmode7>>>>>
+auto PPU::Line::renderMode7HD(PPU::IO::Background& self, uint source) -> void {
+
+  int pixelXp = -12345;
+  int pixelYp = -12345;
+  Pixel pixel;
+
+  bool hp = source == Source::BG1;
+  Pixel* abo = &ppu.lines[this->y].above[0];
+  Pixel* bel = &ppu.lines[this->y].below[0];
+  abo--;
+  bel--;
+
+  // get the first and last scan line for interpolation
+  int y_a = this->y;
+  int y_b = this->y;
+  if (configuration.hacks.ppuFast.hdMode7Perspective) {
+    while (y_a > 1 && ppu.lines[y_a].io.bg1.tileMode == TileMode::Mode7
+        && (ppu.lines[y_a].io.bg1.aboveEnable || ppu.lines[y_a].io.bg1.belowEnable)) {
+      y_a--;
+    } 
+    y_a++;
+    while (y_b < 240-1 && ppu.lines[y_b].io.bg1.tileMode == TileMode::Mode7
+        && (ppu.lines[y_b].io.bg1.aboveEnable || ppu.lines[y_b].io.bg1.belowEnable)) {
+      y_b++;
+    }
+    y_b -= 8;
+  } else {
+    if (y_a > 0 && ppu.lines[y_a].io.bg1.tileMode == TileMode::Mode7
+        && (ppu.lines[y_a].io.bg1.aboveEnable || ppu.lines[y_a].io.bg1.belowEnable)) {
+      y_a--;
+    }
+    if (y_b < 240-1 && ppu.lines[y_b].io.bg1.tileMode == TileMode::Mode7
+        && (ppu.lines[y_b].io.bg1.aboveEnable || ppu.lines[y_b].io.bg1.belowEnable)) {
+      y_b++;
+    }
+  }
+
+  Line line_a = ppu.lines[y_a];
+  float a_a = (int16)line_a.io.mode7.a;
+  float b_a = (int16)line_a.io.mode7.b;
+  float c_a = (int16)line_a.io.mode7.c;
+  float d_a = (int16)line_a.io.mode7.d;
+
+  Line line_b = ppu.lines[y_b];
+  float a_b = (int16)line_b.io.mode7.a;
+  float b_b = (int16)line_b.io.mode7.b;
+  float c_b = (int16)line_b.io.mode7.c;
+  float d_b = (int16)line_b.io.mode7.d;
+
+  int hcenter = (int13)io.mode7.x;
+  int vcenter = (int13)io.mode7.y;
+  int hoffset = (int13)io.mode7.hoffset;
+  int voffset = (int13)io.mode7.voffset;
+
+  array<bool[256]> windowAbove;
+  array<bool[256]> windowBelow;
+  renderWindow(self.window, self.window.aboveEnable, windowAbove);
+  renderWindow(self.window, self.window.belowEnable, windowBelow);
+
+  int Y = this->y - (self.mosaicEnable ? this->y % (1 + io.mosaicSize) : 0);
+  float yt = !io.mode7.vflip ? Y : 255 - Y;
+
+  // additional y positions
+  for(int ys = 0; ys < ppu.hdScale() ; ys++) {
+    float y = yt + ys * 1.0 / ppu.hdScale() - 0.5;
+
+          // inter-/extra-...
+    float a = 1.0/polate(y_a, 1.0/a_a, y_b, 1.0/a_b, y);
+    float b = 1.0/polate(y_a, 1.0/b_a, y_b, 1.0/b_b, y);
+    float c = 1.0/polate(y_a, 1.0/c_a, y_b, 1.0/c_b, y);
+    float d = 1.0/polate(y_a, 1.0/d_a, y_b, 1.0/d_b, y);
+
+    // float version of the integer/bit math
+    int ht = (hoffset - hcenter) % 1024;
+    float vty = ((voffset - vcenter) % 1024) + y;
+    float originX = (a * ht) + (b * vty) + (hcenter << 8);
+    float originY = (c * ht) + (d * vty) + (vcenter << 8);
+
+    for(int X : range(256)) {
+      float xt = !io.mode7.hflip ? X : 255 - X;
+
+      bool doAbo = self.aboveEnable && !windowAbove[X];
+      bool doBel = self.belowEnable && !windowBelow[X];
+
+      // additional x positions
+      for(int xs = 0; xs < ppu.hdScale() ; xs++) {
+        float x = xt + xs * 1.0 / ppu.hdScale() - 0.5;
+        int pixelX = (int)((originX + a * x) / 256);
+        int pixelY = (int)((originY + c * x) / 256);
+        
+        // make sure to increment before any 'if's
+        abo++;
+        bel++;
+
+        uint mosaicCounter = 1;
+        uint mosaicPalette = 0;
+        uint mosaicPriority = 0;
+        uint mosaicColor = 0;
+        // only compute color again when coordinates have changed
+        if(pixelX != pixelXp || pixelY != pixelYp) {
+          uint8 tile    = io.mode7.repeat == 3 && ((pixelX | pixelY) & ~1023) ? 0 : ppu.vram[(pixelY >> 3 & 127)  * 128  +  (pixelX >> 3 & 127)].byte(0);
+          uint8 palette = io.mode7.repeat == 2 && ((pixelX | pixelY) & ~1023) ? 0 : ppu.vram[(((pixelY & 7) << 3) + (pixelX & 7)) + (tile << 6)].byte(1);
+
+          uint priority;
+          if(hp) {
+            priority = self.priority[0];
+          } else if(source == Source::BG2) {
+            priority = self.priority[palette >> 7];
+            palette &= 0x7f;
+          }
+
+          if(!self.mosaicEnable || --mosaicCounter == 0) {
+            mosaicCounter = 1 + io.mosaicSize;
+            mosaicPalette = palette;
+            mosaicPriority = priority;
+            if(io.col.directColor && source == Source::BG1) {
+              mosaicColor = directColor(0, palette);
+            } else {
+              mosaicColor = cgram[palette];
+            }
+          }
+          if(!mosaicPalette) continue;
+        
+          pixelXp = pixelX;
+          pixelYp = pixelY;
+          pixel = {source, mosaicPriority, mosaicColor};
+        }
+        if(doAbo && (hp || (mosaicPriority > abo->priority))) *abo = pixel;
+        if(doBel && (hp || (mosaicPriority > bel->priority))) *bel = pixel;
+      }
+    }
+  }
+}
+         // inter-/extra-...
+auto PPU::Line::polate(float pa, float va, float pb, float vb, float pr) -> float {
+  if (va == vb || pr == pa) {
+    return va;
+  }
+ if (pr == pb) {
+    return vb;
+  }
+  return va + (vb - va) / (pb - pa) * (pr - pa);
+}
+//#HDmode7<<<<<

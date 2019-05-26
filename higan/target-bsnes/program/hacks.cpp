@@ -2,6 +2,10 @@ auto Program::hackCompatibility() -> void {
   bool fastPPU = emulatorSettings.fastPPUOption.checked();
   bool fastPPUNoSpriteLimit = emulatorSettings.noSpriteLimit.checked();
   bool fastPPUHiresMode7 = emulatorSettings.hiresMode7.checked();
+  //#HDmode7>
+  uint fastPPUHdMode7Scale = emulatorSettings.hdMode7Scale.position() + 1;
+  bool hdMode7Perspective = emulatorSettings.hdMode7Perspective.checked();
+  //#HDmode7<
   bool fastDSP = emulatorSettings.fastDSPOption.checked();
   bool coprocessorsDelayedSync = emulatorSettings.coprocessorsDelayedSyncOption.checked();
 
@@ -13,6 +17,10 @@ auto Program::hackCompatibility() -> void {
   emulator->configure("Hacks/FastPPU/Enable", fastPPU);
   emulator->configure("Hacks/FastPPU/NoSpriteLimit", fastPPUNoSpriteLimit);
   emulator->configure("Hacks/FastPPU/HiresMode7", fastPPUHiresMode7);
+  //#HDmode7>
+  emulator->configure("Hacks/FastPPU/HdMode7Scale", fastPPUHdMode7Scale);
+  emulator->configure("Hacks/FastPPU/HdMode7Perspective", hdMode7Perspective);
+  //#HDmode7<
   emulator->configure("Hacks/FastDSP/Enable", fastDSP);
   emulator->configure("Hacks/Coprocessors/DelayedSync", coprocessorsDelayedSync);
 }

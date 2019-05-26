@@ -19,20 +19,35 @@ auto PPU::interlace() const -> bool { return ppubase.display.interlace; }
 auto PPU::overscan() const -> bool { return ppubase.display.overscan; }
 auto PPU::vdisp() const -> uint { return ppubase.display.vdisp; }
 auto PPU::hires() const -> bool { return latch.hires; }
+//#HDmode7>
+auto PPU::hdScale() const -> uint { return configuration.hacks.ppuFast.hdMode7Scale; }
+auto PPU::hdEnabled() const -> bool { return PPU::hdScale() > 1; }
+//#HDmode7<
 
 PPU::PPU() {
-  output = new uint32[512 * 512] + 16 * 512;  //overscan offset
+  //#HDmode7>
+  int lineLength = !hdEnabled() ? 512 : 256 * ppu.hdScale() * ppu.hdScale();
+  output = !hdEnabled() ? new uint32[512 * 512]        + 16 * 512  //overscan offset
+                        : new uint32[256 * lineLength] +  8 * lineLength;
+  //#HDmode7<
   tilecache[TileMode::BPP2] = new uint8[4096 * 8 * 8];
   tilecache[TileMode::BPP4] = new uint8[2048 * 8 * 8];
   tilecache[TileMode::BPP8] = new uint8[1024 * 8 * 8];
 
-  for(uint y : range(lines.size())) {
+  //#HDmode7>
+  for(uint y : range(240)) {
     lines[y].y = y;
+    lines[y].above = new Pixel[lineLength];
+    lines[y].below = new Pixel[lineLength];
   }
+  //#HDmode7<
 }
 
 PPU::~PPU() {
-  delete[] (output - 16 * 512);  //overscan offset
+  //#HDmode7>
+  delete[] (output - (!hdEnabled() ? 16 * 512  //overscan offset
+                                   :  8 * 256 * ppu.hdScale() * ppu.hdScale()));
+  //#HDmode7<
   delete[] tilecache[TileMode::BPP2];
   delete[] tilecache[TileMode::BPP4];
   delete[] tilecache[TileMode::BPP8];
@@ -91,10 +106,12 @@ auto PPU::scanline() -> void {
 
 auto PPU::refresh() -> void {
   auto output = this->output;
-  if(!overscan()) output -= 14 * 512;
-  auto pitch  = 512 << !interlace();
-  auto width  = 256 << hires();
-  auto height = 240 << interlace();
+  //#HDmode7>
+  if(!overscan()) output -= 7 * (!hdEnabled() ? 2*512 : 256 * ppu.hdScale() * ppu.hdScale() );
+  auto pitch  = !hdEnabled() ? 512 << !interlace() : 256 * ppu.hdScale();
+  auto width  = !hdEnabled() ? 256 << hires()      : 256 * ppu.hdScale();
+  auto height = !hdEnabled() ? 240 << interlace()  : 240 * ppu.hdScale();
+  //#HDmode7<
   Emulator::video.setEffect(Emulator::Video::Effect::ColorBleed, configuration.video.blurEmulation && hires());
   Emulator::video.refresh(output, pitch * sizeof(uint32), width, height);
 }

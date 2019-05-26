@@ -19,6 +19,10 @@ auto Configuration::process(Markup::Node document, bool load) -> void {
   bind(boolean, "Hacks/FastPPU/Enable", hacks.ppuFast.enable);
   bind(boolean, "Hacks/FastPPU/NoSpriteLimit", hacks.ppuFast.noSpriteLimit);
   bind(boolean, "Hacks/FastPPU/HiresMode7", hacks.ppuFast.hiresMode7);
+  //#HDmode7>
+  bind(natural, "Hacks/FastPPU/HdMode7Scale", hacks.ppuFast.hdMode7Scale);
+  bind(boolean, "Hacks/FastPPU/HdMode7Perspective", hacks.ppuFast.hdMode7Perspective);
+  //#HDmode7<
   bind(boolean, "Hacks/FastDSP/Enable", hacks.dspFast.enable);
   bind(boolean, "Hacks/Coprocessors/HLE", hacks.coprocessors.hle);
   bind(boolean, "Hacks/Coprocessors/DelayedSync", hacks.coprocessors.delayedSync);

@@ -70,12 +70,42 @@ auto EmulatorSettings::create() -> void {
     superFXValue.setText({settings.emulator.hack.fastSuperFX, "%"});
   }).doChange();
   hacksNote.setForegroundColor({224, 0, 0}).setText("Note: some hack setting changes do not take effect until after reloading games.");
+  //#HDmode7>
+  optionsSpacerB.setColor({192, 192, 192});
+  optionsSpacerC.setColor({192, 192, 192});
+  expLabel.setText("Experimental").setFont(Font().setBold());
+  hdMode7Label.setText("HD Mode7 scale:");
+  hdMode7ValueA.setAlignment(0.5);
+  hdMode7ValueB.setAlignment(0.5);
+  hdMode7ValueC.setAlignment(0.5);
+  hdMode7Scale.setLength(4).setPosition(settings.emulator.hack.fastPPU.hdMode7Scale - 1).onChange([&] {
+    settings.emulator.hack.fastPPU.hdMode7Scale = hdMode7Scale.position() + 1;
+    hdMode7ValueA.setText({settings.emulator.hack.fastPPU.hdMode7Scale, "x"});
+    hdMode7ValueB.setText({settings.emulator.hack.fastPPU.hdMode7Scale * 240, "p"});
+    hdMode7ValueC.setText({
+      settings.emulator.hack.fastPPU.hdMode7Scale == 1 ? "disabled" : 
+      settings.emulator.hack.fastPPU.hdMode7Scale == 2 ? "double" : 
+      settings.emulator.hack.fastPPU.hdMode7Scale == 3 ? "half HD" : "near HD"
+    });
+  }).doChange();
+  hdMode7Perspective.setText("Optimize pseudo 3D perspectives").setChecked(
+                     settings.emulator.hack.fastPPU.hdMode7Perspective).onToggle([&] {
+    settings.emulator.hack.fastPPU.hdMode7Perspective = hdMode7Perspective.checked();
+  });
+  hdMode7NoteA.setText("Changes require restarting the emulator.     Requires 'Fast PPU' enabled and 'Hires mode 7' disabled.");
+  hdMode7NoteB.setText("Scale 1x uses classic processing, disabling this feature.     Scale 3x visually breaks interlacing and hires backgrounds.");
+  hdMode7NoteC.setText("Perspective optimization visually breaks more complex Mode7/HDMA processing.");
+  //#HDmode7<
 }
 
 auto EmulatorSettings::updateConfiguration() -> void {
   emulator->configure("Hacks/FastPPU/Enable", fastPPUOption.checked());
   emulator->configure("Hacks/FastPPU/NoSpriteLimit", noSpriteLimit.checked());
   emulator->configure("Hacks/FastPPU/HiresMode7", hiresMode7.checked());
+  //#HDmode7>
+  emulator->configure("Hacks/FastPPU/HdMode7Scale", hdMode7Scale.position() + 1);
+  emulator->configure("Hacks/FastPPU/HdMode7Perspective", hdMode7Perspective.checked());
+  //#HDmode7<
   emulator->configure("Hacks/FastDSP/Enable", fastDSPOption.checked());
   emulator->configure("Hacks/Coprocessor/DelayedSync", coprocessorsDelayedSyncOption.checked());
   emulator->configure("Hacks/Coprocessor/HLE", coprocessorsHLEOption.checked());

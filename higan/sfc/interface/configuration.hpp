@@ -29,6 +29,10 @@ struct Configuration {
       bool enable = true;
       bool noSpriteLimit = false;
       bool hiresMode7 = false;
+      //#HDmode7>
+      uint hdMode7Scale = 4;
+      bool hdMode7Perspective = true;
+      //#HDmode7<
     } ppuFast;
     struct DSPFast {
       bool enable = true;

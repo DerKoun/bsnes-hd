@@ -13,9 +13,14 @@ auto PPU::Line::flush() -> void {
 }
 
 auto PPU::Line::render() -> void {
-  auto output = ppu.output + y * 1024;
-  if(ppu.interlace() && ppu.field()) output += 512;
-  auto width = !ppu.hires() ? 256 : 512;
+  //#HDmode7>
+  auto output = ppu.output + (!ppu.hdEnabled()
+      ? (y * 1024 + ((ppu.interlace() && ppu.field()) ? 512 : 0))
+      : (y * 256 * ppu.hdScale() * ppu.hdScale()));
+  auto width = !ppu.hdEnabled() 
+      ? (!ppu.hires() ? 256 : 512)
+      : 256 * ppu.hdScale() * ppu.hdScale();
+  //#HDmode7<
 
   if(io.displayDisable) {
     memory::fill<uint32>(output, width);
@@ -26,7 +31,14 @@ auto PPU::Line::render() -> void {
   bool hiresMode7 = io.bgMode == 7 && configuration.hacks.ppuFast.hiresMode7;
   auto aboveColor = cgram[0];
   auto belowColor = hires ? cgram[0] : io.col.fixedColor;
-  for(uint x : range(256 << hiresMode7)) {
+  //#HDmode7>
+  int xStart = ppu.hdEnabled() && ppu.interlace() && ppu.field() 
+      ? 256 * (ppu.hdScale() * ppu.hdScale() / 2) : 0;
+  int xEnd = (!ppu.hdEnabled() ? 256 << hiresMode7 : (ppu.interlace() && !ppu.field()
+      ? 256 * ppu.hdScale() * ppu.hdScale() / 2
+      : 256 * ppu.hdScale() * ppu.hdScale()));
+  for(int x = xStart; x < xEnd; x++) {
+  //#HDmode7<
     above[x] = {Source::COL, 0, aboveColor};
     below[x] = {Source::COL, 0, belowColor};
   }
@@ -40,7 +52,11 @@ auto PPU::Line::render() -> void {
   renderWindow(io.col.window, io.col.window.belowMask, windowBelow);
 
   auto luma = io.displayBrightness << 15;
-  if(hiresMode7) for(uint x : range(512)) {
+  //#HDmode7>
+  if (ppu.hdEnabled()) for(uint x : range(256 * ppu.hdScale() * ppu.hdScale())) {
+    *output++ = luma | pixel(x, above[x], below[x]);
+  } else if(hiresMode7) for(uint x : range(512)) {
+  //#HDmode7<
     auto Above = above[x >> 1].source >= Source::OBJ1 ? above[x >> 1] : above[x >> 1 | (x & 1 ? 256 : 0)];
     auto Below = below[x >> 1].source >= Source::OBJ1 ? below[x >> 1] : below[x >> 1 | (x & 1 ? 256 : 0)];
     *output++ = luma | pixel(x >> 1, Above, Below);
@@ -57,6 +73,12 @@ auto PPU::Line::render() -> void {
 }
 
 auto PPU::Line::pixel(uint x, Pixel above, Pixel below) const -> uint15 {
+  //#HDmode7>
+  if (ppu.hdEnabled()) {
+    x /= ppu.hdScale();
+    x %= 256;
+  }
+  //#HDmode7<
   if(!windowAbove[x]) above.color = 0x0000;
   if(!windowBelow[x]) return above.color;
   if(!io.col.enable[above.source]) return above.color;
@@ -93,10 +115,46 @@ auto PPU::Line::directColor(uint paletteIndex, uint paletteColor) const -> uint1
        + (paletteColor << 7 & 0x6000) + (paletteIndex << 10 & 0x1000);  //B
 }
 
+//#HDmode7>>>>>
 auto PPU::Line::plotAbove(uint x, uint source, uint priority, uint color) -> void {
-  if(priority > above[x].priority) above[x] = {source, priority, color};
+  plotAbove(x, source, priority, color, false, false);
+}
+
+auto PPU::Line::plotAbove(uint x, uint source, uint priority, uint color, bool hiResX, bool xsp) -> void {
+  if (!ppu.hdEnabled()) {
+    if(priority > above[x].priority) above[x] = {source, priority, color};
+    return;
+  }
+  plotHD(above, x, source, priority, color, hiResX, xsp);
 }
 
 auto PPU::Line::plotBelow(uint x, uint source, uint priority, uint color) -> void {
-  if(priority > below[x].priority) below[x] = {source, priority, color};
+  plotBelow(x, source, priority, color, false, false);
 }
+
+auto PPU::Line::plotBelow(uint x, uint source, uint priority, uint color, bool hiResX, bool xsp) -> void {
+  if (!ppu.hdEnabled()) {
+    if(priority > below[x].priority) below[x] = {source, priority, color};
+    return;
+  }
+  plotHD(below, x, source, priority, color, hiResX, xsp);
+}
+
+auto PPU::Line::plotHD(Pixel* par, uint x, uint source, uint priority, uint color, bool hiResX, bool xsp) -> void {
+  int xss = (hiResX && xsp) ? ppu.hdScale() / 2 : 0;
+  int ys = (ppu.interlace() && ppu.field()) ? ppu.hdScale() / 2 : 0;
+  if(priority > par[x * ppu.hdScale() + xss + ys * 256 * ppu.hdScale()].priority) {
+    Pixel p = {source, priority, color};
+    int xsm = (hiResX && !xsp) ? ppu.hdScale() / 2 : ppu.hdScale();
+    int ysm = (ppu.interlace() && !ppu.field()) ? ppu.hdScale() / 2 : ppu.hdScale();
+    for(int xs = xss; xs < xsm; xs++) {
+      par[x * ppu.hdScale() + xs + ys * 256 * ppu.hdScale()] = p;
+    }
+    int size = sizeof(Pixel) * (xsm - xss);
+    Pixel* src = &par[x * ppu.hdScale() + xss + ys * 256 * ppu.hdScale()];
+    for(int yst = ys + 1; yst < ysm; yst++) {
+      memcpy(&par[x * ppu.hdScale() + xss + yst * 256 * ppu.hdScale()], src, size);
+    }
+  }
+}
+//#HDmode7<<<<<

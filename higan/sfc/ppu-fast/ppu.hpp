@@ -13,6 +13,10 @@ struct PPU : Thread, PPUcounter {
   alwaysinline auto overscan() const -> bool;
   alwaysinline auto vdisp() const -> uint;
   alwaysinline auto hires() const -> bool;
+  //#HDmode7>
+  alwaysinline auto hdScale() const -> uint;
+  alwaysinline auto hdEnabled() const -> bool;
+  //#HDmode7<
 
   //ppu.cpp
   PPU();
@@ -271,6 +275,11 @@ public:
     alwaysinline auto directColor(uint paletteIndex, uint paletteColor) const -> uint15;
     alwaysinline auto plotAbove(uint x, uint source, uint priority, uint color) -> void;
     alwaysinline auto plotBelow(uint x, uint source, uint priority, uint color) -> void;
+    //#HDmode7>
+    alwaysinline auto plotAbove(uint x, uint source, uint priority, uint color, bool hiResX, bool xsp) -> void;
+    alwaysinline auto plotBelow(uint x, uint source, uint priority, uint color, bool hiResX, bool xsp) -> void;
+    auto plotHD(Pixel* par, uint x, uint source, uint priority, uint color, bool hiResX, bool xsp) -> void;
+    //#HDmode7<
 
     //background.cpp
     auto renderBackground(PPU::IO::Background&, uint source) -> void;
@@ -278,6 +287,10 @@ public:
 
     //mode7.cpp
     auto renderMode7(PPU::IO::Background&, uint source) -> void;
+    //#HDmode7>
+    auto renderMode7HD(PPU::IO::Background&, uint source) -> void;
+    alwaysinline auto /*inter-/extra-*/polate(float pa, float va, float pb, float vb, float pr) -> float;
+    //#HDmode7<
 
     //object.cpp
     auto renderObject(PPU::IO::Object&) -> void;
@@ -295,8 +308,10 @@ public:
     array<ObjectItem[128]> items;  //32 on real hardware
     array<ObjectTile[128]> tiles;  //34 on real hardware; 1024 max (128 * 64-width tiles)
 
-    array<Pixel[512]> above;  //256 on real hardware
-    array<Pixel[512]> below;  //512 for hires mode 7
+    //#HDmode7>
+    Pixel* above; // sized in PPU constructor (256 on real hardware)
+    Pixel* below; // sized in PPU constructor (512 for hires mode 7)
+    //#HDmode7<
 
     array<bool[256]> windowAbove;
     array<bool[256]> windowBelow;

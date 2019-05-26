@@ -98,6 +98,10 @@ auto Settings::process(bool load) -> void {
   bind(boolean, "Emulator/Hack/FastPPU/Enable",           emulator.hack.fastPPU.enable);
   bind(boolean, "Emulator/Hack/FastPPU/NoSpriteLimit",    emulator.hack.fastPPU.noSpriteLimit);
   bind(boolean, "Emulator/Hack/FastPPU/HiresMode7",       emulator.hack.fastPPU.hiresMode7);
+  //#HDmode7>
+  bind(natural, "Emulator/Hack/FastPPU/HdMode7Scale",      emulator.hack.fastPPU.hdMode7Scale);
+  bind(boolean, "Emulator/Hack/FastPPU/HdMode7Perspective",emulator.hack.fastPPU.hdMode7Perspective);
+  //#HDmode7<
   bind(boolean, "Emulator/Hack/FastDSP/Enable",           emulator.hack.fastDSP.enable);
   bind(boolean, "Emulator/Hack/Coprocessors/DelayedSync", emulator.hack.coprocessors.delayedSync);
   bind(boolean, "Emulator/Hack/Coprocessors/HLE",         emulator.hack.coprocessors.hle);

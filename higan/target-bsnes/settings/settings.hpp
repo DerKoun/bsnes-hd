@@ -79,6 +79,10 @@ struct Settings : Markup::Node {
         bool enable = true;
         bool noSpriteLimit = false;
         bool hiresMode7 = false;
+        //#HDmode7>
+        uint hdMode7Scale = 4;
+        bool hdMode7Perspective = true;
+        //#HDmode7<
       } fastPPU;
       struct FastDSP {
         bool enable = true;
@@ -270,6 +274,21 @@ public:
       Label superFXValue{&superFXLayout, Size{50_sx, 0}};
       HorizontalSlider superFXClock{&superFXLayout, Size{~0, 0}};
     Label hacksNote{&layout, Size{~0, 0}};
+    //#HDmode7>
+    Canvas optionsSpacerB{&layout, Size{~0, 1}};
+    Canvas optionsSpacerC{&layout, Size{~0, 1}};
+    Label expLabel{&layout, Size{~0, 0}};
+    HorizontalLayout hdMode7Layout{&layout, Size{~0, 0}};
+      Label hdMode7Label{&hdMode7Layout, Size{0, 0}};
+      Label hdMode7ValueA{&hdMode7Layout, Size{50_sx, 0}};
+      Label hdMode7ValueB{&hdMode7Layout, Size{50_sx, 0}};
+      Label hdMode7ValueC{&hdMode7Layout, Size{50_sx, 0}};
+      HorizontalSlider hdMode7Scale{&hdMode7Layout, Size{~0, 0}};
+      CheckLabel hdMode7Perspective{&hdMode7Layout, Size{0, 0}};
+    Label hdMode7NoteA{&layout, Size{~0, 0}};
+    Label hdMode7NoteB{&layout, Size{~0, 0}};
+    Label hdMode7NoteC{&layout, Size{~0, 0}};
+    //#HDmode7<
 };
 
 struct DriverSettings : TabFrameItem {

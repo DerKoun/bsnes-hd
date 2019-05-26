@@ -101,11 +101,18 @@ auto PPU::Line::renderBackground(PPU::IO::Background& self, uint source) -> void
         if(self.belowEnable && !windowBelow[x]) plotBelow(x, source, mosaicPriority, mosaicColor);
       } else {
         uint X = x >> 1;
-        if(x & 1) {
-          if(self.aboveEnable && !windowAbove[X]) plotAbove(X, source, mosaicPriority, mosaicColor);
+        //#HDmode7>
+        if (!ppu.hdEnabled()) {
+          if(x & 1) {
+            if(self.aboveEnable && !windowAbove[X]) plotAbove(X, source, mosaicPriority, mosaicColor);
+          } else {
+            if(self.belowEnable && !windowBelow[X]) plotBelow(X, source, mosaicPriority, mosaicColor);
+          }
         } else {
-          if(self.belowEnable && !windowBelow[X]) plotBelow(X, source, mosaicPriority, mosaicColor);
+          if(self.aboveEnable && !windowAbove[X]) plotAbove(X, source, mosaicPriority, mosaicColor, true, x & 1);
+          if(self.belowEnable && !windowBelow[X]) plotBelow(X, source, mosaicPriority, mosaicColor, true, x & 1);
         }
+        //#HDmode7<
       }
     }
   }
