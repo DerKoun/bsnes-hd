@@ -51,17 +51,18 @@ auto EmulatorSettings::create() -> void {
   });
   mode7Label.setText("HD Mode 7 (fast PPU only)").setFont(Font().setBold());
   mode7ScaleLabel.setText("Scale:");
-  mode7Scale.append(ComboButtonItem().setText( "240p").setProperty("multiplier", 1));
-  mode7Scale.append(ComboButtonItem().setText( "480p").setProperty("multiplier", 2));
-  mode7Scale.append(ComboButtonItem().setText( "720p").setProperty("multiplier", 3));
-  mode7Scale.append(ComboButtonItem().setText( "960p").setProperty("multiplier", 4));
-  mode7Scale.append(ComboButtonItem().setText("1200p").setProperty("multiplier", 5));
-  mode7Scale.append(ComboButtonItem().setText("1440p").setProperty("multiplier", 6));
-  mode7Scale.append(ComboButtonItem().setText("1680p").setProperty("multiplier", 7));
-  mode7Scale.append(ComboButtonItem().setText("1920p").setProperty("multiplier", 8));
-  mode7Scale.append(ComboButtonItem().setText("2160p").setProperty("multiplier", 9));
-  for(uint n = 1; n <= 9; n++) {
-    if(settings.emulator.hack.ppu.mode7.scale == n) mode7Scale.item(n - 1).setSelected();
+  mode7Scale.append(ComboButtonItem().setText("disable").setProperty("multiplier", 0));
+  mode7Scale.append(ComboButtonItem().setText("1x  224p").setProperty("multiplier", 1));
+  mode7Scale.append(ComboButtonItem().setText("2x  448p").setProperty("multiplier", 2));
+  mode7Scale.append(ComboButtonItem().setText("3x  672p").setProperty("multiplier", 3));
+  mode7Scale.append(ComboButtonItem().setText("4x  896p").setProperty("multiplier", 4));
+  mode7Scale.append(ComboButtonItem().setText("5x 1120p").setProperty("multiplier", 5));
+  mode7Scale.append(ComboButtonItem().setText("6x 1344p").setProperty("multiplier", 6));
+  mode7Scale.append(ComboButtonItem().setText("7x 1568p").setProperty("multiplier", 7));
+  mode7Scale.append(ComboButtonItem().setText("8x 1792p").setProperty("multiplier", 8));
+  mode7Scale.append(ComboButtonItem().setText("9x 2016p").setProperty("multiplier", 9));
+  for(uint n = 0; n <= 9; n++) {
+    if(settings.emulator.hack.ppu.mode7.scale == n) mode7Scale.item(n).setSelected();
   }
   mode7Scale.onChange([&] {
     settings.emulator.hack.ppu.mode7.scale = mode7Scale.selected().property("multiplier").natural();
@@ -72,23 +73,41 @@ auto EmulatorSettings::create() -> void {
     settings.emulator.hack.ppu.mode7.perspective = mode7Perspective.checked();
     emulator->configure("Hacks/PPU/Mode7/Perspective", settings.emulator.hack.ppu.mode7.perspective);
   });
-  mode7Mosaic.setText("HD->SD Mosaic").setChecked(settings.emulator.hack.ppu.mode7.mosaic).onToggle([&] {
+  mode7Mosaic.setText("keep Mosaic").setChecked(settings.emulator.hack.ppu.mode7.mosaic).onToggle([&] {
     settings.emulator.hack.ppu.mode7.mosaic = mode7Mosaic.checked();
     emulator->configure("Hacks/PPU/Mode7/Mosaic", settings.emulator.hack.ppu.mode7.mosaic);
   });
-  mode7Supersample.setText("Supersample").setChecked(settings.emulator.hack.ppu.mode7.supersample).onToggle([&] {
-    settings.emulator.hack.ppu.mode7.supersample = mode7Supersample.checked();
+  mode7SupersampleLabel.setText("Supersampling:");
+  mode7Supersample.append(ComboButtonItem().setText("none").setProperty("sss", 1));
+  mode7Supersample.append(ComboButtonItem().setText("2x").setProperty("sss", 2));
+  mode7Supersample.append(ComboButtonItem().setText("3x").setProperty("sss", 3));
+  mode7Supersample.append(ComboButtonItem().setText("4x").setProperty("sss", 4));
+  mode7Supersample.append(ComboButtonItem().setText("5x").setProperty("sss", 5));
+  mode7Supersample.append(ComboButtonItem().setText("6x").setProperty("sss", 6));
+  mode7Supersample.append(ComboButtonItem().setText("7x").setProperty("sss", 7));
+  mode7Supersample.append(ComboButtonItem().setText("8x").setProperty("sss", 8));
+  for(uint n = 0; n < 8; n++) {
+    if(mode7Supersample.item(n).property("sss").natural() == settings.emulator.hack.ppu.mode7.supersample)
+       mode7Supersample.item(n).setSelected();
+  }
+  mode7Supersample.onChange([&] {
+    settings.emulator.hack.ppu.mode7.supersample = mode7Supersample.selected().property("sss").natural();
     emulator->configure("Hacks/PPU/Mode7/Supersample", settings.emulator.hack.ppu.mode7.supersample);
   });
+  igwin.setText("ignore outside window").setChecked(settings.emulator.hack.ppu.mode7.igwin).onToggle([&] {
+    settings.emulator.hack.ppu.mode7.igwin = igwin.checked();
+    emulator->configure("Hacks/PPU/Mode7/Igwin", settings.emulator.hack.ppu.mode7.igwin);
+  });
   mode7WidescreenLabel.setText("Widescreen:");
-  mode7Widescreen.append(ComboButtonItem().setText("none ").setProperty("adval",   0));
-  mode7Widescreen.append(ComboButtonItem().setText("16:10").setProperty("adval",  40));
-  mode7Widescreen.append(ComboButtonItem().setText("16:9 ").setProperty("adval",  64));
-  mode7Widescreen.append(ComboButtonItem().setText(" 1.93").setProperty("adval",  80));
-  mode7Widescreen.append(ComboButtonItem().setText(" 2.15").setProperty("adval", 104));
-  mode7Widescreen.append(ComboButtonItem().setText("21:9 ").setProperty("adval", 120));
-  mode7Widescreen.append(ComboButtonItem().setText(" 2.44").setProperty("adval", 136));
-  for(uint n = 0; n < 7; n++) {
+  mode7Widescreen.append(ComboButtonItem().setText(" none ").setProperty("adval",   0));
+  mode7Widescreen.append(ComboButtonItem().setText(" 4 : 3").setProperty("adval",  24));
+  mode7Widescreen.append(ComboButtonItem().setText("16 :10").setProperty("adval",  56));
+  mode7Widescreen.append(ComboButtonItem().setText("HDcrop").setProperty("adval",  64));
+  mode7Widescreen.append(ComboButtonItem().setText("16 : 9").setProperty("adval",  72));
+  mode7Widescreen.append(ComboButtonItem().setText("21 :10").setProperty("adval", 104));
+  mode7Widescreen.append(ComboButtonItem().setText("21 : 9").setProperty("adval", 136));
+  mode7Widescreen.append(ComboButtonItem().setText(" 8 : 3").setProperty("adval", 168));
+  for(uint n = 0; n < 8; n++) {
     if(mode7Widescreen.item(n).property("adval").natural() == settings.emulator.hack.ppu.mode7.widescreen)
        mode7Widescreen.item(n).setSelected();
   }
@@ -221,7 +240,8 @@ auto EmulatorSettings::updateConfiguration() -> void {
   emulator->configure("Hacks/PPU/Mode7/Wsbg3", wsBG3.property("wsbgmode").natural());
   emulator->configure("Hacks/PPU/Mode7/Wsbg4", wsBG4.property("wsbgmode").natural()); 
   emulator->configure("Hacks/PPU/Mode7/Wsobj", wsObj.checked());
-  emulator->configure("Hacks/PPU/Mode7/Supersample", mode7Supersample.checked());
+  emulator->configure("Hacks/PPU/Mode7/Igwin", igwin.checked());
+  emulator->configure("Hacks/PPU/Mode7/Supersample", mode7Supersample.property("sss").natural());
   emulator->configure("Hacks/PPU/Mode7/Mosaic", mode7Mosaic.checked());
   emulator->configure("Hacks/DSP/Fast", fastDSP.checked());
   emulator->configure("Hacks/DSP/Cubic", cubicInterpolation.checked());

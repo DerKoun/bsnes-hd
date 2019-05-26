@@ -104,8 +104,9 @@ auto Settings::process(bool load) -> void {
   bind(natural, "Emulator/Hack/PPU/Mode7/Wsbg2",          emulator.hack.ppu.mode7.wsbg2);
   bind(natural, "Emulator/Hack/PPU/Mode7/Wsbg3",          emulator.hack.ppu.mode7.wsbg3);
   bind(natural, "Emulator/Hack/PPU/Mode7/Wsbg4",          emulator.hack.ppu.mode7.wsbg4);
-  bind(natural, "Emulator/Hack/PPU/Mode7/Wsobj",          emulator.hack.ppu.mode7.wsobj);
-  bind(boolean, "Emulator/Hack/PPU/Mode7/Supersample",    emulator.hack.ppu.mode7.supersample);
+  bind(boolean, "Emulator/Hack/PPU/Mode7/Wsobj",          emulator.hack.ppu.mode7.wsobj);
+  bind(boolean, "Emulator/Hack/PPU/Mode7/Igwin",          emulator.hack.ppu.mode7.igwin);
+  bind(natural, "Emulator/Hack/PPU/Mode7/Supersample",    emulator.hack.ppu.mode7.supersample);
   bind(boolean, "Emulator/Hack/PPU/Mode7/Mosaic",         emulator.hack.ppu.mode7.mosaic);
   bind(boolean, "Emulator/Hack/DSP/Fast",                 emulator.hack.dsp.fast);
   bind(boolean, "Emulator/Hack/DSP/Cubic",                emulator.hack.dsp.cubic);

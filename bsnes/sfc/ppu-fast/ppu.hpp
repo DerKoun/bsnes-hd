@@ -14,11 +14,12 @@ struct PPUfast : Thread, PPUcounter {
   alwaysinline auto ss() const -> bool;
   alwaysinline auto hdScale() const -> uint;
   alwaysinline auto hdPerspective() const -> bool;
-  alwaysinline auto hdSupersample() const -> bool;
+  alwaysinline auto hdSupersample() const -> uint;
   alwaysinline auto hdMosaic() const -> bool;
   alwaysinline auto widescreen() const -> uint;
   alwaysinline auto wsbg(uint bg) const -> uint;
   alwaysinline auto wsobj() const -> bool;
+  alwaysinline auto winXad(uint x, bool bel) const -> uint;
 
   //ppu.cpp
   PPUfast();
@@ -319,6 +320,14 @@ public:
     static uint count;
   };
   array<Line[240]> lines;
+
+
+    array<int[32]> starts;
+    array<int[32]> ends;
+    int ind = 0;
+    array<int[32]> startsp;
+    array<int[32]> endsp;
+
 };
 
 extern PPUfast ppufast;

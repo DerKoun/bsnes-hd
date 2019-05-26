@@ -2,6 +2,36 @@ uint PPUfast::Line::start = 0;
 uint PPUfast::Line::count = 0;
 
 auto PPUfast::Line::flush() -> void {
+  if(ppufast.hdPerspective()) {
+    #define isLineMode7(l) (l.io.bg1.tileMode == TileMode::Mode7 \
+        && !l.io.displayDisable && (l.io.bg1.aboveEnable || l.io.bg1.belowEnable))
+    ppufast.ind = 0;
+    bool state = false;
+    uint y;
+    for(y = 0; y < Line::count; y++) {
+      if(state != isLineMode7(ppufast.lines[Line::start + y])) {
+        state = !state;
+        if(state) {
+          ppufast.starts[ppufast.ind] = ppufast.lines[Line::start + y].y;
+        } else {
+          ppufast.ends[ppufast.ind] = ppufast.lines[Line::start + y].y - 1;
+          int offs = (ppufast.ends[ppufast.ind] - ppufast.starts[ppufast.ind]) / 8;
+          ppufast.startsp[ppufast.ind] = ppufast.starts[ppufast.ind] + offs;
+          ppufast.endsp[ppufast.ind] = ppufast.ends[ppufast.ind] - offs;
+          ppufast.ind++;
+        }
+      }
+    }
+    #undef isLineMode7
+    if(state) {
+      ppufast.ends[ppufast.ind] = ppufast.lines[Line::start + y].y - 1;
+      int offs = (ppufast.ends[ppufast.ind] - ppufast.starts[ppufast.ind]) / 8;
+      ppufast.startsp[ppufast.ind] = ppufast.starts[ppufast.ind] + offs;
+      ppufast.endsp[ppufast.ind] = ppufast.ends[ppufast.ind] - offs;
+      ppufast.ind++;
+    }
+  }  
+
   if(Line::count) {
     #pragma omp parallel for if(Line::count >= 8)
     for(uint y = 0; y < Line::count; y++) {
@@ -22,7 +52,7 @@ auto PPUfast::Line::render() -> void {
   );
   auto width = (!hd
   ? (!ppufast.hires() ? 256 : 512)
-  : (256 * scale * scale));
+  : ((256+2*ppufast.widescreen()) * scale * scale));
 
   if(io.displayDisable) {
     memory::fill<uint32>(output, width);
@@ -63,13 +93,11 @@ auto PPUfast::Line::render() -> void {
 }
 
 auto PPUfast::Line::pixel(uint x, Pixel above, Pixel below) const -> uint15 {
-  if (x <   0) x = 0;
-  if (x > 255) x = 255;
-  if(!windowAbove[x]) above.color = 0x0000;
-  if(!windowBelow[x]) return above.color;
+  if(!windowAbove[ppufast.winXad(x, false)]) above.color = 0x0000;
+  if(!windowBelow[ppufast.winXad(x, true)]) return above.color;
   if(!io.col.enable[above.source]) return above.color;
-  if(!io.col.blendMode) return blend(above.color, io.col.fixedColor, io.col.halve && windowAbove[x]);
-  return blend(above.color, below.color, io.col.halve && windowAbove[x] && below.source != Source::COL);
+  if(!io.col.blendMode) return blend(above.color, io.col.fixedColor, io.col.halve && windowAbove[ppufast.winXad(x, false)]);
+  return blend(above.color, below.color, io.col.halve && windowAbove[ppufast.winXad(x, false)] && below.source != Source::COL);
 }
 
 auto PPUfast::Line::blend(uint x, uint y, bool halve) const -> uint15 {
@@ -102,12 +130,12 @@ auto PPUfast::Line::directColor(uint paletteIndex, uint paletteColor) const -> u
 }
 
 auto PPUfast::Line::plotAbove(int x, uint source, uint priority, uint color) -> void {
-  if(ppufast.hd()) return plotHD(above, x, source, priority, color, false, false);
+  if(ppufast.hd() || ppufast.ss()) return plotHD(above, x, source, priority, color, false, false);
   if(priority > above[x].priority) above[x] = {source, priority, color};
 }
 
 auto PPUfast::Line::plotBelow(int x, uint source, uint priority, uint color) -> void {
-  if(ppufast.hd()) return plotHD(below, x, source, priority, color, false, false);
+  if(ppufast.hd() || ppufast.ss()) return plotHD(below, x, source, priority, color, false, false);
   if(priority > below[x].priority) below[x] = {source, priority, color};
 }
 

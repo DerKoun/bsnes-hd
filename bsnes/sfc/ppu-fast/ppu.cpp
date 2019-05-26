@@ -22,7 +22,7 @@ auto PPUfast::hd() const -> bool { return latch.hd; }
 auto PPUfast::ss() const -> bool { return latch.ss; }
 auto PPUfast::hdScale() const -> uint { return configuration.hacks.ppu.mode7.scale; }
 auto PPUfast::hdPerspective() const -> bool { return configuration.hacks.ppu.mode7.perspective; }
-auto PPUfast::hdSupersample() const -> bool { return configuration.hacks.ppu.mode7.supersample; }
+auto PPUfast::hdSupersample() const -> uint { return configuration.hacks.ppu.mode7.supersample; }
 auto PPUfast::hdMosaic() const -> bool { return configuration.hacks.ppu.mode7.mosaic; }
 auto PPUfast::widescreen() const -> uint { return configuration.hacks.ppu.mode7.widescreen; } // 64 / 0 #widescreenextension
 auto PPUfast::wsbg(uint bg) const -> uint {
@@ -33,6 +33,11 @@ auto PPUfast::wsbg(uint bg) const -> uint {
   return 0;
 }
 auto PPUfast::wsobj() const -> bool { return configuration.hacks.ppu.mode7.wsobj; }
+auto PPUfast::winXad(uint x, bool bel) const -> uint {
+  return (configuration.hacks.ppu.mode7.igwin 
+      && ((bel ? io.col.window.belowMask : io.col.window.aboveMask) == 2)) 
+      ? 127 : (x < 0 ? 0 : (x > 255 ? 255 : x));
+}
 
 PPUfast::PPUfast() {
   output = new uint32[2304 * 2304] + 72 * 2304;  //overscan offset
@@ -96,8 +101,8 @@ auto PPUfast::scanline() -> void {
 
   if(vcounter() > 0 && vcounter() < vdisp()) {
     latch.hires |= io.pseudoHires || io.bgMode == 5 || io.bgMode == 6;
-    latch.hd |= /*io.bgMode == 7 &&*/ hdScale() > 1 && hdSupersample() == 0; //deactivated dynamic scale switching for widescreen
-    latch.ss |= io.bgMode == 7 && hdScale() > 1 && hdSupersample() == 1;
+    latch.hd |= /*io.bgMode == 7 &&*/ hdScale() > 0; //deactivated dynamic scale switching for widescreen
+    latch.ss |= /*io.bgMode == 7 &&*/ hdScale() > 0 && hdSupersample() > 1;
   }
 
   if(vcounter() == vdisp() && !io.displayDisable) {

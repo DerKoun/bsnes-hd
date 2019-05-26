@@ -26,7 +26,8 @@ auto Configuration::process(Markup::Node document, bool load) -> void {
   bind(natural, "Hacks/PPU/Mode7/Wsbg3", hacks.ppu.mode7.wsbg3);
   bind(natural, "Hacks/PPU/Mode7/Wsbg4", hacks.ppu.mode7.wsbg4);
   bind(boolean, "Hacks/PPU/Mode7/Wsobj", hacks.ppu.mode7.wsobj);
-  bind(boolean, "Hacks/PPU/Mode7/Supersample", hacks.ppu.mode7.supersample);
+  bind(boolean, "Hacks/PPU/Mode7/Igwin", hacks.ppu.mode7.igwin);
+  bind(natural, "Hacks/PPU/Mode7/Supersample", hacks.ppu.mode7.supersample);
   bind(boolean, "Hacks/PPU/Mode7/Mosaic", hacks.ppu.mode7.mosaic);
   bind(boolean, "Hacks/DSP/Fast", hacks.dsp.fast);
   bind(boolean, "Hacks/DSP/Cubic", hacks.dsp.cubic);

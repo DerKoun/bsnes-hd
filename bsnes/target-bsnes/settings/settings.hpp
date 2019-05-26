@@ -77,18 +77,19 @@ struct Settings : Markup::Node {
     struct Hack {
       struct PPU {
         bool fast = true;
-        bool noSpriteLimit = false;
+        bool noSpriteLimit = true;
         struct Mode7 {
-          uint scale = 1;
+          uint scale = 2;
           bool perspective = true;
-          bool supersample = false;
-          bool mosaic = true;
-          uint widescreen = 64;
+          uint supersample = 1;
+          bool mosaic = false;
+          uint widescreen = 72;
           uint wsbg1 = 1;
           uint wsbg2 = 1;
           uint wsbg3 = 1;
           uint wsbg4 = 1;
           bool wsobj = false;
+          bool igwin = false;
         } mode7;
       } ppu;
       struct DSP {
@@ -278,7 +279,9 @@ public:
       ComboButton mode7Scale{&mode7Layout, Size{0, 0}};
       CheckLabel mode7Perspective{&mode7Layout, Size{0, 0}};
       CheckLabel mode7Mosaic{&mode7Layout, Size{0, 0}};      
-      CheckLabel mode7Supersample{&mode7Layout, Size{0, 0}};
+      Label mode7SupersampleLabel{&mode7Layout, Size{0, 0}};
+      ComboButton mode7Supersample{&mode7Layout, Size{0, 0}};
+      CheckLabel igwin{&mode7Layout, Size{0, 0}};
     HorizontalLayout widescreenLayout{&layout, Size{~0, 0}};
       Label mode7WidescreenLabel{&widescreenLayout, Size{0, 0}};
       ComboButton mode7Widescreen{&widescreenLayout, Size{0, 0}};

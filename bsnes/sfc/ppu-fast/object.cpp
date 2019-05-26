@@ -29,7 +29,7 @@ auto PPUfast::Line::renderObject(PPUfast::IO::Object& self) -> void {
     }
 
     if(!ppufast.wsobj()
-        && object.x > 256 && object.x + item.width - 1 < 512) continue; //!! //#config
+        && object.x > 256 && object.x + item.width - 1 < 512) continue;
     uint height = item.height >> self.interlace;
     if((y >= object.y && y < object.y + height)
     || (object.y + height >= 256 && y < (object.y + height & 255))
@@ -124,8 +124,8 @@ auto PPUfast::Line::renderObject(PPUfast::IO::Object& self) -> void {
     int xc = x;//
     if(xc > 384) xc -= 512; // 256+256/2
     if(xc < wsl || xc >= wsr) continue;
-    if(self.aboveEnable && !windowAbove[x]) plotAbove(xc, source, priority[x], cgram[palette[x]]);//
-    if(self.belowEnable && !windowBelow[x]) plotBelow(xc, source, priority[x], cgram[palette[x]]);//
+    if(self.aboveEnable && !windowAbove[ppufast.winXad(x, false)]) plotAbove(xc, source, priority[x], cgram[palette[x]]);
+    if(self.belowEnable && !windowBelow[ppufast.winXad(x, true)]) plotBelow(xc, source, priority[x], cgram[palette[x]]);
   }
 }
 

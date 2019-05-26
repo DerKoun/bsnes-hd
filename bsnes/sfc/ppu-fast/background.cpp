@@ -40,7 +40,7 @@ auto PPUfast::Line::renderBackground(PPUfast::IO::Background& self, uint source)
   int ws = (int)ppufast.widescreen();
   if(ws > 0) {
     uint wsConf = ppufast.wsbg(source);
-    if(((wsConf % 2) != 0) == (y < (((int)(wsConf / 2)) * 40))) {
+    if(wsConf == 0 || (wsConf != 1 && (((wsConf % 2) != 0) == (y < (((int)(wsConf / 2)) * 40))))) {
       ws = 0;
     }
   }
@@ -105,22 +105,19 @@ auto PPUfast::Line::renderBackground(PPUfast::IO::Background& self, uint source)
       if(!mosaicPalette) continue;
 
       if(!hires) {
-        int wx = x;
-        if (wx <   0) wx = 0;
-        if (wx > 255) wx = 255;
-        if(self.aboveEnable && !windowAbove[wx]) plotAbove(x, source, mosaicPriority, mosaicColor);
-        if(self.belowEnable && !windowBelow[wx]) plotBelow(x, source, mosaicPriority, mosaicColor);
+        if(self.aboveEnable && !windowAbove[ppufast.winXad(x, false)]) plotAbove(x, source, mosaicPriority, mosaicColor);
+        if(self.belowEnable && !windowBelow[ppufast.winXad(x, true)]) plotBelow(x, source, mosaicPriority, mosaicColor);
       } else {
-        uint X = x >> 1;
+        int X = x / 2;
         if(!ppufast.hd()) {
           if(x & 1) {
-            if(self.aboveEnable && !windowAbove[X]) plotAbove(X, source, mosaicPriority, mosaicColor);
+            if(self.aboveEnable && !windowAbove[ppufast.winXad(X, false)]) plotAbove(X, source, mosaicPriority, mosaicColor);
           } else {
-            if(self.belowEnable && !windowBelow[X]) plotBelow(X, source, mosaicPriority, mosaicColor);
+            if(self.belowEnable && !windowBelow[ppufast.winXad(X, true)]) plotBelow(X, source, mosaicPriority, mosaicColor);
           }
         } else {
-          if(self.aboveEnable && !windowAbove[X]) plotHD(above, X, source, mosaicPriority, mosaicColor, true, x & 1);
-          if(self.belowEnable && !windowBelow[X]) plotHD(below, X, source, mosaicPriority, mosaicColor, true, x & 1);
+          if(self.aboveEnable && !windowAbove[ppufast.winXad(X, false)]) plotHD(above, X, source, mosaicPriority, mosaicColor, true, x & 1);
+          if(self.belowEnable && !windowBelow[ppufast.winXad(X, true)]) plotHD(below, X, source, mosaicPriority, mosaicColor, true, x & 1);
         }
       }
     }

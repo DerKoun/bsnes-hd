@@ -27,18 +27,19 @@ struct Configuration {
   struct Hacks {
     struct PPU {
       bool fast = true;
-      bool noSpriteLimit = false;
+      bool noSpriteLimit = true;
       struct Mode7 {
-        uint scale = 1;
+        uint scale = 2;
         bool perspective = true;
-        uint widescreen = 64;
+        uint widescreen = 72;
         uint wsbg1 = 1;
         uint wsbg2 = 1;
         uint wsbg3 = 1;
         uint wsbg4 = 1;
         bool wsobj = false;
-        bool supersample = false;
-        bool mosaic = true;
+        bool igwin = false;
+        uint supersample = 1;
+        bool mosaic = false;
       } mode7;
     } ppu;
     struct DSP {

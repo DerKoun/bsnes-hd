@@ -1,57 +1,48 @@
 auto PPUfast::Line::renderMode7HD(PPUfast::IO::Background& self, uint source) -> void {
   const bool extbg = source == Source::BG2;
-  const uint scale = ppufast.hdScale();
+  const uint sampScale = ppufast.hdSupersample();
+  const uint scale = ppufast.hdScale() * sampScale;
+
+  uint sampTmp[(256+2*ppufast.widescreen()) * 4 * scale/sampScale] = {};
 
   Pixel  pixel;
-  Pixel* above = &this->above[-1];
-  Pixel* below = &this->below[-1];
+  Pixel* above = &this->above[0];
+  Pixel* below = &this->below[0];
 
   //find the first and last scanline for interpolation
-  int y_a = y;
-  int y_b = y;
+  int y_a = -1;
+  int y_b = -1;
   #define isLineMode7(n) (ppufast.lines[n].io.bg1.tileMode == TileMode::Mode7 && !ppufast.lines[n].io.displayDisable && ( \
     (ppufast.lines[n].io.bg1.aboveEnable || ppufast.lines[n].io.bg1.belowEnable) \
   ))
   if(ppufast.hdPerspective()) {
-    while(y_a >   1 && isLineMode7(y_a)) y_a--; y_a++;
-    while(y_b < 239 && isLineMode7(y_b)) y_b++; y_b--;
-  } else {
+    for(int i = 0; i < ppufast.ind; i++) {
+      if(y >= ppufast.starts[i] && y <= ppufast.ends[i]) {
+        y_a = ppufast.startsp[i];
+        y_b = ppufast.endsp[i];
+        break;
+      }
+    }
+  }
+  if(y_a == -1 || y_b == -1) {
+    y_a = y;
+    y_b = y;
     if(y_a >   1 && isLineMode7(y_a)) y_a--;
     if(y_b < 239 && isLineMode7(y_b)) y_b++;
   }
   #undef isLineMode7
 
-  float a_a;
-  float b_a;
-  float c_a;
-  float d_a;
-  y_a--;
-  do {
-    y_a++;
-    Line line_a = ppufast.lines[y_a];
-    a_a = (int16)line_a.io.mode7.a;
-    b_a = (int16)line_a.io.mode7.b;
-    c_a = (int16)line_a.io.mode7.c;
-    d_a = (int16)line_a.io.mode7.d;
-  } while(ppufast.hdPerspective() && y_a < y 
-      && b_a == 0 && c_a == 0
-      && b_a != (int16)io.mode7.b && c_a != (int16)io.mode7.c);
+  Line line_a = ppufast.lines[y_a];
+  float a_a = (int16)line_a.io.mode7.a;
+  float b_a = (int16)line_a.io.mode7.b;
+  float c_a = (int16)line_a.io.mode7.c;
+  float d_a = (int16)line_a.io.mode7.d;
 
-  float a_b;
-  float b_b;
-  float c_b;
-  float d_b;
-  y_b++;
-  do {
-    y_b--;
-    Line line_b = ppufast.lines[y_b];
-    a_b = (int16)line_b.io.mode7.a;
-    b_b = (int16)line_b.io.mode7.b;
-    c_b = (int16)line_b.io.mode7.c;
-    d_b = (int16)line_b.io.mode7.d;
-  } while(ppufast.hdPerspective() && y_b > y 
-      && b_b == 0 && c_b == 0
-      && b_b != (int16)io.mode7.b && c_a != (int16)io.mode7.b);
+  Line line_b = ppufast.lines[y_b];
+  float a_b = (int16)line_b.io.mode7.a;
+  float b_b = (int16)line_b.io.mode7.b;
+  float c_b = (int16)line_b.io.mode7.c;
+  float d_b = (int16)line_b.io.mode7.d;
 
   int hcenter = (int13)io.mode7.x;
   int vcenter = (int13)io.mode7.y;
@@ -86,11 +77,8 @@ auto PPUfast::Line::renderMode7HD(PPUfast::IO::Background& self, uint source) ->
     int pixelXp = INT_MIN;
     for(int x : range(256+2*ppufast.widescreen())) {
       x -= ppufast.widescreen();
-      int wx = x;
-      if (wx <   0) wx = 0;
-      if (wx > 255) wx = 255;
-      bool doAbove = self.aboveEnable && !windowAbove[wx];
-      bool doBelow = self.belowEnable && !windowBelow[wx];
+      bool doAbove = self.aboveEnable && !windowAbove[ppufast.winXad(x, false)];
+      bool doBelow = self.belowEnable && !windowBelow[ppufast.winXad(x, true)];
 
       for(int xs : range(scale)) {
         float xf = x + xs * 1.0 / scale - 0.5;
@@ -99,9 +87,7 @@ auto PPUfast::Line::renderMode7HD(PPUfast::IO::Background& self, uint source) ->
         int pixelX = (originX + a * xf) / 256;
         int pixelY = (originY + c * xf) / 256;
 
-        above++;
-        below++;
-
+        bool skip = false;
         //only compute color again when coordinates have changed
         if(pixelX != pixelXp || pixelY != pixelYp) {
           uint tile    = io.mode7.repeat == 3 && ((pixelX | pixelY) & ~1023) ? 0 : ppufast.vram[(pixelY >> 3 & 127) * 128 + (pixelX >> 3 & 127)].byte(0);
@@ -114,50 +100,49 @@ auto PPUfast::Line::renderMode7HD(PPUfast::IO::Background& self, uint source) ->
             priority = self.priority[palette >> 7];
             palette &= 0x7f;
           }
-          if(!palette) continue;
+          skip = !palette;
 
-          uint color;
-          if(io.col.directColor && !extbg) {
-            color = directColor(0, palette);
-          } else {
-            color = cgram[palette];
+          if(!skip) {
+            uint color;
+            if(io.col.directColor && !extbg) {
+              color = directColor(0, palette);
+            } else {
+              color = cgram[palette];
+            }
+
+            pixel = {source, priority, color};
+            pixelXp = pixelX;
+            pixelYp = pixelY;
           }
-
-          pixel = {source, priority, color};
-          pixelXp = pixelX;
-          pixelYp = pixelY;
         }
 
-        if(doAbove && (!extbg || pixel.priority > above->priority)) *above = pixel;
-        if(doBelow && (!extbg || pixel.priority > below->priority)) *below = pixel;
-      }
-    }
-  }
-
-  if(ppufast.ss()) {
-    uint divisor = scale * scale;
-    for(uint p : range(256)) {
-      uint ab = 0, bb = 0;
-      uint ag = 0, bg = 0;
-      uint ar = 0, br = 0;
-      for(uint y : range(scale)) {
-        auto above = &this->above[p * scale];
-        auto below = &this->below[p * scale];
-        for(uint x : range(scale)) {
-          uint a = above[x].color;
-          uint b = below[x].color;
-          ab += a >>  0 & 31;
-          ag += a >>  5 & 31;
-          ar += a >> 10 & 31;
-          bb += b >>  0 & 31;
-          bg += b >>  5 & 31;
-          br += b >> 10 & 31;
+        if(sampScale == 1) {
+          if(!skip && doAbove && (!extbg || pixel.priority > above->priority)) *above = pixel;
+          if(!skip && doBelow && (!extbg || pixel.priority > below->priority)) *below = pixel;
+          above++;
+          below++;
+        } else {
+          int p = ((((x+ppufast.widescreen())*(scale/sampScale)) + (xs/sampScale))) * 4;
+          sampTmp[p] += pixel.priority;
+          sampTmp[p+1] += (pixel.color >> 10) & 31;
+          sampTmp[p+2] += (pixel.color >>  5) & 31;
+          sampTmp[p+3] += (pixel.color >>  0) & 31;
+          if((ys+1) % sampScale == 0 && (xs+1) % sampScale == 0) {
+            uint priority = sampTmp[p] / sampScale / sampScale;
+            uint color = ((sampTmp[p+1] / sampScale / sampScale) << 10)
+                        + ((sampTmp[p+2] / sampScale / sampScale) <<  5)
+                        + ((sampTmp[p+3] / sampScale / sampScale) <<  0);
+            if(!skip && doAbove && (!extbg || priority > above->priority)) *above = {source, priority, color};
+            if(!skip && doBelow && (!extbg || priority > below->priority)) *below = {source, priority, color};
+            above++;
+            below++;
+            sampTmp[p] = 0;
+            sampTmp[p+1] = 0;
+            sampTmp[p+2] = 0;
+            sampTmp[p+3] = 0;
+           }
         }
       }
-      uint aboveColor = ab / divisor << 0 | ag / divisor << 5 | ar / divisor << 10;
-      uint belowColor = bb / divisor << 0 | bg / divisor << 5 | br / divisor << 10;
-      this->above[p] = {source, this->above[p * scale].priority, aboveColor};
-      this->below[p] = {source, this->below[p * scale].priority, belowColor};
     }
   }
 }

@@ -5,7 +5,7 @@ auto PPUfast::Line::renderMode7(PPUfast::IO::Background& self, uint source) -> v
 
   //HD mode 7 support
   if(!ppufast.hdMosaic() || !self.mosaicEnable || !io.mosaicSize) {
-    if(ppufast.hdScale() > 1) return renderMode7HD(self, source);
+    if(ppufast.hdScale() > 0) return renderMode7HD(self, source);
   }
 
   int Y = this->y - (self.mosaicEnable ? this->y % (1 + io.mosaicSize) : 0);
@@ -66,7 +66,7 @@ auto PPUfast::Line::renderMode7(PPUfast::IO::Background& self, uint source) -> v
     }
     if(!mosaicPalette) continue;
 
-    if(self.aboveEnable && !windowAbove[X]) plotAbove(X, source, mosaicPriority, mosaicColor);
-    if(self.belowEnable && !windowBelow[X]) plotBelow(X, source, mosaicPriority, mosaicColor);
+    if(self.aboveEnable && !windowAbove[ppufast.winXad(X, false)]) plotAbove(X, source, mosaicPriority, mosaicColor);
+    if(self.belowEnable && !windowBelow[ppufast.winXad(X, true)]) plotBelow(X, source, mosaicPriority, mosaicColor);
   }
 }
