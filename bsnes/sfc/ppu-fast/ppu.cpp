@@ -24,6 +24,7 @@ auto PPUfast::hdScale() const -> uint { return configuration.hacks.ppu.mode7.sca
 auto PPUfast::hdPerspective() const -> bool { return configuration.hacks.ppu.mode7.perspective; }
 auto PPUfast::hdSupersample() const -> bool { return configuration.hacks.ppu.mode7.supersample; }
 auto PPUfast::hdMosaic() const -> bool { return configuration.hacks.ppu.mode7.mosaic; }
+auto PPUfast::widescreen() const -> int { return configuration.hacks.ppu.mode7.widescreen ? 64 : 0; } // 64 / 0 #widescreenextension
 
 PPUfast::PPUfast() {
   output = new uint32[2304 * 2304] + 72 * 2304;  //overscan offset
@@ -87,7 +88,7 @@ auto PPUfast::scanline() -> void {
 
   if(vcounter() > 0 && vcounter() < vdisp()) {
     latch.hires |= io.pseudoHires || io.bgMode == 5 || io.bgMode == 6;
-    latch.hd |= io.bgMode == 7 && hdScale() > 1 && hdSupersample() == 0;
+    latch.hd |= /*io.bgMode == 7 &&*/ hdScale() > 1 && hdSupersample() == 0; //deactivated dynamic scale switching for widescreen
     latch.ss |= io.bgMode == 7 && hdScale() > 1 && hdSupersample() == 1;
   }
 
@@ -111,9 +112,9 @@ auto PPUfast::refresh() -> void {
       width  = 256 << hires();
       height = 240 << interlace();
     } else {
-      if(!overscan()) output -= 7 * 256 * hdScale() * hdScale();
-      pitch  = 256 * hdScale();
-      width  = 256 * hdScale();
+      if(!overscan()) output -= 7 * (256+2*widescreen()) * hdScale() * hdScale();
+      pitch  = (256+2*widescreen()) * hdScale();
+      width  = (256+2*widescreen()) * hdScale();
       height = 240 * hdScale();
     }
     Emulator::video.setEffect(Emulator::Video::Effect::ColorBleed, configuration.video.blurEmulation && hires());

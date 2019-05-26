@@ -16,6 +16,7 @@ struct PPUfast : Thread, PPUcounter {
   alwaysinline auto hdPerspective() const -> bool;
   alwaysinline auto hdSupersample() const -> bool;
   alwaysinline auto hdMosaic() const -> bool;
+  alwaysinline auto widescreen() const -> int;
 
   //ppu.cpp
   PPUfast();

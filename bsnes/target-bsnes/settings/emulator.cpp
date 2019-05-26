@@ -66,10 +66,16 @@ auto EmulatorSettings::create() -> void {
   mode7Scale.onChange([&] {
     settings.emulator.hack.ppu.mode7.scale = mode7Scale.selected().property("multiplier").natural();
     emulator->configure("Hacks/PPU/Mode7/Scale", settings.emulator.hack.ppu.mode7.scale);
+    presentation.resizeViewport();
   });
   mode7Perspective.setText("Perspective correction").setChecked(settings.emulator.hack.ppu.mode7.perspective).onToggle([&] {
     settings.emulator.hack.ppu.mode7.perspective = mode7Perspective.checked();
     emulator->configure("Hacks/PPU/Mode7/Perspective", settings.emulator.hack.ppu.mode7.perspective);
+  });
+  mode7Widescreen.setText("Widescreen").setChecked(settings.emulator.hack.ppu.mode7.widescreen).onToggle([&] {
+    settings.emulator.hack.ppu.mode7.widescreen = mode7Widescreen.checked();
+    emulator->configure("Hacks/PPU/Mode7/Widescreen", settings.emulator.hack.ppu.mode7.widescreen);
+    presentation.resizeViewport();
   });
   mode7Supersample.setText("Supersample").setChecked(settings.emulator.hack.ppu.mode7.supersample).onToggle([&] {
     settings.emulator.hack.ppu.mode7.supersample = mode7Supersample.checked();
@@ -109,6 +115,7 @@ auto EmulatorSettings::updateConfiguration() -> void {
   emulator->configure("Hacks/PPU/NoSpriteLimit", noSpriteLimit.checked());
   emulator->configure("Hacks/PPU/Mode7/Scale", mode7Scale.selected().property("multiplier").natural());
   emulator->configure("Hacks/PPU/Mode7/Perspective", mode7Perspective.checked());
+  emulator->configure("Hacks/PPU/Mode7/Widescreen", mode7Widescreen.checked());
   emulator->configure("Hacks/PPU/Mode7/Supersample", mode7Supersample.checked());
   emulator->configure("Hacks/PPU/Mode7/Mosaic", mode7Mosaic.checked());
   emulator->configure("Hacks/DSP/Fast", fastDSP.checked());

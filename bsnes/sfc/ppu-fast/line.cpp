@@ -18,7 +18,7 @@ auto PPUfast::Line::render() -> void {
   auto scale = ppufast.hdScale();
   auto output = ppufast.output + (!hd
   ? (y * 1024 + (ppufast.interlace() && ppufast.field() ? 512 : 0))
-  : (y * 256 * scale * scale)
+  : (y * (256+2*ppufast.widescreen()) * scale * scale)
   );
   auto width = (!hd
   ? (!ppufast.hires() ? 256 : 512)
@@ -33,7 +33,7 @@ auto PPUfast::Line::render() -> void {
   auto aboveColor = cgram[0];
   auto belowColor = hires ? cgram[0] : io.col.fixedColor;
   uint xa =  (hd || ss) && ppufast.interlace() && ppufast.field() ? 256 * scale * scale / 2 : 0;
-  uint xb = !(hd || ss) ? 256 : ppufast.interlace() && !ppufast.field() ? 256 * scale * scale / 2 : 256 * scale * scale;
+  uint xb = !(hd || ss) ? 256 : ppufast.interlace() && !ppufast.field() ? (256+2*ppufast.widescreen()) * scale * scale / 2 : (256+2*ppufast.widescreen()) * scale * scale;
   for(uint x = xa; x < xb; x++) {
     above[x] = {Source::COL, 0, aboveColor};
     below[x] = {Source::COL, 0, belowColor};
@@ -48,8 +48,8 @@ auto PPUfast::Line::render() -> void {
   renderWindow(io.col.window, io.col.window.belowMask, windowBelow);
 
   auto luma = io.displayBrightness << 15;
-  if(hd) for(uint x : range(256 * scale * scale)) {
-    *output++ = luma | pixel(x / scale & 255, above[x], below[x]);
+  if(hd) for(uint x : range((256+2*ppufast.widescreen()) * scale * scale)) {
+    *output++ = luma | pixel((x / scale % (256+2*ppufast.widescreen()) - ppufast.widescreen()), above[x], below[x]);
   } else if(width == 256) for(uint x : range(256)) {
     *output++ = luma | pixel(x, above[x], below[x]);
   } else if(!hires) for(uint x : range(256)) {
@@ -63,6 +63,8 @@ auto PPUfast::Line::render() -> void {
 }
 
 auto PPUfast::Line::pixel(uint x, Pixel above, Pixel below) const -> uint15 {
+  if (x <   0) x = 0;
+  if (x > 255) x = 255;
   if(!windowAbove[x]) above.color = 0x0000;
   if(!windowBelow[x]) return above.color;
   if(!io.col.enable[above.source]) return above.color;
@@ -112,6 +114,7 @@ auto PPUfast::Line::plotBelow(uint x, uint source, uint priority, uint color) ->
 //todo: name these variables more clearly ...
 auto PPUfast::Line::plotHD(Pixel* pixel, uint x, uint source, uint priority, uint color, bool hires, bool subpixel) -> void {
   auto scale = ppufast.hdScale();
+  pixel += ppufast.widescreen() * scale;
   int xss = hires && subpixel ? scale / 2 : 0;
   int ys = ppufast.interlace() && ppufast.field() ? scale / 2 : 0;
   if(priority > pixel[x * scale + xss + ys * 256 * scale].priority) {
@@ -124,7 +127,7 @@ auto PPUfast::Line::plotHD(Pixel* pixel, uint x, uint source, uint priority, uin
     int size = sizeof(Pixel) * (xsm - xss);
     Pixel* source = &pixel[x * scale + xss + ys * 256 * scale];
     for(int yst = ys + 1; yst < ysm; yst++) {
-      memcpy(&pixel[x * scale + xss + yst * 256 * scale], source, size);
+      memcpy(&pixel[x * scale + xss + yst * (256+2*ppufast.widescreen()) * scale], source, size);
     }
   }
 }

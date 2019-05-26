@@ -99,6 +99,7 @@ auto Settings::process(bool load) -> void {
   bind(boolean, "Emulator/Hack/PPU/NoSpriteLimit",        emulator.hack.ppu.noSpriteLimit);
   bind(natural, "Emulator/Hack/PPU/Mode7/Scale",          emulator.hack.ppu.mode7.scale);
   bind(boolean, "Emulator/Hack/PPU/Mode7/Perspective",    emulator.hack.ppu.mode7.perspective);
+  bind(boolean, "Emulator/Hack/PPU/Mode7/Widescreen",     emulator.hack.ppu.mode7.widescreen);
   bind(boolean, "Emulator/Hack/PPU/Mode7/Supersample",    emulator.hack.ppu.mode7.supersample);
   bind(boolean, "Emulator/Hack/PPU/Mode7/Mosaic",         emulator.hack.ppu.mode7.mosaic);
   bind(boolean, "Emulator/Hack/DSP/Fast",                 emulator.hack.dsp.fast);

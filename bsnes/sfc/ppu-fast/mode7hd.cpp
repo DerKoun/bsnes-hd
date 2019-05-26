@@ -9,29 +9,49 @@ auto PPUfast::Line::renderMode7HD(PPUfast::IO::Background& self, uint source) ->
   //find the first and last scanline for interpolation
   int y_a = y;
   int y_b = y;
-  #define isLineMode7(n) (ppufast.lines[n].io.bg1.tileMode == TileMode::Mode7 && ( \
+  #define isLineMode7(n) (ppufast.lines[n].io.bg1.tileMode == TileMode::Mode7 && !ppufast.lines[n].io.displayDisable && ( \
     (ppufast.lines[n].io.bg1.aboveEnable || ppufast.lines[n].io.bg1.belowEnable) \
   ))
   if(ppufast.hdPerspective()) {
-    while(y_a >   1 && isLineMode7(y_a)) y_a--; y_a += 1;
-    while(y_b < 239 && isLineMode7(y_b)) y_b++; y_b -= 8;
+    while(y_a >   1 && isLineMode7(y_a)) y_a--; y_a++;
+    while(y_b < 239 && isLineMode7(y_b)) y_b++; y_b--;
   } else {
     if(y_a >   1 && isLineMode7(y_a)) y_a--;
     if(y_b < 239 && isLineMode7(y_b)) y_b++;
   }
   #undef isLineMode7
 
-  Line line_a = ppufast.lines[y_a];
-  float a_a = (int16)line_a.io.mode7.a;
-  float b_a = (int16)line_a.io.mode7.b;
-  float c_a = (int16)line_a.io.mode7.c;
-  float d_a = (int16)line_a.io.mode7.d;
+  float a_a;
+  float b_a;
+  float c_a;
+  float d_a;
+  y_a--;
+  do {
+    y_a++;
+    Line line_a = ppufast.lines[y_a];
+    a_a = (int16)line_a.io.mode7.a;
+    b_a = (int16)line_a.io.mode7.b;
+    c_a = (int16)line_a.io.mode7.c;
+    d_a = (int16)line_a.io.mode7.d;
+  } while(ppufast.hdPerspective() && y_a < y 
+      && b_a == 0 && c_a == 0
+      && b_a != (int16)io.mode7.b && c_a != (int16)io.mode7.c);
 
-  Line line_b = ppufast.lines[y_b];
-  float a_b = (int16)line_b.io.mode7.a;
-  float b_b = (int16)line_b.io.mode7.b;
-  float c_b = (int16)line_b.io.mode7.c;
-  float d_b = (int16)line_b.io.mode7.d;
+  float a_b;
+  float b_b;
+  float c_b;
+  float d_b;
+  y_b++;
+  do {
+    y_b--;
+    Line line_b = ppufast.lines[y_b];
+    a_b = (int16)line_b.io.mode7.a;
+    b_b = (int16)line_b.io.mode7.b;
+    c_b = (int16)line_b.io.mode7.c;
+    d_b = (int16)line_b.io.mode7.d;
+  } while(ppufast.hdPerspective() && y_b > y 
+      && b_b == 0 && c_b == 0
+      && b_b != (int16)io.mode7.b && c_a != (int16)io.mode7.b);
 
   int hcenter = (int13)io.mode7.x;
   int vcenter = (int13)io.mode7.y;
@@ -64,9 +84,13 @@ auto PPUfast::Line::renderMode7HD(PPUfast::IO::Background& self, uint source) ->
     float originY = (c * ht) + (d * vty) + (vcenter << 8);
 
     int pixelXp = INT_MIN;
-    for(int x : range(256)) {
-      bool doAbove = self.aboveEnable && !windowAbove[x];
-      bool doBelow = self.belowEnable && !windowBelow[x];
+    for(int x : range(256+2*ppufast.widescreen())) {
+      x -= ppufast.widescreen();
+      int wx = x;
+      if (wx <   0) wx = 0;
+      if (wx > 255) wx = 255;
+      bool doAbove = self.aboveEnable && !windowAbove[wx];
+      bool doBelow = self.belowEnable && !windowBelow[wx];
 
       for(int xs : range(scale)) {
         float xf = x + xs * 1.0 / scale - 0.5;

@@ -81,6 +81,7 @@ struct Settings : Markup::Node {
         struct Mode7 {
           uint scale = 1;
           bool perspective = true;
+          bool widescreen = true;
           bool supersample = false;
           bool mosaic = true;
         } mode7;
@@ -271,6 +272,7 @@ public:
       Label mode7ScaleLabel{&mode7Layout, Size{0, 0}};
       ComboButton mode7Scale{&mode7Layout, Size{0, 0}};
       CheckLabel mode7Perspective{&mode7Layout, Size{0, 0}};
+      CheckLabel mode7Widescreen{&mode7Layout, Size{0, 0}};
       CheckLabel mode7Supersample{&mode7Layout, Size{0, 0}};
       CheckLabel mode7Mosaic{&mode7Layout, Size{0, 0}};
     Label dspLabel{&layout, Size{~0, 0}, 2};

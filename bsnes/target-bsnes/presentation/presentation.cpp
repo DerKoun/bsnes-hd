@@ -253,7 +253,8 @@ auto Presentation::resizeViewport() -> void {
   uint layoutWidth = viewportLayout.geometry().width();
   uint layoutHeight = viewportLayout.geometry().height();
 
-  uint width = 256 * (settings.video.aspectCorrection ? 8.0 / 7.0 : 1.0);
+  int widescreen = settings.emulator.hack.ppu.mode7.widescreen && settings.emulator.hack.ppu.mode7.scale > 1 ? 64 : 0; // 64 / 0 #widescreenextension
+  uint width = (256+2*widescreen) * (settings.video.aspectCorrection && !widescreen ? 8.0 / 7.0 : 1.0);
   uint height = (settings.video.overscan ? 240.0 : 224.0);
   uint viewportWidth, viewportHeight;
 
@@ -274,7 +275,7 @@ auto Presentation::resizeViewport() -> void {
 
   if(settings.video.output == "Center") {
     uint widthMultiplier = layoutWidth / width;
-    uint heightMultiplier = layoutHeight / height;
+    uint heightMultiplier = layoutHeight / (height - 8); // allow the loss of 8 lines so 1080p can be 5x scale
     uint multiplier = min(widthMultiplier, heightMultiplier);
     viewportWidth = width * multiplier;
     viewportHeight = height * multiplier;
@@ -290,8 +291,8 @@ auto Presentation::resizeViewport() -> void {
   }
 
   //center viewport within viewportLayout by use of viewportLayout padding
-  uint paddingWidth = layoutWidth - viewportWidth;
-  uint paddingHeight = layoutHeight - viewportHeight;
+  int paddingWidth = layoutWidth - viewportWidth;
+  int paddingHeight = layoutHeight - viewportHeight;
   viewportLayout.setPadding({
     paddingWidth / 2, paddingHeight / 2,
     paddingWidth - paddingWidth / 2, paddingHeight - paddingHeight / 2
@@ -302,7 +303,8 @@ auto Presentation::resizeWindow() -> void {
   if(fullScreen()) return;
   if(maximized()) setMaximized(false);
 
-  uint width = 256 * (settings.video.aspectCorrection ? 8.0 / 7.0 : 1.0);
+  int widescreen = settings.emulator.hack.ppu.mode7.widescreen && settings.emulator.hack.ppu.mode7.scale > 1 ? 64 : 0; // 64 / 0 #widescreenextension
+  uint width = (256+2*widescreen) * (settings.video.aspectCorrection && !widescreen ? 8.0 / 7.0 : 1.0);
   uint height = (settings.video.overscan ? 240.0 : 224.0);
   uint multiplier = max(1, settings.video.multiplier);
   uint statusHeight = settings.general.statusBar ? StatusHeight : 0;

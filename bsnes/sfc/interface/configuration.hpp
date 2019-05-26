@@ -31,6 +31,7 @@ struct Configuration {
       struct Mode7 {
         uint scale = 1;
         bool perspective = true;
+        bool widescreen = true;
         bool supersample = false;
         bool mosaic = true;
       } mode7;
