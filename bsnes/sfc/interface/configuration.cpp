@@ -21,6 +21,7 @@ auto Configuration::process(Markup::Node document, bool load) -> void {
   bind(boolean, "Hacks/PPU/Mode7/Hires", hacks.ppu.mode7.hires);
   bind(natural, "Hacks/PPU/Mode7/Scale", hacks.ppu.mode7.scale);
   bind(boolean, "Hacks/PPU/Mode7/Perspective", hacks.ppu.mode7.perspective);
+  bind(boolean, "Hacks/PPU/Mode7/DisMos", hacks.ppu.mode7.disMos);
   bind(boolean, "Hacks/DSP/Fast", hacks.dsp.fast);
   bind(boolean, "Hacks/DSP/Cubic", hacks.dsp.cubic);
   bind(boolean, "Hacks/Coprocessors/HLE", hacks.coprocessors.hle);

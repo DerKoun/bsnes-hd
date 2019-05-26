@@ -22,6 +22,7 @@ auto PPUfast::hires() const -> bool { return latch.hires; }
 auto PPUfast::hd() const -> bool { return latch.hd; }
 auto PPUfast::hdScale() const -> uint { return configuration.hacks.ppu.mode7.scale; }
 auto PPUfast::hdPerspective() const -> bool { return configuration.hacks.ppu.mode7.perspective; }
+auto PPUfast::hdDisMos() const -> bool { return configuration.hacks.ppu.mode7.disMos; }
 
 PPUfast::PPUfast() {
   output = new uint32[2304 * 2304] + 72 * 2304;  //overscan offset

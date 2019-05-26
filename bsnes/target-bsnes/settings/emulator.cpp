@@ -77,6 +77,10 @@ auto EmulatorSettings::create() -> void {
     settings.emulator.hack.ppu.mode7.perspective = mode7Perspective.checked();
     emulator->configure("Hacks/PPU/Mode7/Perspective", settings.emulator.hack.ppu.mode7.perspective);
   });
+  mode7DisMos.setText("Disable mosaic effects").setChecked(settings.emulator.hack.ppu.mode7.disMos).onToggle([&] {
+    settings.emulator.hack.ppu.mode7.disMos = mode7DisMos.checked();
+    emulator->configure("Hacks/PPU/Mode7/DisMos", settings.emulator.hack.ppu.mode7.disMos);
+  });
   dspLabel.setText("DSP (audio)").setFont(Font().setBold());
   fastDSP.setText("Fast mode").setChecked(settings.emulator.hack.dsp.fast).onToggle([&] {
     settings.emulator.hack.dsp.fast = fastDSP.checked();

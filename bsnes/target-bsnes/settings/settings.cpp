@@ -100,6 +100,7 @@ auto Settings::process(bool load) -> void {
   bind(boolean, "Emulator/Hack/PPU/Mode7/Hires",          emulator.hack.ppu.mode7.hires);
   bind(natural, "Emulator/Hack/PPU/Mode7/Scale",          emulator.hack.ppu.mode7.scale);
   bind(boolean, "Emulator/Hack/PPU/Mode7/Perspective",    emulator.hack.ppu.mode7.perspective);
+  bind(boolean, "Emulator/Hack/PPU/Mode7/DisMos",         emulator.hack.ppu.mode7.disMos);
   bind(boolean, "Emulator/Hack/DSP/Fast",                 emulator.hack.dsp.fast);
   bind(boolean, "Emulator/Hack/DSP/Cubic",                emulator.hack.dsp.cubic);
   bind(boolean, "Emulator/Hack/Coprocessors/DelayedSync", emulator.hack.coprocessors.delayedSync);

@@ -82,6 +82,7 @@ struct Settings : Markup::Node {
           bool hires = false;
           uint scale = 1;
           bool perspective = true;
+          bool disMos = false;
         } mode7;
       } ppu;
       struct DSP {
@@ -271,6 +272,7 @@ public:
       Label mode7ScaleLabel{&mode7Layout, Size{0, 0}};
       ComboButton mode7Scale{&mode7Layout, Size{0, 0}};
       CheckLabel mode7Perspective{&mode7Layout, Size{0, 0}};
+      CheckLabel mode7DisMos{&mode7Layout, Size{0, 0}};
     Label dspLabel{&layout, Size{~0, 0}, 2};
     HorizontalLayout dspLayout{&layout, Size{~0, 0}};
       CheckLabel fastDSP{&dspLayout, Size{0, 0}};

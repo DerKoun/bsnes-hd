@@ -13,6 +13,7 @@ struct PPUfast : Thread, PPUcounter {
   alwaysinline auto hd() const -> bool;
   alwaysinline auto hdScale() const -> uint;
   alwaysinline auto hdPerspective() const -> bool;
+  alwaysinline auto hdDisMos() const -> bool;
 
   //ppu.cpp
   PPUfast();

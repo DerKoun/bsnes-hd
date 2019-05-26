@@ -1,5 +1,8 @@
 auto PPUfast::Line::renderMode7(PPUfast::IO::Background& self, uint source) -> void {
-  if(ppufast.hdScale() > 1) return renderMode7HD(self, source);
+  if(ppufast.hdScale() > 1
+      && (ppufast.hdDisMos() || !self.mosaicEnable //mosaic intentionally pixelates, so no need for HD
+          || !io.mosaicSize)) //some games enable mosaic with a mosaic size of 0 (1x1)
+    return renderMode7HD(self, source);
   if(configuration.hacks.ppu.mode7.hires) return renderMode7Hires(self, source);
 
   int Y = this->y - (self.mosaicEnable ? this->y % (1 + io.mosaicSize) : 0);

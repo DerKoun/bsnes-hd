@@ -15,6 +15,7 @@ auto Program::hackCompatibility() -> void {
   emulator->configure("Hacks/PPU/Mode7/Hires", fastPPUHiresMode7);
   emulator->configure("Hacks/PPU/Mode7/Scale", settings.emulator.hack.ppu.mode7.scale);
   emulator->configure("Hacks/PPU/Mode7/Perspective", settings.emulator.hack.ppu.mode7.perspective);
+  emulator->configure("Hacks/PPU/Mode7/DisMos", settings.emulator.hack.ppu.mode7.disMos);
   emulator->configure("Hacks/DSP/Fast", fastDSP);
   emulator->configure("Hacks/DSP/Cubic", settings.emulator.hack.dsp.cubic);
   emulator->configure("Hacks/Coprocessors/DelayedSync", coprocessorsDelayedSync);

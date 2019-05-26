@@ -21,9 +21,6 @@ auto PPUfast::Line::renderMode7HD(PPUfast::IO::Background& self, uint source) ->
   }
   #undef isLineMode7
 
-  int Y = y - (self.mosaicEnable ? y % (1 + io.mosaicSize) : 0);
-  float yt = !io.mode7.vflip ? Y : 255 - Y;
-
   Line line_a = ppufast.lines[y_a];
   float a_a = (int16)line_a.io.mode7.a;
   float b_a = (int16)line_a.io.mode7.b;
@@ -41,6 +38,11 @@ auto PPUfast::Line::renderMode7HD(PPUfast::IO::Background& self, uint source) ->
   int hoffset = (int13)io.mode7.hoffset;
   int voffset = (int13)io.mode7.voffset;
 
+  if (io.mode7.vflip) {
+      y_a = 255 - y_a;
+      y_b = 255 - y_b;
+  }
+
   array<bool[256]> windowAbove;
   array<bool[256]> windowBelow;
   renderWindow(self.window, self.window.aboveEnable, windowAbove);
@@ -48,45 +50,38 @@ auto PPUfast::Line::renderMode7HD(PPUfast::IO::Background& self, uint source) ->
 
   int pixelYp = INT_MIN;
   for(int ys : range(scale)) {
-    float y = yt + ys * 1.0 / scale - 0.5;
-    float a = 1.0 / lerp(y_a, 1.0 / a_a, y_b, 1.0 / a_b, y);
-    float b = 1.0 / lerp(y_a, 1.0 / b_a, y_b, 1.0 / b_b, y);
-    float c = 1.0 / lerp(y_a, 1.0 / c_a, y_b, 1.0 / c_b, y);
-    float d = 1.0 / lerp(y_a, 1.0 / d_a, y_b, 1.0 / d_b, y);
+    float yf = y + ys * 1.0 / scale - 0.5;
+    if (io.mode7.vflip) yf = 255 - yf;
+
+    float a = 1.0 / lerp(y_a, 1.0 / a_a, y_b, 1.0 / a_b, yf);
+    float b = 1.0 / lerp(y_a, 1.0 / b_a, y_b, 1.0 / b_b, yf);
+    float c = 1.0 / lerp(y_a, 1.0 / c_a, y_b, 1.0 / c_b, yf);
+    float d = 1.0 / lerp(y_a, 1.0 / d_a, y_b, 1.0 / d_b, yf);
 
     int ht = (hoffset - hcenter) % 1024;
-    float vty = ((voffset - vcenter) % 1024) + y;
+    float vty = ((voffset - vcenter) % 1024) + yf;
     float originX = (a * ht) + (b * vty) + (hcenter << 8);
     float originY = (c * ht) + (d * vty) + (vcenter << 8);
 
-    uint tile, palette, priority;
-    //some games enable mosaic with a mosaic size of 0 (1x1)
-    bool mosaicEnable = self.mosaicEnable && io.mosaicSize;
-    uint mosaicCounter = 1;
-    uint mosaicPalette = 0;
-    uint mosaicPriority = 0;
-    uint mosaicColor = 0;
-    Pixel mosaicPixel;
+    uint tile, palette, priority, color;
 
     int pixelXp = INT_MIN;
-    for(int X : range(256)) {
-      float xt = !io.mode7.hflip ? X : 255 - X;
-      bool doAbove = self.aboveEnable && !windowAbove[X];
-      bool doBelow = self.belowEnable && !windowBelow[X];
+    for(int x : range(256)) {
+      bool doAbove = self.aboveEnable && !windowAbove[x];
+      bool doBelow = self.belowEnable && !windowBelow[x];
 
       for(int xs : range(scale)) {
-        float x = xt + xs * 1.0 / scale - 0.5;
-        int pixelX = (originX + a * x) / 256;
-        int pixelY = (originY + c * x) / 256;
+        float xf = x + xs * 1.0 / scale - 0.5;
+        if (io.mode7.hflip) xf = 255 - xf;
+        
+        int pixelX = (originX + a * xf) / 256;
+        int pixelY = (originY + c * xf) / 256;
 
         above++;
         below++;
 
         //only compute color again when coordinates have changed
         if(pixelX != pixelXp || pixelY != pixelYp) {
-          pixelXp = pixelX;
-          pixelYp = pixelY;
-
           tile    = io.mode7.repeat == 3 && ((pixelX | pixelY) & ~1023) ? 0 : ppufast.vram[(pixelY >> 3 & 127) * 128 + (pixelX >> 3 & 127)].byte(0);
           palette = io.mode7.repeat == 2 && ((pixelX | pixelY) & ~1023) ? 0 : ppufast.vram[(((pixelY & 7) << 3) + (pixelX & 7)) + (tile << 6)].byte(1);
 
@@ -96,23 +91,22 @@ auto PPUfast::Line::renderMode7HD(PPUfast::IO::Background& self, uint source) ->
             priority = self.priority[palette >> 7];
             palette &= 0x7f;
           }
-        }
 
-        if(!mosaicEnable || --mosaicCounter == 0) {
-          mosaicCounter = (1 + io.mosaicSize) * scale;
-          mosaicPalette = palette;
-          mosaicPriority = priority;
+          if(!palette) continue;
+
           if(io.col.directColor && !extbg) {
-            mosaicColor = directColor(0, palette);
+            color = directColor(0, palette);
           } else {
-            mosaicColor = cgram[palette];
+            color = cgram[palette];
           }
-          pixel = {source, mosaicPriority, mosaicColor};
+          
+          pixel = {source, priority, color};
+          pixelXp = pixelX;
+          pixelYp = pixelY;
         }
-        if(!mosaicPalette) continue;
 
-        if(doAbove && (!extbg || mosaicPriority > above->priority)) *above = pixel;
-        if(doBelow && (!extbg || mosaicPriority > below->priority)) *below = pixel;
+        if(doAbove && (!extbg || priority > above->priority)) *above = pixel;
+        if(doBelow && (!extbg || priority > below->priority)) *below = pixel;
       }
     }
   }

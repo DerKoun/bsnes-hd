@@ -32,6 +32,7 @@ struct Configuration {
         bool hires = false;
         uint scale = 1;
         bool perspective = true;
+        bool disMos = false;
       } mode7;
     } ppu;
     struct DSP {
