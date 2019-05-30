@@ -1,0 +1,3 @@
+/bsnes/obj/*.o
+/bsnes/obj/*.d
+/bsnes/bsnes*
