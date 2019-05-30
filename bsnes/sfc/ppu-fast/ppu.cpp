@@ -38,6 +38,17 @@ auto PPUfast::winXad(uint x, bool bel) const -> uint {
       && ((bel ? io.col.window.belowMask : io.col.window.aboveMask) == 2)) 
       ? 127 : (x < 0 ? 0 : (x > 255 ? 255 : x));
 }
+auto PPUfast::renderbg(uint bg) const -> bool {
+  if (bg == Source::BG1) return configuration.hacks.ppu.renderBg1;
+  if (bg == Source::BG2) return configuration.hacks.ppu.renderBg2;
+  if (bg == Source::BG3) return configuration.hacks.ppu.renderBg3;
+  if (bg == Source::BG4) return configuration.hacks.ppu.renderBg4;
+  return 0;
+}
+auto PPUfast::renderobj() const -> bool {
+    // printf("renderobj: %d\n",configuration.video.renderObj);
+    return configuration.hacks.ppu.renderObj;
+}
 
 PPUfast::PPUfast() {
   output = new uint32[2304 * 2304] + 72 * 2304;  //overscan offset

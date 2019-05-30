@@ -16,8 +16,14 @@ auto Configuration::process(Markup::Node document, bool load) -> void {
   bind(boolean, "Video/BlurEmulation", video.blurEmulation);
   bind(boolean, "Video/ColorEmulation", video.colorEmulation);
 
+
   bind(boolean, "Hacks/PPU/Fast", hacks.ppu.fast);
   bind(boolean, "Hacks/PPU/NoSpriteLimit", hacks.ppu.noSpriteLimit);
+  bind(boolean, "Hacks/PPU/RenderBG1", hacks.ppu.renderBg1);
+  bind(boolean, "Hacks/PPU/RenderBG2", hacks.ppu.renderBg2);
+  bind(boolean, "Hacks/PPU/RenderBG3", hacks.ppu.renderBg3);
+  bind(boolean, "Hacks/PPU/RenderBG4", hacks.ppu.renderBg4);
+  bind(boolean, "Hacks/PPU/RenderObj", hacks.ppu.renderObj);
   bind(natural, "Hacks/PPU/Mode7/Scale", hacks.ppu.mode7.scale);
   bind(boolean, "Hacks/PPU/Mode7/Perspective", hacks.ppu.mode7.perspective);
   bind(natural, "Hacks/PPU/Mode7/Widescreen", hacks.ppu.mode7.widescreen);

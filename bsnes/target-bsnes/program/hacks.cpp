@@ -11,6 +11,10 @@ auto Program::hackCompatibility() -> void {
 
   emulator->configure("Hacks/PPU/Fast", fastPPU);
   emulator->configure("Hacks/PPU/NoSpriteLimit", fastPPUNoSpriteLimit);
+  emulator->configure("Hacks/PPU/RenderBG1", settings.emulator.hack.ppu.renderBg1);
+  emulator->configure("Hacks/PPU/RenderBG2", settings.emulator.hack.ppu.renderBg2);
+  emulator->configure("Hacks/PPU/RenderBG3", settings.emulator.hack.ppu.renderBg3);
+  emulator->configure("Hacks/PPU/RenderObj", settings.emulator.hack.ppu.renderObj);
   emulator->configure("Hacks/PPU/Mode7/Scale", settings.emulator.hack.ppu.mode7.scale);
   emulator->configure("Hacks/PPU/Mode7/Perspective", settings.emulator.hack.ppu.mode7.perspective);
   emulator->configure("Hacks/PPU/Mode7/Widescreen", settings.emulator.hack.ppu.mode7.widescreen);

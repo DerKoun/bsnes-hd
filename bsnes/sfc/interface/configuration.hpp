@@ -28,6 +28,11 @@ struct Configuration {
     struct PPU {
       bool fast = true;
       bool noSpriteLimit = true;
+      bool renderBg1 = true;
+      bool renderBg2 = true;
+      bool renderBg3 = true;
+      bool renderBg4 = true;
+      bool renderObj = true;
       struct Mode7 {
         uint scale = 2;
         bool perspective = true;

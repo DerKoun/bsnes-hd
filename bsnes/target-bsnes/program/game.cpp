@@ -42,6 +42,11 @@ auto Program::load() -> void {
   presentation.toolsMenu.setVisible(true);
   presentation.updateStateMenus();
   presentation.speedNormal.setChecked();
+  presentation.renderBg1.setChecked();
+  presentation.renderBg2.setChecked();
+  presentation.renderBg3.setChecked();
+  presentation.renderBg4.setChecked();
+  presentation.renderObj.setChecked();
   presentation.pauseEmulation.setChecked(false);
   presentation.updateStatusIcon();
   presentation.viewportLayout.remove(presentation.iconLayout);

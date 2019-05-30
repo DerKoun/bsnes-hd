@@ -129,6 +129,32 @@ auto Presentation::create() -> void {
   cheatEditor.setIcon(Icon::Edit::Replace).setText("Cheat Editor ...").onActivate([&] { toolsWindow.show(0); });
   stateManager.setIcon(Icon::Application::FileManager).setText("State Manager ...").onActivate([&] { toolsWindow.show(1); });
   manifestViewer.setIcon(Icon::Emblem::Text).setText("Manifest Viewer ...").onActivate([&] { toolsWindow.show(2); });
+  renderMenu.setText("Render");
+
+  renderBg1.setText("Background 1").setChecked(settings.emulator.hack.ppu.renderBg1).onToggle([&] {
+    settings.emulator.hack.ppu.renderBg1 = renderBg1.checked();
+    emulator->configure("Hacks/PPU/RenderBG1", settings.emulator.hack.ppu.renderBg1);
+  });
+
+  renderBg2.setText("Background 2").setChecked(settings.emulator.hack.ppu.renderBg2).onToggle([&] {
+    settings.emulator.hack.ppu.renderBg2 = renderBg2.checked();
+    emulator->configure("Hacks/PPU/RenderBG2", settings.emulator.hack.ppu.renderBg2);
+  });
+
+  renderBg3.setText("Background 3").setChecked(settings.emulator.hack.ppu.renderBg3).onToggle([&] {
+    settings.emulator.hack.ppu.renderBg3 = renderBg3.checked();
+    emulator->configure("Hacks/PPU/RenderBG3", settings.emulator.hack.ppu.renderBg3);
+  });
+
+  renderBg4.setText("Background 4").setChecked(settings.emulator.hack.ppu.renderBg4).onToggle([&] {
+    settings.emulator.hack.ppu.renderBg4 = renderBg4.checked();
+    emulator->configure("Hacks/PPU/RenderBG4", settings.emulator.hack.ppu.renderBg4);
+  });
+
+  renderObj.setText("Sprites").setChecked(settings.emulator.hack.ppu.renderObj).onToggle([&] {
+    settings.emulator.hack.ppu.renderObj = renderObj.checked();
+    emulator->configure("Hacks/PPU/RenderObj", settings.emulator.hack.ppu.renderObj);
+  });
 
   helpMenu.setText(tr("Help"));
   documentation.setIcon(Icon::Application::Browser).setText({tr("Documentation"), " ..."}).onActivate([&] {

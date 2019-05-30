@@ -20,6 +20,8 @@ struct PPUfast : Thread, PPUcounter {
   alwaysinline auto wsbg(uint bg) const -> uint;
   alwaysinline auto wsobj() const -> bool;
   alwaysinline auto winXad(uint x, bool bel) const -> uint;
+  alwaysinline auto renderbg(uint bg) const -> bool;
+  alwaysinline auto renderobj() const -> bool;
 
   //ppu.cpp
   PPUfast();

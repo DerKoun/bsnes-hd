@@ -69,11 +69,11 @@ auto PPUfast::Line::render() -> void {
     below[x] = {Source::COL, 0, belowColor};
   }
 
-  renderBackground(io.bg1, Source::BG1);
-  renderBackground(io.bg2, Source::BG2);
-  renderBackground(io.bg3, Source::BG3);
-  renderBackground(io.bg4, Source::BG4);
-  renderObject(io.obj);
+  if(ppufast.renderbg(Source::BG1)) renderBackground(io.bg1, Source::BG1);
+  if(ppufast.renderbg(Source::BG2)) renderBackground(io.bg2, Source::BG2);
+  if(ppufast.renderbg(Source::BG3)) renderBackground(io.bg3, Source::BG3);
+  if(ppufast.renderbg(Source::BG4)) renderBackground(io.bg4, Source::BG4);
+  if(ppufast.renderobj()) renderObject(io.obj);
   renderWindow(io.col.window, io.col.window.aboveMask, windowAbove);
   renderWindow(io.col.window, io.col.window.belowMask, windowBelow);
 

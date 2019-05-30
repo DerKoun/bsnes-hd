@@ -97,6 +97,11 @@ auto Settings::process(bool load) -> void {
   bind(boolean, "Emulator/AutoLoadStateOnLoad",           emulator.autoLoadStateOnLoad);
   bind(boolean, "Emulator/Hack/PPU/Fast",                 emulator.hack.ppu.fast);
   bind(boolean, "Emulator/Hack/PPU/NoSpriteLimit",        emulator.hack.ppu.noSpriteLimit);
+  bind(boolean, "Emulator/Hack/PPU/RenderBG1",            emulator.hack.ppu.renderBg1);
+  bind(boolean, "Emulator/Hack/PPU/RenderBG2",            emulator.hack.ppu.renderBg2);
+  bind(boolean, "Emulator/Hack/PPU/RenderBG3",            emulator.hack.ppu.renderBg3);
+  bind(boolean, "Emulator/Hack/PPU/RenderBG4",            emulator.hack.ppu.renderBg4);
+  bind(boolean, "Emulator/Hack/PPU/RenderObj",            emulator.hack.ppu.renderObj);
   bind(natural, "Emulator/Hack/PPU/Mode7/Scale",          emulator.hack.ppu.mode7.scale);
   bind(boolean, "Emulator/Hack/PPU/Mode7/Perspective",    emulator.hack.ppu.mode7.perspective);
   bind(natural, "Emulator/Hack/PPU/Mode7/Widescreen",     emulator.hack.ppu.mode7.widescreen);

@@ -59,6 +59,13 @@ struct Presentation : Window {
       MenuItem pathSettings{&settingsMenu};
       MenuItem emulatorSettings{&settingsMenu};
       MenuItem driverSettings{&settingsMenu};
+      MenuSeparator settingsSeparatorC{&settingsMenu};
+      Menu renderMenu{&settingsMenu};
+        MenuCheckItem renderBg1{&renderMenu};
+        MenuCheckItem renderBg2{&renderMenu};
+        MenuCheckItem renderBg3{&renderMenu};
+        MenuCheckItem renderBg4{&renderMenu};
+        MenuCheckItem renderObj{&renderMenu};
     Menu toolsMenu{&menuBar};
       Menu saveState{&toolsMenu};
       Menu loadState{&toolsMenu};
