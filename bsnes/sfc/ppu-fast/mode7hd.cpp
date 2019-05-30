@@ -3,7 +3,7 @@ auto PPUfast::Line::renderMode7HD(PPUfast::IO::Background& self, uint source) ->
   const uint sampScale = ppufast.hdSupersample();
   const uint scale = ppufast.hdScale() * sampScale;
 
-  uint sampTmp[(256+2*ppufast.widescreen()) * 4 * scale/sampScale] = {};
+  uint *sampTmp = new uint[(256+2*ppufast.widescreen()) * 4 * scale/sampScale];
 
   Pixel  pixel;
   Pixel* above = &this->above[0];
@@ -145,6 +145,7 @@ auto PPUfast::Line::renderMode7HD(PPUfast::IO::Background& self, uint source) ->
       }
     }
   }
+  delete[] sampTmp;
 }
 
 //interpolation and extrapolation
