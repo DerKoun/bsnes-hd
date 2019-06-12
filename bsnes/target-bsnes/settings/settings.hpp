@@ -80,7 +80,7 @@ struct Settings : Markup::Node {
         bool noSpriteLimit = true;
         struct Mode7 {
           uint scale = 2;
-          bool perspective = true;
+          uint perspective = 1;
           uint supersample = 1;
           bool mosaic = false;
           uint widescreen = 72;
@@ -88,8 +88,14 @@ struct Settings : Markup::Node {
           uint wsbg2 = 1;
           uint wsbg3 = 1;
           uint wsbg4 = 1;
-          bool wsobj = false;
-          bool igwin = false;
+          uint wsobj = 0;
+          uint igwin = 0;
+          uint igwinx = 128;
+          uint unintrMode = 1;
+          uint unintrTop = 10;
+          uint unintrBottom = 10;
+          uint unintrLeft = 20;
+          uint unintrRight = 20;
         } mode7;
       } ppu;
       struct DSP {
@@ -256,6 +262,7 @@ struct EmulatorSettings : TabFrameItem {
 
 public:
   VerticalLayout layout{this};
+    Label hacksNote{&layout, Size{~0, 0}};
     Label optionsLabel{&layout, Size{~0, 0}, 2};
     HorizontalLayout inputFocusLayout{&layout, Size{~0, 0}};
       Label inputFocusLabel{&inputFocusLayout, Size{0, 0}};
@@ -264,11 +271,21 @@ public:
       RadioLabel allowInput{&inputFocusLayout, Size{0, 0}};
       Group inputFocusGroup{&pauseEmulation, &blockInput, &allowInput};
     CheckLabel warnOnUnverifiedGames{&layout, Size{~0, 0}};
-    CheckLabel autoSaveMemory{&layout, Size{~0, 0}};
     HorizontalLayout autoStateLayout{&layout, Size{~0, 0}};
+      CheckLabel autoSaveMemory{&autoStateLayout, Size{~0, 0}};
       CheckLabel autoSaveStateOnUnload{&autoStateLayout, Size{0, 0}};
       CheckLabel autoLoadStateOnLoad{&autoStateLayout, Size{0, 0}};
-    Canvas optionsSpacer{&layout, Size{~0, 1}};
+    Label dspLabel{&layout, Size{~0, 0}, 2};
+    HorizontalLayout dspLayout{&layout, Size{~0, 0}};
+      CheckLabel fastDSP{&dspLayout, Size{0, 0}};
+      CheckLabel cubicInterpolation{&dspLayout, Size{0, 0}};
+    Label coprocessorLabel{&layout, Size{~0, 0}, 2};
+    HorizontalLayout coprocessorsLayout{&layout, Size{~0, 0}};
+      Label superFXLabel{&coprocessorsLayout, Size{0, 0}};
+      Label superFXValue{&coprocessorsLayout, Size{50_sx, 0}};
+      HorizontalSlider superFXClock{&coprocessorsLayout, Size{~0, 0}};
+      CheckLabel coprocessorsDelayedSyncOption{&coprocessorsLayout, Size{0, 0}};
+      CheckLabel coprocessorsHLEOption{&coprocessorsLayout, Size{0, 0}};
     Label ppuLabel{&layout, Size{~0, 0}, 2};
     HorizontalLayout ppuLayout{&layout, Size{~0, 0}};
       CheckLabel fastPPU{&ppuLayout, Size{0, 0}};
@@ -277,11 +294,11 @@ public:
     HorizontalLayout mode7Layout{&layout, Size{~0, 0}};
       Label mode7ScaleLabel{&mode7Layout, Size{0, 0}};
       ComboButton mode7Scale{&mode7Layout, Size{0, 0}};
-      CheckLabel mode7Perspective{&mode7Layout, Size{0, 0}};
-      CheckLabel mode7Mosaic{&mode7Layout, Size{0, 0}};      
+      Label mode7PerspectiveLabel{&mode7Layout, Size{0, 0}};
+      ComboButton mode7Perspective{&mode7Layout, Size{0, 0}};
       Label mode7SupersampleLabel{&mode7Layout, Size{0, 0}};
       ComboButton mode7Supersample{&mode7Layout, Size{0, 0}};
-      CheckLabel igwin{&mode7Layout, Size{0, 0}};
+      CheckLabel mode7Mosaic{&mode7Layout, Size{0, 0}};      
     HorizontalLayout widescreenLayout{&layout, Size{~0, 0}};
       Label mode7WidescreenLabel{&widescreenLayout, Size{0, 0}};
       ComboButton mode7Widescreen{&widescreenLayout, Size{0, 0}};
@@ -293,20 +310,24 @@ public:
       ComboButton wsBG3{&widescreenLayout, Size{0, 0}};
       Label wsBG4Label{&widescreenLayout, Size{0, 0}};
       ComboButton wsBG4{&widescreenLayout, Size{0, 0}};
-      CheckLabel wsObj{&widescreenLayout, Size{0, 0}};
-    Label dspLabel{&layout, Size{~0, 0}, 2};
-    HorizontalLayout dspLayout{&layout, Size{~0, 0}};
-      CheckLabel fastDSP{&dspLayout, Size{0, 0}};
-      CheckLabel cubicInterpolation{&dspLayout, Size{0, 0}};
-    Label coprocessorLabel{&layout, Size{~0, 0}, 2};
-    HorizontalLayout coprocessorsLayout{&layout, Size{~0, 0}};
-      CheckLabel coprocessorsDelayedSyncOption{&coprocessorsLayout, Size{0, 0}};
-      CheckLabel coprocessorsHLEOption{&coprocessorsLayout, Size{0, 0}};
-    HorizontalLayout superFXLayout{&layout, Size{~0, 0}};
-      Label superFXLabel{&superFXLayout, Size{0, 0}};
-      Label superFXValue{&superFXLayout, Size{50_sx, 0}};
-      HorizontalSlider superFXClock{&superFXLayout, Size{~0, 0}};
-    Label hacksNote{&layout, Size{~0, 0}};
+      Label wsObjLabel{&widescreenLayout, Size{0, 0}};
+      ComboButton wsObj{&widescreenLayout, Size{0, 0}};
+    HorizontalLayout viewModLayout{&layout, Size{~0, 0}};
+      Label igwinLabel{&viewModLayout, Size{0, 0}};
+      ComboButton igwin{&viewModLayout, Size{0, 0}};
+      Label igwinxLabel{&viewModLayout, Size{0, 0}};
+      ComboButton igwinx{&viewModLayout, Size{0, 0}};
+	  HorizontalLayout unintrLayout{&layout, Size{~0, 0}};
+      Label unintrModeLabel{&unintrLayout, Size{0, 0}};
+      ComboButton unintrMode{&unintrLayout, Size{0, 0}};
+      Label unintrTopLabel{&unintrLayout, Size{0, 0}};
+      ComboButton unintrTop{&unintrLayout, Size{0, 0}};
+      Label unintrBottomLabel{&unintrLayout, Size{0, 0}};
+      ComboButton unintrBottom{&unintrLayout, Size{0, 0}};
+      Label unintrLeftLabel{&unintrLayout, Size{0, 0}};
+      ComboButton unintrLeft{&unintrLayout, Size{0, 0}};
+      Label unintrRightLabel{&unintrLayout, Size{0, 0}};
+      ComboButton unintrRight{&unintrLayout, Size{0, 0}};
 };
 
 struct DriverSettings : TabFrameItem {

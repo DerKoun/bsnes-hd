@@ -3,6 +3,23 @@ auto PPUfast::Line::renderBackground(PPUfast::IO::Background& self, uint source)
   if(self.tileMode == TileMode::Mode7) return renderMode7(self, source);
   if(self.tileMode == TileMode::Inactive) return;
 
+  uint wsConf = ppufast.wsbg(source);
+  if(wsConf == 14) {
+    return;
+  }
+  bool autoCrop = false;
+  int ws = (int)ppufast.widescreen();
+  if(ws > 0) {
+    if(wsConf == 12) {
+      ws = -8;
+    } else if(wsConf == 13) {
+      ws = 0;
+      autoCrop = true;
+    } else if(wsConf == 0 || (wsConf != 1 && (((wsConf % 2) != 0) == (y < (((int)(wsConf / 2)) * 40))))) {
+      ws = 0;
+    }
+  }
+
   array<bool[256]> windowAbove;
   array<bool[256]> windowBelow;
   renderWindow(self.window, self.window.aboveEnable, windowAbove);
@@ -37,14 +54,7 @@ auto PPUfast::Line::renderBackground(PPUfast::IO::Background& self, uint source)
   uint mosaicPriority = 0;
   uint mosaicColor = 0;
 
-  int ws = (int)ppufast.widescreen();
-  if(ws > 0) {
-    uint wsConf = ppufast.wsbg(source);
-    if(wsConf == 0 || (wsConf != 1 && (((wsConf % 2) != 0) == (y < (((int)(wsConf / 2)) * 40))))) {
-      ws = 0;
-    }
-  }
-
+  bool lastCropped = false;
   int x = 0 - (hscroll & 7) - ws;
   while(x < (width + ws)) {
     uint hoffset = x + hscroll;
@@ -102,7 +112,8 @@ auto PPUfast::Line::renderBackground(PPUfast::IO::Background& self, uint source)
           mosaicColor = cgram[paletteIndex + mosaicPalette];
         }
       }
-      if(!mosaicPalette) continue;
+      if(!mosaicPalette) { lastCropped = false; continue; };
+      if(autoCrop && (lastCropped || x < 8 || x > 255-8) && mosaicColor == 0) { lastCropped = true; continue; } else { lastCropped = false; }
 
       if(!hires) {
         if(self.aboveEnable && !windowAbove[ppufast.winXad(x, false)]) plotAbove(x, source, mosaicPriority, mosaicColor);

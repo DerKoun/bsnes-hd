@@ -4,6 +4,7 @@ auto EmulatorSettings::create() -> void {
 
   layout.setPadding(5_sx);
 
+  hacksNote.setForegroundColor({224, 0, 0}).setText("Note: some hack setting changes do not take effect until after reloading games or restarting the emulator.");
   optionsLabel.setText("Options").setFont(Font().setBold());
   inputFocusLabel.setText("When focus is lost:");
   pauseEmulation.setText("Pause emulation").onActivate([&] {
@@ -35,10 +36,30 @@ auto EmulatorSettings::create() -> void {
   autoLoadStateOnLoad.setText("Auto-resume on load").setChecked(settings.emulator.autoLoadStateOnLoad).onToggle([&] {
     settings.emulator.autoLoadStateOnLoad = autoLoadStateOnLoad.checked();
   });
-  optionsSpacer.setColor({192, 192, 192});
-
+  dspLabel.setText("DSP (audio)").setFont(Font().setBold());
+  fastDSP.setText("Fast mode").setChecked(settings.emulator.hack.dsp.fast).onToggle([&] {
+    settings.emulator.hack.dsp.fast = fastDSP.checked();
+    emulator->configure("Hacks/DSP/Fast", settings.emulator.hack.dsp.fast);
+  });
+  cubicInterpolation.setText("Cubic interpolation").setChecked(settings.emulator.hack.dsp.cubic).onToggle([&] {
+    settings.emulator.hack.dsp.cubic = cubicInterpolation.checked();
+    emulator->configure("Hacks/DSP/Cubic", settings.emulator.hack.dsp.cubic);
+  });
+  coprocessorLabel.setText("Coprocessors").setFont(Font().setBold());
+  coprocessorsDelayedSyncOption.setText("Fast mode").setChecked(settings.emulator.hack.coprocessors.delayedSync).onToggle([&] {
+    settings.emulator.hack.coprocessors.delayedSync = coprocessorsDelayedSyncOption.checked();
+  });
+  coprocessorsHLEOption.setText("Prefer HLE").setChecked(settings.emulator.hack.coprocessors.hle).onToggle([&] {
+    settings.emulator.hack.coprocessors.hle = coprocessorsHLEOption.checked();
+  });
+  superFXLabel.setText("SuperFX clock speed:");
+  superFXValue.setAlignment(0.5);
+  superFXClock.setLength(71).setPosition((settings.emulator.hack.fastSuperFX - 100) / 10).onChange([&] {
+    settings.emulator.hack.fastSuperFX = superFXClock.position() * 10 + 100;
+    superFXValue.setText({settings.emulator.hack.fastSuperFX, "%"});
+  }).doChange();
   ppuLabel.setText("PPU (video)").setFont(Font().setBold());
-  fastPPU.setText("Fast mode").setChecked(settings.emulator.hack.ppu.fast).onToggle([&] {
+  fastPPU.setText("Fast mode [required for HD Mode 7 / bsnes-hd]").setChecked(settings.emulator.hack.ppu.fast).onToggle([&] {
     settings.emulator.hack.ppu.fast = fastPPU.checked();
     if(!fastPPU.checked()) {
       noSpriteLimit.setEnabled(false).setChecked(false).doToggle();
@@ -49,7 +70,7 @@ auto EmulatorSettings::create() -> void {
   noSpriteLimit.setText("No sprite limit").setChecked(settings.emulator.hack.ppu.noSpriteLimit).onToggle([&] {
     settings.emulator.hack.ppu.noSpriteLimit = noSpriteLimit.checked();
   });
-  mode7Label.setText("HD Mode 7 (fast PPU only)").setFont(Font().setBold());
+  mode7Label.setText("HD Mode 7 / bsnes-hd").setFont(Font().setBold());
   mode7ScaleLabel.setText("Scale:");
   mode7Scale.append(ComboButtonItem().setText("disable").setProperty("multiplier", 0));
   mode7Scale.append(ComboButtonItem().setText("1x  224p").setProperty("multiplier", 1));
@@ -69,13 +90,21 @@ auto EmulatorSettings::create() -> void {
     emulator->configure("Hacks/PPU/Mode7/Scale", settings.emulator.hack.ppu.mode7.scale);
     presentation.resizeViewport();
   });
-  mode7Perspective.setText("Perspective correction").setChecked(settings.emulator.hack.ppu.mode7.perspective).onToggle([&] {
-    settings.emulator.hack.ppu.mode7.perspective = mode7Perspective.checked();
+  mode7PerspectiveLabel.setText("Perspective correction:");
+  mode7Perspective.append(ComboButtonItem().setText("off").setProperty("mode", 0));
+  mode7Perspective.append(ComboButtonItem().setText("auto/wide").setProperty("mode", 1));
+  mode7Perspective.append(ComboButtonItem().setText("auto/medium").setProperty("mode", 2));
+  mode7Perspective.append(ComboButtonItem().setText("auto/narrow").setProperty("mode", 3));
+  mode7Perspective.append(ComboButtonItem().setText("on/wide").setProperty("mode", 4));
+  mode7Perspective.append(ComboButtonItem().setText("on/medium").setProperty("mode", 5));
+  mode7Perspective.append(ComboButtonItem().setText("on/narrow").setProperty("mode", 6));
+  for(uint n = 0; n < 7; n++) {
+    if(mode7Perspective.item(n).property("mode").natural() == settings.emulator.hack.ppu.mode7.perspective)
+       mode7Perspective.item(n).setSelected();
+  }
+  mode7Perspective.onChange([&] {
+    settings.emulator.hack.ppu.mode7.perspective = mode7Perspective.selected().property("mode").natural();
     emulator->configure("Hacks/PPU/Mode7/Perspective", settings.emulator.hack.ppu.mode7.perspective);
-  });
-  mode7Mosaic.setText("keep Mosaic").setChecked(settings.emulator.hack.ppu.mode7.mosaic).onToggle([&] {
-    settings.emulator.hack.ppu.mode7.mosaic = mode7Mosaic.checked();
-    emulator->configure("Hacks/PPU/Mode7/Mosaic", settings.emulator.hack.ppu.mode7.mosaic);
   });
   mode7SupersampleLabel.setText("Supersampling:");
   mode7Supersample.append(ComboButtonItem().setText("none").setProperty("sss", 1));
@@ -94,9 +123,9 @@ auto EmulatorSettings::create() -> void {
     settings.emulator.hack.ppu.mode7.supersample = mode7Supersample.selected().property("sss").natural();
     emulator->configure("Hacks/PPU/Mode7/Supersample", settings.emulator.hack.ppu.mode7.supersample);
   });
-  igwin.setText("ignore outside window").setChecked(settings.emulator.hack.ppu.mode7.igwin).onToggle([&] {
-    settings.emulator.hack.ppu.mode7.igwin = igwin.checked();
-    emulator->configure("Hacks/PPU/Mode7/Igwin", settings.emulator.hack.ppu.mode7.igwin);
+  mode7Mosaic.setText("Keep Mosaics non-HD").setChecked(settings.emulator.hack.ppu.mode7.mosaic).onToggle([&] {
+    settings.emulator.hack.ppu.mode7.mosaic = mode7Mosaic.checked();
+    emulator->configure("Hacks/PPU/Mode7/Mosaic", settings.emulator.hack.ppu.mode7.mosaic);
   });
   mode7WidescreenLabel.setText("Widescreen:");
   mode7Widescreen.append(ComboButtonItem().setText(" none ").setProperty("adval",   0));
@@ -129,7 +158,10 @@ auto EmulatorSettings::create() -> void {
   wsBG1.append(ComboButtonItem().setText(">160").setProperty("wsbgmode",  9));
   wsBG1.append(ComboButtonItem().setText("<200").setProperty("wsbgmode", 10));
   wsBG1.append(ComboButtonItem().setText(">200").setProperty("wsbgmode", 11));
-  for(uint n = 0; n < 12; n++) {
+  wsBG1.append(ComboButtonItem().setText("crop").setProperty("wsbgmode", 12));
+  wsBG1.append(ComboButtonItem().setText("cAut").setProperty("wsbgmode", 13));
+  wsBG1.append(ComboButtonItem().setText("dis.").setProperty("wsbgmode", 14));
+  for(uint n = 0; n <= 14; n++) {
     if(wsBG1.item(n).property("wsbgmode").natural() == settings.emulator.hack.ppu.mode7.wsbg1)
        wsBG1.item(n).setSelected();
   }
@@ -150,7 +182,10 @@ auto EmulatorSettings::create() -> void {
   wsBG2.append(ComboButtonItem().setText(">160").setProperty("wsbgmode",  9));
   wsBG2.append(ComboButtonItem().setText("<200").setProperty("wsbgmode", 10));
   wsBG2.append(ComboButtonItem().setText(">200").setProperty("wsbgmode", 11));
-  for(uint n = 0; n < 12; n++) {
+  wsBG2.append(ComboButtonItem().setText("crop").setProperty("wsbgmode", 12));
+  wsBG2.append(ComboButtonItem().setText("cAut").setProperty("wsbgmode", 13));
+  wsBG2.append(ComboButtonItem().setText("dis.").setProperty("wsbgmode", 14));
+  for(uint n = 0; n <= 14; n++) {
     if(wsBG2.item(n).property("wsbgmode").natural() == settings.emulator.hack.ppu.mode7.wsbg2)
        wsBG2.item(n).setSelected();
   }
@@ -171,7 +206,10 @@ auto EmulatorSettings::create() -> void {
   wsBG3.append(ComboButtonItem().setText(">160").setProperty("wsbgmode",  9));
   wsBG3.append(ComboButtonItem().setText("<200").setProperty("wsbgmode", 10));
   wsBG3.append(ComboButtonItem().setText(">200").setProperty("wsbgmode", 11));
-  for(uint n = 0; n < 12; n++) {
+  wsBG3.append(ComboButtonItem().setText("crop").setProperty("wsbgmode", 12));
+  wsBG3.append(ComboButtonItem().setText("cAut").setProperty("wsbgmode", 13));
+  wsBG3.append(ComboButtonItem().setText("dis.").setProperty("wsbgmode", 14));
+  for(uint n = 0; n <= 14; n++) {
     if(wsBG3.item(n).property("wsbgmode").natural() == settings.emulator.hack.ppu.mode7.wsbg3)
        wsBG3.item(n).setSelected();
   }
@@ -192,7 +230,10 @@ auto EmulatorSettings::create() -> void {
   wsBG4.append(ComboButtonItem().setText(">160").setProperty("wsbgmode",  9));
   wsBG4.append(ComboButtonItem().setText("<200").setProperty("wsbgmode", 10));
   wsBG4.append(ComboButtonItem().setText(">200").setProperty("wsbgmode", 11));
-  for(uint n = 0; n < 12; n++) {
+  wsBG4.append(ComboButtonItem().setText("crop").setProperty("wsbgmode", 12));
+  wsBG4.append(ComboButtonItem().setText("cAut").setProperty("wsbgmode", 13));
+  wsBG4.append(ComboButtonItem().setText("dis.").setProperty("wsbgmode", 14));
+  for(uint n = 0; n <= 14; n++) {
     if(wsBG4.item(n).property("wsbgmode").natural() == settings.emulator.hack.ppu.mode7.wsbg4)
        wsBG4.item(n).setSelected();
   }
@@ -200,47 +241,182 @@ auto EmulatorSettings::create() -> void {
     settings.emulator.hack.ppu.mode7.wsbg4 = wsBG4.selected().property("wsbgmode").natural();
     emulator->configure("Hacks/PPU/Mode7/Wsbg4", settings.emulator.hack.ppu.mode7.wsbg4);
   });
-  wsObj.setText("unsafe sprites").setChecked(settings.emulator.hack.ppu.mode7.wsobj).onToggle([&] {
-    settings.emulator.hack.ppu.mode7.wsobj = wsObj.checked();
+  wsObjLabel.setText("Sprites:");
+  wsObj.append(ComboButtonItem().setText("normal").setProperty("mode", 0));
+  wsObj.append(ComboButtonItem().setText("unsafe").setProperty("mode", 1));
+  wsObj.append(ComboButtonItem().setText("disab.").setProperty("mode", 2));
+  for(uint n = 0; n < 3; n++) {
+    if(wsObj.item(n).property("mode").natural() == settings.emulator.hack.ppu.mode7.igwin)
+       wsObj.item(n).setSelected();
+  }
+  wsObj.onChange([&] {
+    settings.emulator.hack.ppu.mode7.wsobj = wsObj.selected().property("mode").natural();
     emulator->configure("Hacks/PPU/Mode7/Wsobj", settings.emulator.hack.ppu.mode7.wsobj);
   });
-  dspLabel.setText("DSP (audio)").setFont(Font().setBold());
-  fastDSP.setText("Fast mode").setChecked(settings.emulator.hack.dsp.fast).onToggle([&] {
-    settings.emulator.hack.dsp.fast = fastDSP.checked();
-    emulator->configure("Hacks/DSP/Fast", settings.emulator.hack.dsp.fast);
+  igwinLabel.setText("Ignore window:");
+  igwin.append(ComboButtonItem().setText("none").setProperty("mode", 0));
+  igwin.append(ComboButtonItem().setText("outside").setProperty("mode", 1));
+  igwin.append(ComboButtonItem().setText("outs&alw").setProperty("mode", 2));
+  igwin.append(ComboButtonItem().setText("all").setProperty("mode", 3));
+  for(uint n = 0; n < 4; n++) {
+    if(igwin.item(n).property("mode").natural() == settings.emulator.hack.ppu.mode7.igwin)
+       igwin.item(n).setSelected();
+  }
+  igwin.onChange([&] {
+    settings.emulator.hack.ppu.mode7.igwin = igwin.selected().property("mode").natural();
+    emulator->configure("Hacks/PPU/Mode7/Igwin", settings.emulator.hack.ppu.mode7.igwin);
   });
-  cubicInterpolation.setText("Cubic interpolation").setChecked(settings.emulator.hack.dsp.cubic).onToggle([&] {
-    settings.emulator.hack.dsp.cubic = cubicInterpolation.checked();
-    emulator->configure("Hacks/DSP/Cubic", settings.emulator.hack.dsp.cubic);
+  igwinxLabel.setText("Fallback x-coordinate:");
+  igwinx.append(ComboButtonItem().setText(" 40").setProperty("col",  40));
+  igwinx.append(ComboButtonItem().setText(" 88").setProperty("col",  88));
+  igwinx.append(ComboButtonItem().setText("128").setProperty("col", 128));
+  igwinx.append(ComboButtonItem().setText("168").setProperty("col", 168));
+  igwinx.append(ComboButtonItem().setText("216").setProperty("col", 216));
+  for(uint n = 0; n < 5; n++) {
+    if(igwinx.item(n).property("col").natural() == settings.emulator.hack.ppu.mode7.igwinx)
+       igwinx.item(n).setSelected();
+  }
+  igwinx.onChange([&] {
+    settings.emulator.hack.ppu.mode7.igwinx = igwinx.selected().property("col").natural();
+    emulator->configure("Hacks/PPU/Mode7/Igwinx", settings.emulator.hack.ppu.mode7.igwinx);
   });
-  coprocessorLabel.setText("Coprocessors").setFont(Font().setBold());
-  coprocessorsDelayedSyncOption.setText("Fast mode").setChecked(settings.emulator.hack.coprocessors.delayedSync).onToggle([&] {
-    settings.emulator.hack.coprocessors.delayedSync = coprocessorsDelayedSyncOption.checked();
+  unintrModeLabel.setText("Soft crop:");
+  unintrMode.append(ComboButtonItem().setText(" none ").setProperty("mode", 0));
+  unintrMode.append(ComboButtonItem().setText("center").setProperty("mode", 1));
+  unintrMode.append(ComboButtonItem().setText(" scale").setProperty("mode", 2));
+  for(uint n = 0; n < 3; n++) {
+    if(unintrMode.item(n).property("mode").natural() == settings.emulator.hack.ppu.mode7.unintrMode)
+       unintrMode.item(n).setSelected();
+  }
+  unintrMode.onChange([&] {
+    settings.emulator.hack.ppu.mode7.unintrMode = unintrMode.selected().property("mode").natural();
+    emulator->configure("Hacks/PPU/Mode7/UnintrMode", settings.emulator.hack.ppu.mode7.unintrMode);
   });
-  coprocessorsHLEOption.setText("Prefer HLE").setChecked(settings.emulator.hack.coprocessors.hle).onToggle([&] {
-    settings.emulator.hack.coprocessors.hle = coprocessorsHLEOption.checked();
+
+  unintrTopLabel.setText("Top:");
+  unintrTop.append(ComboButtonItem().setText("  0").setProperty("marg",   0));
+  unintrTop.append(ComboButtonItem().setText(" 10").setProperty("marg",  10));
+  unintrTop.append(ComboButtonItem().setText(" 20").setProperty("marg",  20));
+  unintrTop.append(ComboButtonItem().setText(" 30").setProperty("marg",  30));
+  unintrTop.append(ComboButtonItem().setText(" 40").setProperty("marg",  40));
+  unintrTop.append(ComboButtonItem().setText(" 50").setProperty("marg",  50));
+  unintrTop.append(ComboButtonItem().setText(" 60").setProperty("marg",  60));
+  unintrTop.append(ComboButtonItem().setText(" 70").setProperty("marg",  70));
+  unintrTop.append(ComboButtonItem().setText(" 80").setProperty("marg",  80));
+  unintrTop.append(ComboButtonItem().setText(" 90").setProperty("marg",  90));
+  unintrTop.append(ComboButtonItem().setText("100").setProperty("marg", 100));
+  unintrTop.append(ComboButtonItem().setText("110").setProperty("marg", 110));
+  unintrTop.append(ComboButtonItem().setText("120").setProperty("marg", 120));
+  unintrTop.append(ComboButtonItem().setText("130").setProperty("marg", 130));
+  unintrTop.append(ComboButtonItem().setText("140").setProperty("marg", 140));
+  unintrTop.append(ComboButtonItem().setText("150").setProperty("marg", 150));
+  for(uint n = 0; n < 17; n++) {
+    if(unintrTop.item(n).property("marg").natural() == settings.emulator.hack.ppu.mode7.unintrTop)
+       unintrTop.item(n).setSelected();
+  }
+  unintrTop.onChange([&] {
+    settings.emulator.hack.ppu.mode7.unintrTop = unintrTop.selected().property("marg").natural();
+    emulator->configure("Hacks/PPU/Mode7/UnintrTop", settings.emulator.hack.ppu.mode7.unintrTop);
   });
-  superFXLabel.setText("SuperFX clock speed:");
-  superFXValue.setAlignment(0.5);
-  superFXClock.setLength(71).setPosition((settings.emulator.hack.fastSuperFX - 100) / 10).onChange([&] {
-    settings.emulator.hack.fastSuperFX = superFXClock.position() * 10 + 100;
-    superFXValue.setText({settings.emulator.hack.fastSuperFX, "%"});
-  }).doChange();
-  hacksNote.setForegroundColor({224, 0, 0}).setText("Note: some hack setting changes do not take effect until after reloading games.");
+
+  unintrBottomLabel.setText("Bottom:");
+  unintrBottom.append(ComboButtonItem().setText("  0").setProperty("marg",   0));
+  unintrBottom.append(ComboButtonItem().setText(" 10").setProperty("marg",  10));
+  unintrBottom.append(ComboButtonItem().setText(" 20").setProperty("marg",  20));
+  unintrBottom.append(ComboButtonItem().setText(" 30").setProperty("marg",  30));
+  unintrBottom.append(ComboButtonItem().setText(" 40").setProperty("marg",  40));
+  unintrBottom.append(ComboButtonItem().setText(" 50").setProperty("marg",  50));
+  unintrBottom.append(ComboButtonItem().setText(" 60").setProperty("marg",  60));
+  unintrBottom.append(ComboButtonItem().setText(" 70").setProperty("marg",  70));
+  unintrBottom.append(ComboButtonItem().setText(" 80").setProperty("marg",  80));
+  unintrBottom.append(ComboButtonItem().setText(" 90").setProperty("marg",  90));
+  unintrBottom.append(ComboButtonItem().setText("100").setProperty("marg", 100));
+  unintrBottom.append(ComboButtonItem().setText("110").setProperty("marg", 110));
+  unintrBottom.append(ComboButtonItem().setText("120").setProperty("marg", 120));
+  unintrBottom.append(ComboButtonItem().setText("130").setProperty("marg", 130));
+  unintrBottom.append(ComboButtonItem().setText("140").setProperty("marg", 140));
+  unintrBottom.append(ComboButtonItem().setText("150").setProperty("marg", 150));
+  for(uint n = 0; n < 17; n++) {
+    if(unintrBottom.item(n).property("marg").natural() == settings.emulator.hack.ppu.mode7.unintrBottom)
+       unintrBottom.item(n).setSelected();
+  }
+  unintrBottom.onChange([&] {
+    settings.emulator.hack.ppu.mode7.unintrBottom = unintrBottom.selected().property("marg").natural();
+    emulator->configure("Hacks/PPU/Mode7/UnintrBottom", settings.emulator.hack.ppu.mode7.unintrBottom);
+  });
+
+  unintrLeftLabel.setText("Left:");
+  unintrLeft.append(ComboButtonItem().setText("  0").setProperty("marg",   0));
+  unintrLeft.append(ComboButtonItem().setText(" 10").setProperty("marg",  10));
+  unintrLeft.append(ComboButtonItem().setText(" 20").setProperty("marg",  20));
+  unintrLeft.append(ComboButtonItem().setText(" 30").setProperty("marg",  30));
+  unintrLeft.append(ComboButtonItem().setText(" 40").setProperty("marg",  40));
+  unintrLeft.append(ComboButtonItem().setText(" 50").setProperty("marg",  50));
+  unintrLeft.append(ComboButtonItem().setText(" 60").setProperty("marg",  60));
+  unintrLeft.append(ComboButtonItem().setText(" 70").setProperty("marg",  70));
+  unintrLeft.append(ComboButtonItem().setText(" 80").setProperty("marg",  80));
+  unintrLeft.append(ComboButtonItem().setText(" 90").setProperty("marg",  90));
+  unintrLeft.append(ComboButtonItem().setText("100").setProperty("marg", 100));
+  unintrLeft.append(ComboButtonItem().setText("110").setProperty("marg", 110));
+  unintrLeft.append(ComboButtonItem().setText("120").setProperty("marg", 120));
+  unintrLeft.append(ComboButtonItem().setText("130").setProperty("marg", 130));
+  unintrLeft.append(ComboButtonItem().setText("140").setProperty("marg", 140));
+  unintrLeft.append(ComboButtonItem().setText("150").setProperty("marg", 150));
+  for(uint n = 0; n < 17; n++) {
+    if(unintrLeft.item(n).property("marg").natural() == settings.emulator.hack.ppu.mode7.unintrLeft)
+       unintrLeft.item(n).setSelected();
+  }
+  unintrLeft.onChange([&] {
+    settings.emulator.hack.ppu.mode7.unintrLeft = unintrLeft.selected().property("marg").natural();
+    emulator->configure("Hacks/PPU/Mode7/UnintrLeft", settings.emulator.hack.ppu.mode7.unintrLeft);
+  });
+
+  unintrRightLabel.setText("Right:");
+  unintrRight.append(ComboButtonItem().setText("  0").setProperty("marg",   0));
+  unintrRight.append(ComboButtonItem().setText(" 10").setProperty("marg",  10));
+  unintrRight.append(ComboButtonItem().setText(" 20").setProperty("marg",  20));
+  unintrRight.append(ComboButtonItem().setText(" 30").setProperty("marg",  30));
+  unintrRight.append(ComboButtonItem().setText(" 40").setProperty("marg",  40));
+  unintrRight.append(ComboButtonItem().setText(" 50").setProperty("marg",  50));
+  unintrRight.append(ComboButtonItem().setText(" 60").setProperty("marg",  60));
+  unintrRight.append(ComboButtonItem().setText(" 70").setProperty("marg",  70));
+  unintrRight.append(ComboButtonItem().setText(" 80").setProperty("marg",  80));
+  unintrRight.append(ComboButtonItem().setText(" 90").setProperty("marg",  90));
+  unintrRight.append(ComboButtonItem().setText("100").setProperty("marg", 100));
+  unintrRight.append(ComboButtonItem().setText("110").setProperty("marg", 110));
+  unintrRight.append(ComboButtonItem().setText("120").setProperty("marg", 120));
+  unintrRight.append(ComboButtonItem().setText("130").setProperty("marg", 130));
+  unintrRight.append(ComboButtonItem().setText("140").setProperty("marg", 140));
+  unintrRight.append(ComboButtonItem().setText("150").setProperty("marg", 150));
+  for(uint n = 0; n < 17; n++) {
+    if(unintrRight.item(n).property("marg").natural() == settings.emulator.hack.ppu.mode7.unintrRight)
+       unintrRight.item(n).setSelected();
+  }
+  unintrRight.onChange([&] {
+    settings.emulator.hack.ppu.mode7.unintrRight = unintrRight.selected().property("marg").natural();
+    emulator->configure("Hacks/PPU/Mode7/UnintrRight", settings.emulator.hack.ppu.mode7.unintrRight);
+  });
+
 }
 
 auto EmulatorSettings::updateConfiguration() -> void {
   emulator->configure("Hacks/PPU/Fast", fastPPU.checked());
   emulator->configure("Hacks/PPU/NoSpriteLimit", noSpriteLimit.checked());
   emulator->configure("Hacks/PPU/Mode7/Scale", mode7Scale.selected().property("multiplier").natural());
-  emulator->configure("Hacks/PPU/Mode7/Perspective", mode7Perspective.checked());
+  emulator->configure("Hacks/PPU/Mode7/Perspective", mode7Perspective.property("mode").natural());
   emulator->configure("Hacks/PPU/Mode7/Widescreen", mode7Widescreen.property("addval").natural());
   emulator->configure("Hacks/PPU/Mode7/Wsbg1", wsBG1.property("wsbgmode").natural());
   emulator->configure("Hacks/PPU/Mode7/Wsbg2", wsBG2.property("wsbgmode").natural());
   emulator->configure("Hacks/PPU/Mode7/Wsbg3", wsBG3.property("wsbgmode").natural());
   emulator->configure("Hacks/PPU/Mode7/Wsbg4", wsBG4.property("wsbgmode").natural()); 
-  emulator->configure("Hacks/PPU/Mode7/Wsobj", wsObj.checked());
-  emulator->configure("Hacks/PPU/Mode7/Igwin", igwin.checked());
+  emulator->configure("Hacks/PPU/Mode7/Wsobj", wsObj.property("mode").natural());
+  emulator->configure("Hacks/PPU/Mode7/Igwin", igwin.property("mode").natural());
+  emulator->configure("Hacks/PPU/Mode7/Igwinx", igwin.property("col").natural());
+  emulator->configure("Hacks/PPU/Mode7/UnintrMode", igwin.property("mode").natural());
+  emulator->configure("Hacks/PPU/Mode7/UnintrTop", igwin.property("marg").natural());
+  emulator->configure("Hacks/PPU/Mode7/UnintrBottom", igwin.property("marg").natural());
+  emulator->configure("Hacks/PPU/Mode7/UnintrLeft", igwin.property("marg").natural());
+  emulator->configure("Hacks/PPU/Mode7/UnintrRight", igwin.property("marg").natural());
   emulator->configure("Hacks/PPU/Mode7/Supersample", mode7Supersample.property("sss").natural());
   emulator->configure("Hacks/PPU/Mode7/Mosaic", mode7Mosaic.checked());
   emulator->configure("Hacks/DSP/Fast", fastDSP.checked());

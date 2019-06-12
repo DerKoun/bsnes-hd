@@ -2,12 +2,19 @@ uint PPUfast::Line::start = 0;
 uint PPUfast::Line::count = 0;
 
 auto PPUfast::Line::flush() -> void {
-  if(ppufast.hdPerspective()) {
+  uint perspCorMode = ppufast.hdPerspective();
+  if(perspCorMode > 0) {
     #define isLineMode7(l) (l.io.bg1.tileMode == TileMode::Mode7 \
         && !l.io.displayDisable && (l.io.bg1.aboveEnable || l.io.bg1.belowEnable))
     ppufast.ind = 0;
     bool state = false;
     uint y;
+    int offsPart = 8;
+    if(perspCorMode == 2 || perspCorMode == 5) {
+      offsPart = 6;
+    } else if(perspCorMode == 3 || perspCorMode == 6) {
+      offsPart = 4;
+    }
     for(y = 0; y < Line::count; y++) {
       if(state != isLineMode7(ppufast.lines[Line::start + y])) {
         state = !state;
@@ -15,7 +22,7 @@ auto PPUfast::Line::flush() -> void {
           ppufast.starts[ppufast.ind] = ppufast.lines[Line::start + y].y;
         } else {
           ppufast.ends[ppufast.ind] = ppufast.lines[Line::start + y].y - 1;
-          int offs = (ppufast.ends[ppufast.ind] - ppufast.starts[ppufast.ind]) / 8;
+          int offs = (ppufast.ends[ppufast.ind] - ppufast.starts[ppufast.ind]) / offsPart;
           ppufast.startsp[ppufast.ind] = ppufast.starts[ppufast.ind] + offs;
           ppufast.endsp[ppufast.ind] = ppufast.ends[ppufast.ind] - offs;
           ppufast.ind++;
@@ -25,12 +32,79 @@ auto PPUfast::Line::flush() -> void {
     #undef isLineMode7
     if(state) {
       ppufast.ends[ppufast.ind] = ppufast.lines[Line::start + y].y - 1;
-      int offs = (ppufast.ends[ppufast.ind] - ppufast.starts[ppufast.ind]) / 8;
+      int offs = (ppufast.ends[ppufast.ind] - ppufast.starts[ppufast.ind]) / offsPart;
       ppufast.startsp[ppufast.ind] = ppufast.starts[ppufast.ind] + offs;
       ppufast.endsp[ppufast.ind] = ppufast.ends[ppufast.ind] - offs;
       ppufast.ind++;
     }
-  }  
+
+    if(perspCorMode < 4) {  
+      for(int i = 0; i < ppufast.ind; i++) {
+        int la = -1;
+        int lb = -1;
+        int lc = -1;
+        int ld = -1;
+        bool abd= false;
+        bool bbd= false;
+        bool cbd= false;
+        bool dbd= false;
+        bool ab= false;
+        bool bb= false;
+        bool cb= false;
+        bool db= false;
+        for(y = ppufast.startsp[i]; y <= ppufast.endsp[i]; y++) {
+          int a = ((int)((int16)(ppufast.lines[y].io.mode7.a)));
+          int b = ((int)((int16)(ppufast.lines[y].io.mode7.b)));
+          int c = ((int)((int16)(ppufast.lines[y].io.mode7.c)));
+          int d = ((int)((int16)(ppufast.lines[y].io.mode7.d)));
+          if(la > 0 && a > 0 && a != la) {
+            if(!abd) {
+              abd = true;
+              ab = a > la;
+            } else if(ab != a > la) {
+              ppufast.startsp[i] = -1;
+              ppufast.endsp[i] = -1;
+              break;
+            }
+          }
+          if(lb > 0 && b > 0 && b != lb) {
+            if(!bbd) {
+              bbd = true;
+              bb = b > lb;
+            } else if(bb != b > lb) {
+              ppufast.startsp[i] = -1;
+              ppufast.endsp[i] = -1;
+              break;
+            }
+          }
+          if(lc > 0 && c > 0 && c != lc) {
+            if(!cbd) {
+              cbd = true;
+              cb = c > lc;
+            } else if(cb != c > lc) {
+              ppufast.startsp[i] = -1;
+              ppufast.endsp[i] = -1;
+              break;
+            }
+          }
+          if(ld > 0 && d > 0 && d != ld) {
+            if(!dbd) {
+              dbd = true;
+              db = d > ld;
+            } else if(db != d > ld) {
+              ppufast.startsp[i] = -1;
+              ppufast.endsp[i] = -1;
+              break;
+            }
+          }
+          la = a;
+          lb = b;
+          lc = c;
+          ld = d;
+        }
+      }
+    }
+  }
 
   if(Line::count) {
     #pragma omp parallel for if(Line::count >= 8)
@@ -70,10 +144,11 @@ auto PPUfast::Line::render() -> void {
   }
 
   renderBackground(io.bg1, Source::BG1);
-  renderBackground(io.bg2, Source::BG2);
+  if(!io.extbg) renderBackground(io.bg2, Source::BG2);
   renderBackground(io.bg3, Source::BG3);
   renderBackground(io.bg4, Source::BG4);
   renderObject(io.obj);
+  if(io.extbg) renderBackground(io.bg2, Source::BG2);
   renderWindow(io.col.window, io.col.window.aboveMask, windowAbove);
   renderWindow(io.col.window, io.col.window.belowMask, windowBelow);
 

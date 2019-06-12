@@ -253,9 +253,16 @@ auto Presentation::resizeViewport() -> void {
   uint layoutWidth = viewportLayout.geometry().width();
   uint layoutHeight = viewportLayout.geometry().height();
 
-  uint widescreen = settings.emulator.hack.ppu.mode7.scale > 0 ? settings.emulator.hack.ppu.mode7.widescreen : 0; // 64 / 0 #widescreenextension
+  uint widescreen = settings.emulator.hack.ppu.mode7.scale > 0 ? settings.emulator.hack.ppu.mode7.widescreen : 0;
+  uint unintrMode = settings.emulator.hack.ppu.mode7.unintrMode;
+  uint unintrTop = settings.emulator.hack.ppu.mode7.unintrTop;
+  uint unintrBottom = settings.emulator.hack.ppu.mode7.unintrBottom;
+  uint unintrLeft = settings.emulator.hack.ppu.mode7.unintrLeft;
+  uint unintrRight = settings.emulator.hack.ppu.mode7.unintrRight;
   uint width = (256+2*widescreen) * (settings.video.aspectCorrection && !widescreen ? 8.0 / 7.0 : 1.0);
   uint height = (settings.video.overscan ? 240.0 : 224.0);
+  while(((int)width) - ((int)unintrLeft) - ((int)unintrRight) <= 10) { if (unintrLeft > 0) unintrLeft--; if (unintrRight > 0) unintrRight--; }
+  while(((int)height) - ((int)unintrTop) - ((int)unintrBottom) <= 10) { if (unintrTop > 0) unintrTop--; if (unintrBottom > 0) unintrBottom--; }
   uint viewportWidth, viewportHeight;
 
   if(visible() && !fullScreen()) {
@@ -274,14 +281,14 @@ auto Presentation::resizeViewport() -> void {
   if(!video) return;
 
   if(settings.video.output == "Center") {
-    uint widthMultiplier = layoutWidth / (width - 20);
-    uint heightMultiplier = layoutHeight / (height - 10); // allow the loss of ~8 lines so 1080p can be 5x scale
+    uint widthMultiplier = layoutWidth / (width - (unintrMode < 1 ? 0 : (unintrLeft + unintrRight)));
+    uint heightMultiplier = layoutHeight / (height - (unintrMode < 1 ? 0 : (unintrTop + unintrBottom)));
     uint multiplier = min(widthMultiplier, heightMultiplier);
     viewportWidth = width * multiplier;
     viewportHeight = height * multiplier;
   } else if(settings.video.output == "Scale") {
-    double widthMultiplier = (double)layoutWidth / width;
-    double heightMultiplier = (double)layoutHeight / height;
+    double widthMultiplier = (double)layoutWidth / (width - (unintrMode < 2 ? 0 : (unintrLeft + unintrRight)));
+    double heightMultiplier = (double)layoutHeight / (height - (unintrMode < 2 ? 0 : (unintrTop + unintrBottom)));
     double multiplier = min(widthMultiplier, heightMultiplier);
     viewportWidth = width * multiplier;
     viewportHeight = height * multiplier;
@@ -293,9 +300,11 @@ auto Presentation::resizeViewport() -> void {
   //center viewport within viewportLayout by use of viewportLayout padding
   int paddingWidth = layoutWidth - viewportWidth;
   int paddingHeight = layoutHeight - viewportHeight;
+  int paddingLeft = paddingWidth >= 0 ? paddingWidth / 2 : (1.0 * paddingWidth / (unintrLeft + unintrRight) * unintrLeft);
+  int paddingTop = paddingHeight >= 0 ? paddingHeight / 2 : (1.0 * paddingHeight / (unintrTop + unintrBottom) * unintrTop);
   viewportLayout.setPadding({
-    paddingWidth / 2, paddingHeight / 2,
-    paddingWidth - paddingWidth / 2, paddingHeight - paddingHeight / 2
+    paddingLeft, paddingTop,
+    paddingWidth - paddingLeft, paddingHeight - paddingTop
   });
 }
 

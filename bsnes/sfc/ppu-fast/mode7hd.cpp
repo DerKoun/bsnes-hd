@@ -3,7 +3,9 @@ auto PPUfast::Line::renderMode7HD(PPUfast::IO::Background& self, uint source) ->
   const uint sampScale = ppufast.hdSupersample();
   const uint scale = ppufast.hdScale() * sampScale;
 
-  uint sampTmp[(256+2*ppufast.widescreen()) * 4 * scale/sampScale] = {};
+  int sampSize = sampScale < 2 ? 0 : (256+2*ppufast.widescreen()) * 4 * scale/sampScale;
+  uint *sampTmp = new uint[sampSize];
+  memory::fill<uint>(sampTmp, sampSize);
 
   Pixel  pixel;
   Pixel* above = &this->above[0];
@@ -15,7 +17,7 @@ auto PPUfast::Line::renderMode7HD(PPUfast::IO::Background& self, uint source) ->
   #define isLineMode7(n) (ppufast.lines[n].io.bg1.tileMode == TileMode::Mode7 && !ppufast.lines[n].io.displayDisable && ( \
     (ppufast.lines[n].io.bg1.aboveEnable || ppufast.lines[n].io.bg1.belowEnable) \
   ))
-  if(ppufast.hdPerspective()) {
+  if(ppufast.hdPerspective() > 0) {
     for(int i = 0; i < ppufast.ind; i++) {
       if(y >= ppufast.starts[i] && y <= ppufast.ends[i]) {
         y_a = ppufast.startsp[i];
@@ -145,6 +147,7 @@ auto PPUfast::Line::renderMode7HD(PPUfast::IO::Background& self, uint source) ->
       }
     }
   }
+  delete[] sampTmp;
 }
 
 //interpolation and extrapolation

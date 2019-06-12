@@ -30,14 +30,20 @@ struct Configuration {
       bool noSpriteLimit = true;
       struct Mode7 {
         uint scale = 2;
-        bool perspective = true;
+        uint perspective = 1;
         uint widescreen = 72;
         uint wsbg1 = 1;
         uint wsbg2 = 1;
         uint wsbg3 = 1;
         uint wsbg4 = 1;
-        bool wsobj = false;
-        bool igwin = false;
+        uint wsobj = 0;
+        uint igwin = 0;
+        uint igwinx = 128;
+        uint unintrMode = 1;
+        uint unintrTop = 10;
+        uint unintrBottom = 10;
+        uint unintrLeft = 20;
+        uint unintrRight = 20;
         uint supersample = 1;
         bool mosaic = false;
       } mode7;

@@ -1,5 +1,6 @@
 auto PPUfast::Line::renderObject(PPUfast::IO::Object& self) -> void {
   if(!self.aboveEnable && !self.belowEnable) return;
+  if(ppufast.wsobj() == 2) return;
 
   array<bool[256]> windowAbove;
   array<bool[256]> windowBelow;
@@ -28,7 +29,7 @@ auto PPUfast::Line::renderObject(PPUfast::IO::Object& self) -> void {
       item.height = heights[self.baseSize];
     }
 
-    if(!ppufast.wsobj()
+    if(ppufast.wsobj() == 0
         && object.x > 256 && object.x + item.width - 1 < 512) continue;
     uint height = item.height >> self.interlace;
     if((y >= object.y && y < object.y + height)

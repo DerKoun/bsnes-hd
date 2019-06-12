@@ -13,12 +13,12 @@ struct PPUfast : Thread, PPUcounter {
   alwaysinline auto hd() const -> bool;
   alwaysinline auto ss() const -> bool;
   alwaysinline auto hdScale() const -> uint;
-  alwaysinline auto hdPerspective() const -> bool;
+  alwaysinline auto hdPerspective() const -> uint;
   alwaysinline auto hdSupersample() const -> uint;
   alwaysinline auto hdMosaic() const -> bool;
   alwaysinline auto widescreen() const -> uint;
   alwaysinline auto wsbg(uint bg) const -> uint;
-  alwaysinline auto wsobj() const -> bool;
+  alwaysinline auto wsobj() const -> uint;
   alwaysinline auto winXad(uint x, bool bel) const -> uint;
 
   //ppu.cpp
