@@ -15,11 +15,16 @@ struct PPUfast : Thread, PPUcounter {
   alwaysinline auto hdScale() const -> uint;
   alwaysinline auto hdPerspective() const -> uint;
   alwaysinline auto hdSupersample() const -> uint;
-  alwaysinline auto hdMosaic() const -> bool;
+  alwaysinline auto hdMosaic() const -> uint;
   alwaysinline auto widescreen() const -> uint;
   alwaysinline auto wsbg(uint bg) const -> uint;
   alwaysinline auto wsobj() const -> uint;
   alwaysinline auto winXad(uint x, bool bel) const -> uint;
+  alwaysinline auto wsOverrideCandidate() const -> bool;
+  alwaysinline auto wsOverride() const -> bool;
+  alwaysinline auto wsBgCol() const -> bool;
+  alwaysinline auto wsMarker() const -> uint;
+  alwaysinline auto wsMarkerAlpha() const -> uint;
 
   //ppu.cpp
   PPUfast();
@@ -275,8 +280,8 @@ public:
     //line.cpp
     static auto flush() -> void;
     auto render() -> void;
-    auto pixel(uint x, Pixel above, Pixel below) const -> uint15;
-    auto blend(uint x, uint y, bool halve) const -> uint15;
+    alwaysinline auto pixel(uint x, Pixel above, Pixel below, uint wsm, uint wsma) const -> uint15;
+    alwaysinline auto blend(uint x, uint y, bool halve) const -> uint15;
     alwaysinline auto directColor(uint paletteIndex, uint paletteColor) const -> uint15;
     alwaysinline auto plotAbove(int x, uint source, uint priority, uint color) -> void;
     alwaysinline auto plotBelow(int x, uint source, uint priority, uint color) -> void;
@@ -284,7 +289,7 @@ public:
 
     //background.cpp
     auto renderBackground(PPUfast::IO::Background&, uint source) -> void;
-    auto getTile(PPUfast::IO::Background&, uint hoffset, uint voffset) -> uint;
+    alwaysinline auto getTile(PPUfast::IO::Background&, uint hoffset, uint voffset) -> uint;
 
     //mode7.cpp
     auto renderMode7(PPUfast::IO::Background&, uint source) -> void;
@@ -297,8 +302,8 @@ public:
     auto renderObject(PPUfast::IO::Object&) -> void;
 
     //window.cpp
-    auto renderWindow(PPUfast::IO::WindowLayer&, bool, array<bool[256]>&) -> void;
-    auto renderWindow(PPUfast::IO::WindowColor&, uint, array<bool[256]>&) -> void;
+    alwaysinline auto renderWindow(PPUfast::IO::WindowLayer&, bool, array<bool[256]>&) -> void;
+    alwaysinline auto renderWindow(PPUfast::IO::WindowColor&, uint, array<bool[256]>&) -> void;
 
     //[unserialized]
     uint9 y;  //constant

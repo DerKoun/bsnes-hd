@@ -2,6 +2,8 @@ auto PPUfast::Line::renderObject(PPUfast::IO::Object& self) -> void {
   if(!self.aboveEnable && !self.belowEnable) return;
   if(ppufast.wsobj() == 2) return;
 
+  uint wsobj = ppufast.wsOverride() ? 3 : ppufast.wsobj();
+
   array<bool[256]> windowAbove;
   array<bool[256]> windowBelow;
   renderWindow(self.window, self.window.aboveEnable, windowAbove);
@@ -29,8 +31,7 @@ auto PPUfast::Line::renderObject(PPUfast::IO::Object& self) -> void {
       item.height = heights[self.baseSize];
     }
 
-    if(ppufast.wsobj() == 0
-        && object.x > 256 && object.x + item.width - 1 < 512) continue;
+    if((wsobj == 0 || wsobj == 3) && object.x > 256 && object.x + item.width - 1 < 512) continue;
     uint height = item.height >> self.interlace;
     if((y >= object.y && y < object.y + height)
     || (object.y + height >= 256 && y < (object.y + height & 255))
@@ -124,7 +125,7 @@ auto PPUfast::Line::renderObject(PPUfast::IO::Object& self) -> void {
     uint source = palette[x] < 192 ? Source::OBJ1 : Source::OBJ2;
     int xc = x;//
     if(xc > 384) xc -= 512; // 256+256/2
-    if(xc < wsl || xc >= wsr) continue;
+    if(xc < wsl || xc >= wsr || (wsobj == 3 && (xc < 0 || xc >= 256))) continue;
     if(self.aboveEnable && !windowAbove[ppufast.winXad(x, false)]) plotAbove(xc, source, priority[x], cgram[palette[x]]);
     if(self.belowEnable && !windowBelow[ppufast.winXad(x, true)]) plotBelow(xc, source, priority[x], cgram[palette[x]]);
   }

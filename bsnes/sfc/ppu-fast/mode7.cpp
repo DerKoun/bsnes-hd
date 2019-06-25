@@ -4,8 +4,9 @@ auto PPUfast::Line::renderMode7(PPUfast::IO::Background& self, uint source) -> v
   if(io.extbg && source == Source::BG1) return;
 
   //HD mode 7 support
-  if(!ppufast.hdMosaic() || !self.mosaicEnable || !io.mosaicSize) {
-    if(ppufast.hdScale() > 0) return renderMode7HD(self, source);
+  if(ppufast.hdScale() > 0 && (ppufast.hdMosaic() != 0
+      || !self.mosaicEnable || !io.mosaicSize)) {
+    return renderMode7HD(self, source);
   }
 
   int Y = this->y - (self.mosaicEnable ? this->y % (1 + io.mosaicSize) : 0);

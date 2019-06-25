@@ -108,13 +108,17 @@ auto Settings::process(bool load) -> void {
   bind(natural, "Emulator/Hack/PPU/Mode7/Wsobj",          emulator.hack.ppu.mode7.wsobj);
   bind(natural, "Emulator/Hack/PPU/Mode7/Igwin",          emulator.hack.ppu.mode7.igwin);
   bind(natural, "Emulator/Hack/PPU/Mode7/Igwinx",         emulator.hack.ppu.mode7.igwinx);
+  bind(natural, "Emulator/Hack/PPU/Mode7/WsMode",         emulator.hack.ppu.mode7.wsMode);
+  bind(natural, "Emulator/Hack/PPU/Mode7/WsBgCol",        emulator.hack.ppu.mode7.wsBgCol);
   bind(natural, "Emulator/Hack/PPU/Mode7/UnintrMode",     emulator.hack.ppu.mode7.unintrMode);
   bind(natural, "Emulator/Hack/PPU/Mode7/UnintrTop",      emulator.hack.ppu.mode7.unintrTop);
   bind(natural, "Emulator/Hack/PPU/Mode7/UnintrBottom",   emulator.hack.ppu.mode7.unintrBottom);
   bind(natural, "Emulator/Hack/PPU/Mode7/UnintrLeft",     emulator.hack.ppu.mode7.unintrLeft);
   bind(natural, "Emulator/Hack/PPU/Mode7/UnintrRight",    emulator.hack.ppu.mode7.unintrRight);
+  bind(natural, "Emulator/Hack/PPU/Mode7/WsMarker",       emulator.hack.ppu.mode7.wsMarker);
+  bind(natural, "Emulator/Hack/PPU/Mode7/WsMarkerAlpha",  emulator.hack.ppu.mode7.wsMarkerAlpha);
   bind(natural, "Emulator/Hack/PPU/Mode7/Supersample",    emulator.hack.ppu.mode7.supersample);
-  bind(boolean, "Emulator/Hack/PPU/Mode7/Mosaic",         emulator.hack.ppu.mode7.mosaic);
+  bind(natural, "Emulator/Hack/PPU/Mode7/Mosaic",         emulator.hack.ppu.mode7.mosaic);
   bind(boolean, "Emulator/Hack/DSP/Fast",                 emulator.hack.dsp.fast);
   bind(boolean, "Emulator/Hack/DSP/Cubic",                emulator.hack.dsp.cubic);
   bind(boolean, "Emulator/Hack/Coprocessors/DelayedSync", emulator.hack.coprocessors.delayedSync);

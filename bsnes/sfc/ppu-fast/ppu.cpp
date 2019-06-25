@@ -23,22 +23,26 @@ auto PPUfast::ss() const -> bool { return latch.ss; }
 auto PPUfast::hdScale() const -> uint { return configuration.hacks.ppu.mode7.scale; }
 auto PPUfast::hdPerspective() const -> uint { return configuration.hacks.ppu.mode7.perspective; }
 auto PPUfast::hdSupersample() const -> uint { return configuration.hacks.ppu.mode7.supersample; }
-auto PPUfast::hdMosaic() const -> bool { return configuration.hacks.ppu.mode7.mosaic; }
-auto PPUfast::widescreen() const -> uint { return configuration.hacks.ppu.mode7.widescreen; } // 64 / 0 #widescreenextension
+auto PPUfast::hdMosaic() const -> uint { return configuration.hacks.ppu.mode7.mosaic; }
+auto PPUfast::widescreen() const -> uint { return configuration.hacks.ppu.mode7.wsMode == 0 ? 0 : configuration.hacks.ppu.mode7.widescreen; }
 auto PPUfast::wsbg(uint bg) const -> uint {
   if (bg == Source::BG1) return configuration.hacks.ppu.mode7.wsbg1;
   if (bg == Source::BG2) return configuration.hacks.ppu.mode7.wsbg2;
   if (bg == Source::BG3) return configuration.hacks.ppu.mode7.wsbg3;
   if (bg == Source::BG4) return configuration.hacks.ppu.mode7.wsbg4;
-  return 0;
-}
+  return 0; }
 auto PPUfast::wsobj() const -> uint { return configuration.hacks.ppu.mode7.wsobj; }
 auto PPUfast::winXad(uint x, bool bel) const -> uint {
   return (configuration.hacks.ppu.mode7.igwin != 0 && (configuration.hacks.ppu.mode7.igwin >= 3
        || configuration.hacks.ppu.mode7.igwin >= 2 && ((bel ? io.col.window.belowMask : io.col.window.aboveMask) == 0)
        || configuration.hacks.ppu.mode7.igwin >= 1 && ((bel ? io.col.window.belowMask : io.col.window.aboveMask) == 2)))
-    ? configuration.hacks.ppu.mode7.igwinx : (x < 0 ? 0 : (x > 255 ? 255 : x));
-}
+    ? configuration.hacks.ppu.mode7.igwinx : (x < 0 ? 0 : (x > 255 ? 255 : x)); }
+auto PPUfast::wsOverrideCandidate() const -> bool { return configuration.hacks.ppu.mode7.wsMode == 1; }
+auto PPUfast::wsOverride() const -> bool { return ind < 1 && wsOverrideCandidate(); }
+auto PPUfast::wsBgCol() const -> bool { return configuration.hacks.ppu.mode7.wsBgCol == 2
+                                            || configuration.hacks.ppu.mode7.wsBgCol == 1 && wsOverride(); }
+auto PPUfast::wsMarker() const -> uint { return configuration.hacks.ppu.mode7.wsMarker; }
+auto PPUfast::wsMarkerAlpha() const -> uint { return configuration.hacks.ppu.mode7.wsMarkerAlpha; }
 
 PPUfast::PPUfast() {
   output = new uint32[2304 * 2304] + 72 * 2304;  //overscan offset

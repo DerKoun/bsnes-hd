@@ -10,15 +10,21 @@ auto PPUfast::Line::renderBackground(PPUfast::IO::Background& self, uint source)
   bool autoCrop = false;
   int ws = (int)ppufast.widescreen();
   if(ws > 0) {
-    if(wsConf == 12) {
+    if(ppufast.wsOverride()) {
+      ws = 0;
+    } else if(wsConf == 12) {
       ws = -8;
     } else if(wsConf == 13) {
       ws = 0;
       autoCrop = true;
+    } else if(wsConf == 15) {
+      if (self.tileSize == 0 && self.hoffset == 0) ws = 0;
+    } else if(wsConf == 16) {
+      if (self.tileSize == 0 && self.hoffset == 0 && self.voffset == 0) ws = 0;
     } else if(wsConf == 0 || (wsConf != 1 && (((wsConf % 2) != 0) == (y < (((int)(wsConf / 2)) * 40))))) {
       ws = 0;
     }
-  }
+	} 
 
   array<bool[256]> windowAbove;
   array<bool[256]> windowBelow;

@@ -2,11 +2,11 @@ uint PPUfast::Line::start = 0;
 uint PPUfast::Line::count = 0;
 
 auto PPUfast::Line::flush() -> void {
+  ppufast.ind = 0;
   uint perspCorMode = ppufast.hdPerspective();
   if(perspCorMode > 0) {
     #define isLineMode7(l) (l.io.bg1.tileMode == TileMode::Mode7 \
         && !l.io.displayDisable && (l.io.bg1.aboveEnable || l.io.bg1.belowEnable))
-    ppufast.ind = 0;
     bool state = false;
     uint y;
     int offsPart = 8;
@@ -104,6 +104,20 @@ auto PPUfast::Line::flush() -> void {
         }
       }
     }
+  } else if(ppufast.wsOverrideCandidate()) {
+    #define isLineMode7(l) (l.io.bg1.tileMode == TileMode::Mode7 \
+        && !l.io.displayDisable && (l.io.bg1.aboveEnable || l.io.bg1.belowEnable))
+    for(uint y = 0; y < Line::count; y++) {
+      if(isLineMode7(ppufast.lines[Line::start + y])) {
+        ppufast.ind = 1;
+        ppufast.starts[0] = -1;
+        ppufast.ends[0] = -1;
+        ppufast.startsp[0] = -1;
+        ppufast.endsp[0] = -1;
+        break;
+      }
+    }
+    #undef isLineMode7
   }
 
   if(Line::count) {
@@ -138,9 +152,22 @@ auto PPUfast::Line::render() -> void {
   auto belowColor = hires ? cgram[0] : io.col.fixedColor;
   uint xa =  (hd || ss) && ppufast.interlace() && ppufast.field() ? 256 * scale * scale / 2 : 0;
   uint xb = !(hd || ss) ? 256 : ppufast.interlace() && !ppufast.field() ? (256+2*ppufast.widescreen()) * scale * scale / 2 : (256+2*ppufast.widescreen()) * scale * scale;
-  for(uint x = xa; x < xb; x++) {
-    above[x] = {Source::COL, 0, aboveColor};
-    below[x] = {Source::COL, 0, belowColor};
+  if (hd && ppufast.wsBgCol()) {
+    for(uint x = xa; x < xb; x++) {
+      int cx = (x % ((256+2*ppufast.widescreen()) * scale)) - (ppufast.widescreen() * scale);
+      if (cx >= 0 && cx <= (256 * scale)) {
+        above[x] = {Source::COL, 0, aboveColor};
+        below[x] = {Source::COL, 0, belowColor};
+      } else {
+        above[x] = {Source::COL, 0, 0};
+        below[x] = {Source::COL, 0, 0};
+      }
+    }
+  } else {
+    for(uint x = xa; x < xb; x++) {
+      above[x] = {Source::COL, 0, aboveColor};
+      below[x] = {Source::COL, 0, belowColor};
+    }
   }
 
   renderBackground(io.bg1, Source::BG1);
@@ -152,27 +179,41 @@ auto PPUfast::Line::render() -> void {
   renderWindow(io.col.window, io.col.window.aboveMask, windowAbove);
   renderWindow(io.col.window, io.col.window.belowMask, windowBelow);
 
+  uint wsm = (ppufast.widescreen() == 0 || ppufast.wsOverride()) ? 0 : ppufast.wsMarker();
+  uint wsma = ppufast.wsMarkerAlpha();
+
   auto luma = io.displayBrightness << 15;
   if(hd) for(uint x : range((256+2*ppufast.widescreen()) * scale * scale)) {
-    *output++ = luma | pixel((x / scale % (256+2*ppufast.widescreen()) - ppufast.widescreen()), above[x], below[x]);
+    *output++ = luma | pixel((x / scale % (256+2*ppufast.widescreen()) - ppufast.widescreen()), above[x], below[x], wsm, wsma);
   } else if(width == 256) for(uint x : range(256)) {
-    *output++ = luma | pixel(x, above[x], below[x]);
+    *output++ = luma | pixel(x, above[x], below[x], wsm, wsma);
   } else if(!hires) for(uint x : range(256)) {
-    auto color = luma | pixel(x, above[x], below[x]);
+    auto color = luma | pixel(x, above[x], below[x], wsm, wsma);
     *output++ = color;
     *output++ = color;
   } else for(uint x : range(256)) {
-    *output++ = luma | pixel(x, below[x], above[x]);
-    *output++ = luma | pixel(x, above[x], below[x]);
+    *output++ = luma | pixel(x, below[x], above[x], wsm, wsma);
+    *output++ = luma | pixel(x, above[x], below[x], wsm, wsma);
   }
 }
 
-auto PPUfast::Line::pixel(uint x, Pixel above, Pixel below) const -> uint15 {
+auto PPUfast::Line::pixel(uint x, Pixel above, Pixel below, uint wsm, uint wsma) const -> uint15 { 
+  uint15 r = 0;
   if(!windowAbove[ppufast.winXad(x, false)]) above.color = 0x0000;
-  if(!windowBelow[ppufast.winXad(x, true)]) return above.color;
-  if(!io.col.enable[above.source]) return above.color;
-  if(!io.col.blendMode) return blend(above.color, io.col.fixedColor, io.col.halve && windowAbove[ppufast.winXad(x, false)]);
-  return blend(above.color, below.color, io.col.halve && windowAbove[ppufast.winXad(x, false)] && below.source != Source::COL);
+  else if(!windowBelow[ppufast.winXad(x, true)]) r = above.color;
+  else if(!io.col.enable[above.source]) r = above.color;
+  else if(!io.col.blendMode) r = blend(above.color, io.col.fixedColor, io.col.halve && windowAbove[ppufast.winXad(x, false)]);
+  else r = blend(above.color, below.color, io.col.halve && windowAbove[ppufast.winXad(x, false)] && below.source != Source::COL);
+  if(wsm > 0) {
+    if(wsm == 1 && (x == 0 || x == 255)
+        || wsm == 2 && (!(x >= 0 && x <= 255))) {
+      int b = wsm == 2 ? 0 : ((y / 4) % 2 == 0) ? 0 : 31;
+      r = ((((((r >> 10) & 31) * wsma) + b) / (wsma + 1)) << 10)
+        + ((((((r >>  5) & 31) * wsma) + b) / (wsma + 1)) <<  5)
+        + ((((((r >>  0) & 31) * wsma) + b) / (wsma + 1)) <<  0);
+    }
+  }
+  return r;
 }
 
 auto PPUfast::Line::blend(uint x, uint y, bool halve) const -> uint15 {

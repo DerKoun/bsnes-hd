@@ -1,7 +1,8 @@
 auto PPUfast::Line::renderMode7HD(PPUfast::IO::Background& self, uint source) -> void {
   const bool extbg = source == Source::BG2;
-  const uint sampScale = ppufast.hdSupersample();
-  const uint scale = ppufast.hdScale() * sampScale;
+  bool mosSing = self.mosaicEnable && io.mosaicSize && ppufast.hdMosaic() == 1;
+  const uint sampScale = mosSing ? 1 : ppufast.hdSupersample();
+  const uint scale = mosSing ? 1 : ppufast.hdScale() * sampScale;
 
   int sampSize = sampScale < 2 ? 0 : (256+2*ppufast.widescreen()) * 4 * scale/sampScale;
   uint *sampTmp = new uint[sampSize];
@@ -118,6 +119,10 @@ auto PPUfast::Line::renderMode7HD(PPUfast::IO::Background& self, uint source) ->
           }
         }
 
+        if(mosSing) {
+          if(self.aboveEnable && !windowAbove[ppufast.winXad(x, false)]) plotAbove(x, pixel.source, pixel.priority, pixel.color);
+          if(self.belowEnable && !windowBelow[ppufast.winXad(x, true)]) plotBelow(x, pixel.source, pixel.priority, pixel.color);
+        } else
         if(sampScale == 1) {
           if(!skip && doAbove && (!extbg || pixel.priority > above->priority)) *above = pixel;
           if(!skip && doBelow && (!extbg || pixel.priority > below->priority)) *below = pixel;

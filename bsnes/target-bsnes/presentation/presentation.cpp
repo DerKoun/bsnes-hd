@@ -253,7 +253,9 @@ auto Presentation::resizeViewport() -> void {
   uint layoutWidth = viewportLayout.geometry().width();
   uint layoutHeight = viewportLayout.geometry().height();
 
-  uint widescreen = settings.emulator.hack.ppu.mode7.scale > 0 ? settings.emulator.hack.ppu.mode7.widescreen : 0;
+  uint widescreen = (settings.emulator.hack.ppu.mode7.scale > 0
+                  && settings.emulator.hack.ppu.mode7.wsMode > 0)
+				   ? settings.emulator.hack.ppu.mode7.widescreen : 0;
   uint unintrMode = settings.emulator.hack.ppu.mode7.unintrMode;
   uint unintrTop = settings.emulator.hack.ppu.mode7.unintrTop;
   uint unintrBottom = settings.emulator.hack.ppu.mode7.unintrBottom;
@@ -312,7 +314,7 @@ auto Presentation::resizeWindow() -> void {
   if(fullScreen()) return;
   if(maximized()) setMaximized(false);
 
-  int widescreen = settings.emulator.hack.ppu.mode7.scale > 0 ? settings.emulator.hack.ppu.mode7.widescreen : 0; // 64 / 0 #widescreenextension
+  int widescreen = settings.emulator.hack.ppu.mode7.wsMode > 0 ? settings.emulator.hack.ppu.mode7.widescreen : 0; // 64 / 0 #widescreenextension
   uint width = (256+2*widescreen) * (settings.video.aspectCorrection && !widescreen ? 8.0 / 7.0 : 1.0);
   uint height = (settings.video.overscan ? 240.0 : 224.0);
   uint multiplier = max(1, settings.video.multiplier);

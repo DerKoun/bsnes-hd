@@ -21,11 +21,15 @@ auto Program::hackCompatibility() -> void {
   emulator->configure("Hacks/PPU/Mode7/Wsobj", settings.emulator.hack.ppu.mode7.wsobj);
   emulator->configure("Hacks/PPU/Mode7/Igwin", settings.emulator.hack.ppu.mode7.igwin);
   emulator->configure("Hacks/PPU/Mode7/Igwinx", settings.emulator.hack.ppu.mode7.igwinx);
+  emulator->configure("Hacks/PPU/Mode7/WsMode", settings.emulator.hack.ppu.mode7.wsMode);
+  emulator->configure("Hacks/PPU/Mode7/WsBgCol", settings.emulator.hack.ppu.mode7.wsBgCol);
   emulator->configure("Hacks/PPU/Mode7/UnintrMode", settings.emulator.hack.ppu.mode7.unintrMode);
   emulator->configure("Hacks/PPU/Mode7/UnintrTop", settings.emulator.hack.ppu.mode7.unintrTop);
   emulator->configure("Hacks/PPU/Mode7/UnintrBottom", settings.emulator.hack.ppu.mode7.unintrBottom);
   emulator->configure("Hacks/PPU/Mode7/UnintrLeft", settings.emulator.hack.ppu.mode7.unintrLeft);
   emulator->configure("Hacks/PPU/Mode7/UnintrRight", settings.emulator.hack.ppu.mode7.unintrRight);
+  emulator->configure("Hacks/PPU/Mode7/WsMarker", settings.emulator.hack.ppu.mode7.wsMarker);
+  emulator->configure("Hacks/PPU/Mode7/WsMarkerAlpha", settings.emulator.hack.ppu.mode7.wsMarkerAlpha);
   emulator->configure("Hacks/PPU/Mode7/Supersample", settings.emulator.hack.ppu.mode7.supersample);
   emulator->configure("Hacks/PPU/Mode7/Mosaic", settings.emulator.hack.ppu.mode7.mosaic);
   emulator->configure("Hacks/DSP/Fast", fastDSP);

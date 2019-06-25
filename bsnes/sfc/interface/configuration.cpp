@@ -28,13 +28,17 @@ auto Configuration::process(Markup::Node document, bool load) -> void {
   bind(natural, "Hacks/PPU/Mode7/Wsobj", hacks.ppu.mode7.wsobj);
   bind(natural, "Hacks/PPU/Mode7/Igwin", hacks.ppu.mode7.igwin);
   bind(natural, "Hacks/PPU/Mode7/Igwinx", hacks.ppu.mode7.igwinx);
+  bind(natural, "Hacks/PPU/Mode7/WsMode", hacks.ppu.mode7.wsMode);
+  bind(natural, "Hacks/PPU/Mode7/WsBgCol", hacks.ppu.mode7.wsBgCol);
   bind(natural, "Hacks/PPU/Mode7/UnintrMode", hacks.ppu.mode7.unintrMode);
   bind(natural, "Hacks/PPU/Mode7/UnintrTop", hacks.ppu.mode7.unintrTop);
   bind(natural, "Hacks/PPU/Mode7/UnintrBottom", hacks.ppu.mode7.unintrBottom);
   bind(natural, "Hacks/PPU/Mode7/UnintrLeft", hacks.ppu.mode7.unintrLeft);
   bind(natural, "Hacks/PPU/Mode7/UnintrRight", hacks.ppu.mode7.unintrRight);
+  bind(natural, "Hacks/PPU/Mode7/WsMarker", hacks.ppu.mode7.wsMarker);
+  bind(natural, "Hacks/PPU/Mode7/WsMarkerAlpha", hacks.ppu.mode7.wsMarkerAlpha);
   bind(natural, "Hacks/PPU/Mode7/Supersample", hacks.ppu.mode7.supersample);
-  bind(boolean, "Hacks/PPU/Mode7/Mosaic", hacks.ppu.mode7.mosaic);
+  bind(natural, "Hacks/PPU/Mode7/Mosaic", hacks.ppu.mode7.mosaic);
   bind(boolean, "Hacks/DSP/Fast", hacks.dsp.fast);
   bind(boolean, "Hacks/DSP/Cubic", hacks.dsp.cubic);
   bind(boolean, "Hacks/Coprocessors/HLE", hacks.coprocessors.hle);
