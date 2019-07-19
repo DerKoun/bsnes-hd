@@ -1,0 +1,16 @@
+pool:
+  vmImage: 'macOS-latest'
+
+steps:
+- bash: make -j$(nproc --all) -C bsnes
+  displayName: 'Build'
+
+- bash: |
+    cp LICENSE README.md bsnes/out
+    cd bsnes/out
+    zip -r $(Build.ArtifactStagingDirectory)/bsnes-hd_macos.zip . -x DO_NOT_DELETE_THIS_FOLDER
+  displayName: 'Create archive'
+
+- publish: $(Build.ArtifactStagingDirectory)
+  artifact: bsnes-hd_macos
+  displayName: Publish artifacts
