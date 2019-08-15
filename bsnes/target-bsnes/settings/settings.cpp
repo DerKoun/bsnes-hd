@@ -108,6 +108,8 @@ auto Settings::process(bool load) -> void {
   bind(natural, "Emulator/Hack/PPU/Mode7/Wsobj",          emulator.hack.ppu.mode7.wsobj);
   bind(natural, "Emulator/Hack/PPU/Mode7/Igwin",          emulator.hack.ppu.mode7.igwin);
   bind(natural, "Emulator/Hack/PPU/Mode7/Igwinx",         emulator.hack.ppu.mode7.igwinx);
+  bind(natural, "Emulator/Hack/PPU/Mode7/BgGrad",         emulator.hack.ppu.mode7.bgGrad);
+  bind(natural, "Emulator/Hack/PPU/Mode7/WindRad",        emulator.hack.ppu.mode7.windRad);
   bind(natural, "Emulator/Hack/PPU/Mode7/WsMode",         emulator.hack.ppu.mode7.wsMode);
   bind(natural, "Emulator/Hack/PPU/Mode7/WsBgCol",        emulator.hack.ppu.mode7.wsBgCol);
   bind(natural, "Emulator/Hack/PPU/Mode7/UnintrMode",     emulator.hack.ppu.mode7.unintrMode);

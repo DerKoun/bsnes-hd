@@ -83,6 +83,7 @@ auto PPUfast::Line::renderMode7HD(PPUfast::IO::Background& self, uint source) ->
       bool doAbove = self.aboveEnable && !windowAbove[ppufast.winXad(x, false)];
       bool doBelow = self.belowEnable && !windowBelow[ppufast.winXad(x, true)];
 
+      uint color;
       for(int xs : range(scale)) {
         float xf = x + xs * 1.0 / scale - 0.5;
         if(io.mode7.hflip) xf = 255 - xf;
@@ -106,22 +107,21 @@ auto PPUfast::Line::renderMode7HD(PPUfast::IO::Background& self, uint source) ->
           skip = !palette;
 
           if(!skip) {
-            uint color;
             if(io.col.directColor && !extbg) {
               color = directColor(0, palette);
             } else {
               color = cgram[palette];
             }
 
-            pixel = {source, priority, color};
+            pixel = {source, priority, Emulator::video.processColor(color, io.displayBrightness)};
             pixelXp = pixelX;
             pixelYp = pixelY;
           }
         }
 
         if(mosSing) {
-          if(self.aboveEnable && !windowAbove[ppufast.winXad(x, false)]) plotAbove(x, pixel.source, pixel.priority, pixel.color);
-          if(self.belowEnable && !windowBelow[ppufast.winXad(x, true)]) plotBelow(x, pixel.source, pixel.priority, pixel.color);
+          if(self.aboveEnable && !windowAbove[ppufast.winXad(x, false)]) plotAbove(x, pixel.source, pixel.priority, color);
+          if(self.belowEnable && !windowBelow[ppufast.winXad(x, true)]) plotBelow(x, pixel.source, pixel.priority, color);
         } else
         if(sampScale == 1) {
           if(!skip && doAbove && (!extbg || pixel.priority > above->priority)) *above = pixel;
@@ -131,14 +131,14 @@ auto PPUfast::Line::renderMode7HD(PPUfast::IO::Background& self, uint source) ->
         } else {
           int p = ((((x+ppufast.widescreen())*(scale/sampScale)) + (xs/sampScale))) * 4;
           sampTmp[p] += pixel.priority;
-          sampTmp[p+1] += (pixel.color >> 10) & 31;
-          sampTmp[p+2] += (pixel.color >>  5) & 31;
-          sampTmp[p+3] += (pixel.color >>  0) & 31;
+          sampTmp[p+1] += (pixel.color >> 16) & 255;
+          sampTmp[p+2] += (pixel.color >>  8) & 255;
+          sampTmp[p+3] += (pixel.color >>  0) & 255;
           if((ys+1) % sampScale == 0 && (xs+1) % sampScale == 0) {
             uint priority = sampTmp[p] / sampScale / sampScale;
-            uint color = ((sampTmp[p+1] / sampScale / sampScale) << 10)
-                        + ((sampTmp[p+2] / sampScale / sampScale) <<  5)
-                        + ((sampTmp[p+3] / sampScale / sampScale) <<  0);
+            uint color = ((sampTmp[p+1] / sampScale / sampScale) << 16)
+                       + ((sampTmp[p+2] / sampScale / sampScale) <<  8)
+                       + ((sampTmp[p+3] / sampScale / sampScale) <<  0);
             if(!skip && doAbove && (!extbg || priority > above->priority)) *above = {source, priority, color};
             if(!skip && doBelow && (!extbg || priority > below->priority)) *below = {source, priority, color};
             above++;

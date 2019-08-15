@@ -1,0 +1,22 @@
+version: '{build}'
+
+image:
+- Visual Studio 2017
+- Ubuntu1804
+
+install:
+- cmd: set PATH=%PATH%;C:\mingw-w64\x86_64-8.1.0-posix-seh-rt_v6-rev0\mingw64\bin
+- sh: sudo apt-get update && sudo apt-get -y install build-essential libgtk2.0-dev libpulse-dev mesa-common-dev libgtksourceview2.0-dev libcairo2-dev libsdl2-dev libxv-dev libao-dev libopenal-dev libudev-dev
+
+build_script:
+- cmd: mingw32-make -j 4 -C bsnes
+- sh: make -j 4 -C bsnes
+
+after_build:
+- cmd: cd bsnes/out && 7z a ../../bsnes_hd.zip bsnes.exe
+- sh: cd bsnes/out && 7z a ../../bsnes_hd.zip bsnes
+
+test: off
+
+artifacts:
+- path: bsnes_hd_build.zip

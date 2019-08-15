@@ -111,6 +111,10 @@ auto Video::removeSprite(shared_pointer<Sprite> sprite) -> bool {
   return false;
 }
 
+auto Video::processColor(uint15 color, uint4 displayBrightness) const -> uint32 {
+  return color == 0 ? (uint32)0 : palette[color | (displayBrightness << 15)];
+}
+
 auto Video::refresh(uint32* input, uint pitch, uint width, uint height) -> void {
   if(this->width != width || this->height != height) {
     delete buffer;
@@ -124,20 +128,19 @@ auto Video::refresh(uint32* input, uint pitch, uint width, uint height) -> void 
   auto output = buffer;
   pitch >>= 2;  //bytes to words
 
-  for(uint y : range(height)) {
+  if(pitch == width) {
+    memory::copy<uint32>(output, input, width * height);
+  } else for(uint y : range(height)) {
     auto source = input + y * pitch;
     auto target = output + y * width;
 
     if(!effects.interframeBlending) {
-      for(uint x : range(width)) {
-        auto color = palette[*source++];
-        *target++ = color;
-      }
+      memory::copy<uint32>(target, source, width);
     } else {
       uint32 mask = depth == 30 ? 0x40100401 : 0x01010101;
       for(uint x : range(width)) {
         auto a = *target;
-        auto b = palette[*source++];
+        auto b = *source++;
         *target++ = (a + b - ((a ^ b) & mask)) >> 1;
       }
     }

@@ -133,8 +133,8 @@ auto PPUfast::Line::renderBackground(PPUfast::IO::Background& self, uint source)
             if(self.belowEnable && !windowBelow[ppufast.winXad(X, true)]) plotBelow(X, source, mosaicPriority, mosaicColor);
           }
         } else {
-          if(self.aboveEnable && !windowAbove[ppufast.winXad(X, false)]) plotHD(above, X, source, mosaicPriority, mosaicColor, true, x & 1);
-          if(self.belowEnable && !windowBelow[ppufast.winXad(X, true)]) plotHD(below, X, source, mosaicPriority, mosaicColor, true, x & 1);
+          if(self.aboveEnable && !windowAbove[ppufast.winXad(X, false)]) plotHD(above, X, source, mosaicPriority, Emulator::video.processColor(mosaicColor, io.displayBrightness), true, x & 1);
+          if(self.belowEnable && !windowBelow[ppufast.winXad(X, true)]) plotHD(below, X, source, mosaicPriority, Emulator::video.processColor(mosaicColor, io.displayBrightness), true, x & 1);
         }
       }
     }

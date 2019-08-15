@@ -29,6 +29,8 @@ struct Video {
 
   auto refresh(uint32* input, uint pitch, uint width, uint height) -> void;
 
+  /*alwaysinline*/ auto processColor(uint15 color, uint4 displayBrightness) const -> uint32;
+
 private:
   Interface* interface = nullptr;
   vector<shared_pointer<Sprite>> sprites;

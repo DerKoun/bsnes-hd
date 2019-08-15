@@ -24,7 +24,7 @@ auto PPUfast::hdScale() const -> uint { return configuration.hacks.ppu.mode7.sca
 auto PPUfast::hdPerspective() const -> uint { return configuration.hacks.ppu.mode7.perspective; }
 auto PPUfast::hdSupersample() const -> uint { return configuration.hacks.ppu.mode7.supersample; }
 auto PPUfast::hdMosaic() const -> uint { return configuration.hacks.ppu.mode7.mosaic; }
-auto PPUfast::widescreen() const -> uint { return configuration.hacks.ppu.mode7.wsMode == 0 ? 0 : configuration.hacks.ppu.mode7.widescreen; }
+auto PPUfast::widescreen() const -> uint { return !hd() || configuration.hacks.ppu.mode7.wsMode == 0 ? 0 : configuration.hacks.ppu.mode7.widescreen; }
 auto PPUfast::wsbg(uint bg) const -> uint {
   if (bg == Source::BG1) return configuration.hacks.ppu.mode7.wsbg1;
   if (bg == Source::BG2) return configuration.hacks.ppu.mode7.wsbg2;
@@ -37,6 +37,8 @@ auto PPUfast::winXad(uint x, bool bel) const -> uint {
        || configuration.hacks.ppu.mode7.igwin >= 2 && ((bel ? io.col.window.belowMask : io.col.window.aboveMask) == 0)
        || configuration.hacks.ppu.mode7.igwin >= 1 && ((bel ? io.col.window.belowMask : io.col.window.aboveMask) == 2)))
     ? configuration.hacks.ppu.mode7.igwinx : (x < 0 ? 0 : (x > 255 ? 255 : x)); }
+auto PPUfast::bgGrad() const -> uint { return !hd() ? 0 : configuration.hacks.ppu.mode7.bgGrad; }
+auto PPUfast::windRad() const -> uint { return !hd() ? 0 : configuration.hacks.ppu.mode7.windRad; }
 auto PPUfast::wsOverrideCandidate() const -> bool { return configuration.hacks.ppu.mode7.wsMode == 1; }
 auto PPUfast::wsOverride() const -> bool { return ind < 1 && wsOverrideCandidate(); }
 auto PPUfast::wsBgCol() const -> bool { return configuration.hacks.ppu.mode7.wsBgCol == 2
@@ -45,7 +47,7 @@ auto PPUfast::wsMarker() const -> uint { return configuration.hacks.ppu.mode7.ws
 auto PPUfast::wsMarkerAlpha() const -> uint { return configuration.hacks.ppu.mode7.wsMarkerAlpha; }
 
 PPUfast::PPUfast() {
-  output = new uint32[2304 * 2304] + 72 * 2304;  //overscan offset
+  output = new uint32[256 * 61440] + 8 * 61440;  //overscan offset
   tilecache[TileMode::BPP2] = new uint8[4096 * 8 * 8];
   tilecache[TileMode::BPP4] = new uint8[2048 * 8 * 8];
   tilecache[TileMode::BPP8] = new uint8[1024 * 8 * 8];
@@ -56,7 +58,7 @@ PPUfast::PPUfast() {
 }
 
 PPUfast::~PPUfast() {
-  delete[] (output - 72 * 2304);  //overscan offset
+  delete[] (output - 8 * 61440);  //overscan offset
   delete[] tilecache[TileMode::BPP2];
   delete[] tilecache[TileMode::BPP4];
   delete[] tilecache[TileMode::BPP8];

@@ -21,6 +21,8 @@ auto Program::hackCompatibility() -> void {
   emulator->configure("Hacks/PPU/Mode7/Wsobj", settings.emulator.hack.ppu.mode7.wsobj);
   emulator->configure("Hacks/PPU/Mode7/Igwin", settings.emulator.hack.ppu.mode7.igwin);
   emulator->configure("Hacks/PPU/Mode7/Igwinx", settings.emulator.hack.ppu.mode7.igwinx);
+  emulator->configure("Hacks/PPU/Mode7/BgGrad", settings.emulator.hack.ppu.mode7.bgGrad);
+  emulator->configure("Hacks/PPU/Mode7/WindRad", settings.emulator.hack.ppu.mode7.windRad);
   emulator->configure("Hacks/PPU/Mode7/WsMode", settings.emulator.hack.ppu.mode7.wsMode);
   emulator->configure("Hacks/PPU/Mode7/WsBgCol", settings.emulator.hack.ppu.mode7.wsBgCol);
   emulator->configure("Hacks/PPU/Mode7/UnintrMode", settings.emulator.hack.ppu.mode7.unintrMode);

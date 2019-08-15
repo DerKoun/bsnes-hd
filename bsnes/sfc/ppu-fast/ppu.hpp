@@ -20,6 +20,8 @@ struct PPUfast : Thread, PPUcounter {
   alwaysinline auto wsbg(uint bg) const -> uint;
   alwaysinline auto wsobj() const -> uint;
   alwaysinline auto winXad(uint x, bool bel) const -> uint;
+  alwaysinline auto bgGrad() const -> uint;
+  alwaysinline auto windRad() const -> uint;
   alwaysinline auto wsOverrideCandidate() const -> bool;
   alwaysinline auto wsOverride() const -> bool;
   alwaysinline auto wsBgCol() const -> bool;
@@ -239,7 +241,7 @@ public:
   struct Pixel {
      uint8 source;
      uint8 priority;
-    uint15 color;
+    uint32 color;
   };
 
   //io.cpp
@@ -280,12 +282,14 @@ public:
     //line.cpp
     static auto flush() -> void;
     auto render() -> void;
-    alwaysinline auto pixel(uint x, Pixel above, Pixel below, uint wsm, uint wsma) const -> uint15;
-    alwaysinline auto blend(uint x, uint y, bool halve) const -> uint15;
+    alwaysinline auto pixel(uint x, Pixel above, Pixel below, uint wsm, uint wsma, uint32 bgFixedColor) const -> uint32;
+    alwaysinline auto blend(uint x, uint y, bool halve) const -> uint32;
     alwaysinline auto directColor(uint paletteIndex, uint paletteColor) const -> uint15;
     alwaysinline auto plotAbove(int x, uint source, uint priority, uint color) -> void;
     alwaysinline auto plotBelow(int x, uint source, uint priority, uint color) -> void;
-    alwaysinline auto plotHD(Pixel*, int x, uint source, uint priority, uint color, bool hires, bool subpixel) -> void;
+    alwaysinline auto plotHD(Pixel*, int x, uint source, uint priority, uint32 color, bool hires, bool subpixel) -> void;
+
+    alwaysinline auto avgBgC(uint dist, uint offset) const -> uint32;
 
     //background.cpp
     auto renderBackground(PPUfast::IO::Background&, uint source) -> void;
@@ -303,7 +307,8 @@ public:
 
     //window.cpp
     alwaysinline auto renderWindow(PPUfast::IO::WindowLayer&, bool, array<bool[256]>&) -> void;
-    alwaysinline auto renderWindow(PPUfast::IO::WindowColor&, uint, array<bool[256]>&) -> void;
+    alwaysinline auto renderWindow(PPUfast::IO::WindowColor&, uint, bool *output,
+                                   uint oneLeft, uint oneRight, uint twoLeft, uint twoRight, uint scale, uint offset) -> void;
 
     //[unserialized]
     uint9 y;  //constant
@@ -314,11 +319,11 @@ public:
     array<ObjectItem[128]> items;  //32 on real hardware
     array<ObjectTile[128]> tiles;  //34 on real hardware; 1024 max (128 * 64-width tiles)
 
-    Pixel above[256 * 9 * 9];
-    Pixel below[256 * 9 * 9];
+    Pixel *above = new Pixel[61440];
+    Pixel *below = new Pixel[61440];
 
-    array<bool[256]> windowAbove;
-    array<bool[256]> windowBelow;
+    bool *windowAbove = new bool[25600] ;
+    bool *windowBelow = new bool[25600] ;
 
     //flush()
     static uint start;

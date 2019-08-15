@@ -39,6 +39,8 @@ struct Configuration {
         uint wsobj = 0;
         uint igwin = 1;
         uint igwinx = 128;
+        uint bgGrad = 4;
+		uint windRad = 0;
         uint wsMode = 1;
         uint wsBgCol = 1;
         uint unintrMode = 1;

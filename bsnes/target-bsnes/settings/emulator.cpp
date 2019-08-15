@@ -71,7 +71,7 @@ auto EmulatorSettings::create() -> void {
   });
   mode7Label.setText("HD Mode 7 / bsnes-hd").setFont(Font().setBold());
   mode7ScaleLabel.setText("Scale:");
-  mode7Scale.append(ComboButtonItem().setText("disable").setProperty("multiplier", 0));
+  mode7Scale.append(ComboButtonItem().setText("disable ").setProperty("multiplier", 0));
   mode7Scale.append(ComboButtonItem().setText("1x  224p").setProperty("multiplier", 1));
   mode7Scale.append(ComboButtonItem().setText("2x  448p").setProperty("multiplier", 2));
   mode7Scale.append(ComboButtonItem().setText("3x  672p").setProperty("multiplier", 3));
@@ -81,7 +81,8 @@ auto EmulatorSettings::create() -> void {
   mode7Scale.append(ComboButtonItem().setText("7x 1568p").setProperty("multiplier", 7));
   mode7Scale.append(ComboButtonItem().setText("8x 1792p").setProperty("multiplier", 8));
   mode7Scale.append(ComboButtonItem().setText("9x 2016p").setProperty("multiplier", 9));
-  for(uint n = 0; n <= 9; n++) {
+  mode7Scale.append(ComboButtonItem().setText("10x2240p").setProperty("multiplier",10));
+  for(uint n = 0; n <= 10; n++) {
     if(settings.emulator.hack.ppu.mode7.scale == n) mode7Scale.item(n).setSelected();
   }
   mode7Scale.onChange([&] {
@@ -114,7 +115,9 @@ auto EmulatorSettings::create() -> void {
   mode7Supersample.append(ComboButtonItem().setText("6x").setProperty("sss", 6));
   mode7Supersample.append(ComboButtonItem().setText("7x").setProperty("sss", 7));
   mode7Supersample.append(ComboButtonItem().setText("8x").setProperty("sss", 8));
-  for(uint n = 0; n < 8; n++) {
+  mode7Supersample.append(ComboButtonItem().setText("9x").setProperty("sss", 9));
+  mode7Supersample.append(ComboButtonItem().setText("10x").setProperty("sss", 10));
+  for(uint n = 0; n < 10; n++) {
     if(mode7Supersample.item(n).property("sss").natural() == settings.emulator.hack.ppu.mode7.supersample)
        mode7Supersample.item(n).setSelected();
   }
@@ -295,6 +298,44 @@ auto EmulatorSettings::create() -> void {
   igwinx.onChange([&] {
     settings.emulator.hack.ppu.mode7.igwinx = igwinx.selected().property("col").natural();
     emulator->configure("Hacks/PPU/Mode7/Igwinx", settings.emulator.hack.ppu.mode7.igwinx);
+  });
+
+  bgGradLabel.setText("Line color HD:");
+  bgGrad.append(ComboButtonItem().setText("0").setProperty("rad",  0));
+  bgGrad.append(ComboButtonItem().setText("1").setProperty("rad",  1));
+  bgGrad.append(ComboButtonItem().setText("2").setProperty("rad",  2));
+  bgGrad.append(ComboButtonItem().setText("3").setProperty("rad",  3));
+  bgGrad.append(ComboButtonItem().setText("4").setProperty("rad",  4));
+  bgGrad.append(ComboButtonItem().setText("5").setProperty("rad",  5));
+  bgGrad.append(ComboButtonItem().setText("6").setProperty("rad",  6));
+  bgGrad.append(ComboButtonItem().setText("7").setProperty("rad",  7));
+  bgGrad.append(ComboButtonItem().setText("8").setProperty("rad",  8));
+  for(uint n = 0; n <= 8; n++) {
+    if(bgGrad.item(n).property("rad").natural() == settings.emulator.hack.ppu.mode7.bgGrad)
+       bgGrad.item(n).setSelected();
+  }
+  bgGrad.onChange([&] {
+    settings.emulator.hack.ppu.mode7.bgGrad = bgGrad.selected().property("rad").natural();
+    emulator->configure("Hacks/PPU/Mode7/BgGrad", settings.emulator.hack.ppu.mode7.bgGrad);
+  });
+
+  windRadLabel.setText("Window HD:");
+  windRad.append(ComboButtonItem().setText("0").setProperty("rad",  0));
+  windRad.append(ComboButtonItem().setText("1").setProperty("rad",  1));
+  windRad.append(ComboButtonItem().setText("2").setProperty("rad",  2));
+  windRad.append(ComboButtonItem().setText("3").setProperty("rad",  3));
+  windRad.append(ComboButtonItem().setText("4").setProperty("rad",  4));
+  windRad.append(ComboButtonItem().setText("5").setProperty("rad",  5));
+  windRad.append(ComboButtonItem().setText("6").setProperty("rad",  6));
+  windRad.append(ComboButtonItem().setText("7").setProperty("rad",  7));
+  windRad.append(ComboButtonItem().setText("8").setProperty("rad",  8));
+  for(uint n = 0; n <= 8; n++) {
+    if(windRad.item(n).property("rad").natural() == settings.emulator.hack.ppu.mode7.windRad)
+       windRad.item(n).setSelected();
+  }
+  windRad.onChange([&] {
+    settings.emulator.hack.ppu.mode7.windRad = windRad.selected().property("rad").natural();
+    emulator->configure("Hacks/PPU/Mode7/WindRad", settings.emulator.hack.ppu.mode7.windRad);
   });
 
   wsBgColLabel.setText("WS bg:");
@@ -497,6 +538,8 @@ auto EmulatorSettings::updateConfiguration() -> void {
   emulator->configure("Hacks/PPU/Mode7/Wsobj", wsObj.property("mode").natural());
   emulator->configure("Hacks/PPU/Mode7/Igwin", igwin.property("mode").natural());
   emulator->configure("Hacks/PPU/Mode7/Igwinx", igwin.property("col").natural());
+  emulator->configure("Hacks/PPU/Mode7/BgGrad", bgGrad.property("rad").natural());
+  emulator->configure("Hacks/PPU/Mode7/WindRad", windRad.property("rad").natural());
   emulator->configure("Hacks/PPU/Mode7/WsMode", wsMode.property("mode").natural());
   emulator->configure("Hacks/PPU/Mode7/WsBgCol", wsBgCol.property("mode").natural());
   emulator->configure("Hacks/PPU/Mode7/UnintrMode", igwin.property("mode").natural());

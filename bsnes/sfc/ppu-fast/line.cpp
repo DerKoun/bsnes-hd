@@ -130,10 +130,55 @@ auto PPUfast::Line::flush() -> void {
   }
 }
 
+auto PPUfast::Line::avgBgC(uint dist, uint offset) const -> uint32 {
+  uint32 t = Emulator::video.processColor(io.col.fixedColor, io.displayBrightness);
+  if(dist < 1) return t;
+  uint32 a = (t >> 16) & 255;
+  uint32 b = (t >>  8) & 255;
+  uint32 c = (t >>  0) & 255;
+  int scale = ppufast.hd() ? ppufast.hdScale() : 1;
+  int hdY = y * scale + offset;
+  int count = 1;
+  for (int i = 1; i <= dist*scale; i++) {
+    int uY = (hdY-i)/scale;
+    int dY = (hdY+i)/scale;
+    if(uY < 0 || dY >= 224) break; /////////////////////////////
+    auto uL = ppufast.lines[uY];
+    auto dL = ppufast.lines[dY];
+    if( io.col.halve     != dL.io.col.halve     || io.col.halve     != uL.io.col.halve     ||
+        io.col.mathMode  != dL.io.col.mathMode  || io.col.mathMode  != uL.io.col.mathMode  ||
+        io.col.blendMode != dL.io.col.blendMode || io.col.blendMode != uL.io.col.blendMode ||
+        io.col.enable[0] != dL.io.col.enable[0] || io.col.enable[0] != uL.io.col.enable[0] ||
+        io.col.enable[1] != dL.io.col.enable[1] || io.col.enable[1] != uL.io.col.enable[1] ||
+        io.col.enable[2] != dL.io.col.enable[2] || io.col.enable[2] != uL.io.col.enable[2] ||
+        io.col.enable[3] != dL.io.col.enable[3] || io.col.enable[3] != uL.io.col.enable[3] ||
+        io.col.enable[4] != dL.io.col.enable[4] || io.col.enable[4] != uL.io.col.enable[4] ||
+        io.col.enable[5] != dL.io.col.enable[5] || io.col.enable[5] != uL.io.col.enable[5] ||
+        io.col.enable[6] != dL.io.col.enable[6] || io.col.enable[6] != uL.io.col.enable[6] ||
+        io.bg1.tileMode  != dL.io.bg1.tileMode  || io.bg1.tileMode  != uL.io.bg1.tileMode  ||
+        io.bg2.tileMode  != dL.io.bg2.tileMode  || io.bg2.tileMode  != uL.io.bg2.tileMode  ||
+        io.bg3.tileMode  != dL.io.bg3.tileMode  || io.bg3.tileMode  != uL.io.bg3.tileMode  ||
+        io.bg4.tileMode  != dL.io.bg4.tileMode  || io.bg4.tileMode  != uL.io.bg4.tileMode) break; 
+    t = Emulator::video.processColor(uL.io.col.fixedColor, io.displayBrightness);
+    a += (t >> 16) & 255;
+    b += (t >>  8) & 255;
+    c += (t >>  0) & 255;
+    t = Emulator::video.processColor(dL.io.col.fixedColor, io.displayBrightness);
+    a += (t >> 16) & 255;
+    b += (t >>  8) & 255;
+    c += (t >>  0) & 255;
+    count += 2;
+  }
+  a /= count;
+  b /= count;
+  c /= count;
+  return (a << 16) + (b << 8) + (c << 0);
+}
+
 auto PPUfast::Line::render() -> void {
   auto hd = ppufast.hd();
   auto ss = ppufast.ss();
-  auto scale = ppufast.hdScale();
+  auto scale = ppufast.hd() ? ppufast.hdScale() : 1;
   auto output = ppufast.output + (!hd
   ? (y * 1024 + (ppufast.interlace() && ppufast.field() ? 512 : 0))
   : (y * (256+2*ppufast.widescreen()) * scale * scale)
@@ -148,8 +193,14 @@ auto PPUfast::Line::render() -> void {
   }
 
   bool hires = io.pseudoHires || io.bgMode == 5 || io.bgMode == 6;
-  auto aboveColor = cgram[0];
-  auto belowColor = hires ? cgram[0] : io.col.fixedColor;
+  auto aboveColor = Emulator::video.processColor(cgram[0], io.displayBrightness);
+  uint32 *bgFixedColors = new uint32[10];
+  uint32 *belowColors = new uint32[10];
+  for (int i = 0; i < scale; i++) {
+    bgFixedColors[i] = avgBgC(ppufast.bgGrad(), i);
+    belowColors[i]  = hires ? aboveColor : bgFixedColors[i];
+  }
+  
   uint xa =  (hd || ss) && ppufast.interlace() && ppufast.field() ? 256 * scale * scale / 2 : 0;
   uint xb = !(hd || ss) ? 256 : ppufast.interlace() && !ppufast.field() ? (256+2*ppufast.widescreen()) * scale * scale / 2 : (256+2*ppufast.widescreen()) * scale * scale;
   if (hd && ppufast.wsBgCol()) {
@@ -157,7 +208,7 @@ auto PPUfast::Line::render() -> void {
       int cx = (x % ((256+2*ppufast.widescreen()) * scale)) - (ppufast.widescreen() * scale);
       if (cx >= 0 && cx <= (256 * scale)) {
         above[x] = {Source::COL, 0, aboveColor};
-        below[x] = {Source::COL, 0, belowColor};
+        below[x] = {Source::COL, 0, belowColors[x / ((256+2*ppufast.widescreen()) * scale)]};
       } else {
         above[x] = {Source::COL, 0, 0};
         below[x] = {Source::COL, 0, 0};
@@ -166,7 +217,7 @@ auto PPUfast::Line::render() -> void {
   } else {
     for(uint x = xa; x < xb; x++) {
       above[x] = {Source::COL, 0, aboveColor};
-      below[x] = {Source::COL, 0, belowColor};
+      below[x] = {Source::COL, 0, belowColors[x / ((256+2*ppufast.widescreen()) * scale)]};
     }
   }
 
@@ -176,62 +227,136 @@ auto PPUfast::Line::render() -> void {
   renderBackground(io.bg4, Source::BG4);
   renderObject(io.obj);
   if(io.extbg) renderBackground(io.bg2, Source::BG2);
-  renderWindow(io.col.window, io.col.window.aboveMask, windowAbove);
-  renderWindow(io.col.window, io.col.window.belowMask, windowBelow);
+
+  //TODO: move to own method
+  uint windRad = ppufast.windRad();
+  for (int offset = 0; offset < scale; offset++) {
+    uint oneLeft  = io.window.oneLeft;
+    uint oneRight = io.window.oneRight;
+    uint twoLeft  = io.window.twoLeft;
+    uint twoRight = io.window.twoRight;
+
+    int hdY = y * scale + offset;
+    int count = 1;
+    for (int i = 1; i <= windRad*scale; i++) {
+      int uY = (hdY-i)/scale;
+      int dY = (hdY+i)/scale;
+      if(uY <= 0 || dY >= 224) break;
+      auto uL = ppufast.lines[uY];
+      auto dL = ppufast.lines[dY];
+
+      if( io.col.halve     != dL.io.col.halve     || io.col.halve     != uL.io.col.halve     ||
+          io.col.mathMode  != dL.io.col.mathMode  || io.col.mathMode  != uL.io.col.mathMode  ||
+          io.col.blendMode != dL.io.col.blendMode || io.col.blendMode != uL.io.col.blendMode ||
+          (io.window.oneLeft >= io.window.oneRight) != (dL.io.window.oneLeft >= dL.io.window.oneRight) ||
+          (io.window.oneLeft >= io.window.oneRight) != (uL.io.window.oneLeft >= uL.io.window.oneRight) ||
+          (io.window.twoLeft >= io.window.twoRight) != (dL.io.window.twoLeft >= dL.io.window.twoRight) ||
+          (io.window.twoLeft >= io.window.twoRight) != (uL.io.window.twoLeft >= uL.io.window.twoRight) ||
+          io.col.window.oneEnable != dL.io.col.window.oneEnable ||
+          io.col.window.oneEnable != uL.io.col.window.oneEnable ||
+          io.col.window.oneInvert != dL.io.col.window.oneInvert ||
+          io.col.window.oneInvert != uL.io.col.window.oneInvert ||
+          io.col.window.twoEnable != dL.io.col.window.twoEnable ||
+          io.col.window.twoEnable != uL.io.col.window.twoEnable ||
+          io.col.window.twoInvert != dL.io.col.window.twoInvert ||
+          io.col.window.twoInvert != uL.io.col.window.twoInvert ||
+          io.col.window.mask != dL.io.col.window.mask ||
+          io.col.window.mask != uL.io.col.window.mask ||
+          io.col.window.aboveMask != dL.io.col.window.aboveMask ||
+          io.col.window.aboveMask != uL.io.col.window.aboveMask ||
+          io.col.window.belowMask != dL.io.col.window.belowMask ||
+          io.col.window.belowMask != uL.io.col.window.belowMask
+          ) break; 
+
+      oneLeft  += dL.io.window.oneLeft  + uL.io.window.oneLeft;
+      oneRight += dL.io.window.oneRight + uL.io.window.oneRight;
+      twoLeft  += dL.io.window.twoLeft  + uL.io.window.twoLeft;
+      twoRight += dL.io.window.twoRight + uL.io.window.twoRight;
+
+      count += 2;
+    }
+    oneLeft  = oneLeft  * scale / count;
+    oneRight = oneRight * scale / count + scale - 1;
+    twoLeft  = twoLeft  * scale / count;
+    twoRight = twoRight * scale / count + scale - 1;
+
+    renderWindow(io.col.window, io.col.window.aboveMask, windowAbove,
+                oneLeft, oneRight, twoLeft, twoRight, scale, 256*scale*offset);
+    renderWindow(io.col.window, io.col.window.belowMask, windowBelow,
+                oneLeft, oneRight, twoLeft, twoRight, scale, 256*scale*offset);
+  }
 
   uint wsm = (ppufast.widescreen() == 0 || ppufast.wsOverride()) ? 0 : ppufast.wsMarker();
   uint wsma = ppufast.wsMarkerAlpha();
 
-  auto luma = io.displayBrightness << 15;
-  if(hd) for(uint x : range((256+2*ppufast.widescreen()) * scale * scale)) {
-    *output++ = luma | pixel((x / scale % (256+2*ppufast.widescreen()) - ppufast.widescreen()), above[x], below[x], wsm, wsma);
+  if(hd) {
+    int x = 0;
+    int xWindow = 0;
+    for(uint ySub : range(scale)) {
+      for(uint i : range(ppufast.widescreen() * scale)) {
+        *output++ = pixel(xWindow, above[x], below[x], wsm, wsma, bgFixedColors[ySub]);
+        x++;
+      }
+      for(uint i : range(256 * scale)) {
+        *output++ = pixel(xWindow, above[x], below[x], wsm, wsma, bgFixedColors[ySub]);
+        x++;
+        xWindow++;
+      }
+      xWindow--;
+      for(uint i : range(ppufast.widescreen() * scale)) {
+        *output++ = pixel(xWindow, above[x], below[x], wsm, wsma, bgFixedColors[ySub]);
+        x++;
+      }
+      xWindow++;
+    }
   } else if(width == 256) for(uint x : range(256)) {
-    *output++ = luma | pixel(x, above[x], below[x], wsm, wsma);
+    *output++ = pixel(x, above[x], below[x], wsm, wsma, bgFixedColors[0]);
   } else if(!hires) for(uint x : range(256)) {
-    auto color = luma | pixel(x, above[x], below[x], wsm, wsma);
+    auto color = pixel(x, above[x], below[x], wsm, wsma, bgFixedColors[0]);
     *output++ = color;
     *output++ = color;
   } else for(uint x : range(256)) {
-    *output++ = luma | pixel(x, below[x], above[x], wsm, wsma);
-    *output++ = luma | pixel(x, above[x], below[x], wsm, wsma);
+    *output++ = pixel(x, below[x], above[x], wsm, wsma, bgFixedColors[0]);
+    *output++ = pixel(x, above[x], below[x], wsm, wsma, bgFixedColors[0]);
   }
 }
 
-auto PPUfast::Line::pixel(uint x, Pixel above, Pixel below, uint wsm, uint wsma) const -> uint15 { 
-  uint15 r = 0;
-  if(!windowAbove[ppufast.winXad(x, false)]) above.color = 0x0000;
-  else if(!windowBelow[ppufast.winXad(x, true)]) r = above.color;
+auto PPUfast::Line::pixel(uint x, Pixel above, Pixel below, uint wsm, uint wsma, uint32 bgFixedColor) const -> uint32 {
+  uint32 r = 0;
+  if(!windowAbove[x]) above.color = 0x0000;
+  if(!windowBelow[x]) r = above.color;
   else if(!io.col.enable[above.source]) r = above.color;
-  else if(!io.col.blendMode) r = blend(above.color, io.col.fixedColor, io.col.halve && windowAbove[ppufast.winXad(x, false)]);
-  else r = blend(above.color, below.color, io.col.halve && windowAbove[ppufast.winXad(x, false)] && below.source != Source::COL);
+  else if(!io.col.blendMode) r = blend(above.color, bgFixedColor, io.col.halve && windowAbove[x]);
+  else r = blend(above.color, below.color, io.col.halve && windowAbove[x] && below.source != Source::COL);
   if(wsm > 0) {
-    if(wsm == 1 && (x == 0 || x == 255)
-        || wsm == 2 && (!(x >= 0 && x <= 255))) {
-      int b = wsm == 2 ? 0 : ((y / 4) % 2 == 0) ? 0 : 31;
-      r = ((((((r >> 10) & 31) * wsma) + b) / (wsma + 1)) << 10)
-        + ((((((r >>  5) & 31) * wsma) + b) / (wsma + 1)) <<  5)
-        + ((((((r >>  0) & 31) * wsma) + b) / (wsma + 1)) <<  0);
+    x = (x / ppufast.hdScale()) % 256;
+    if(wsm == 1 && (x == 1 || x == 254)
+        || wsm == 2 && (x == 0 || x == 255)) {
+      int b = wsm == 2 ? 0 : ((y / 4) % 2 == 0) ? 0 : 255;
+      r = ((((((r >> 16) & 255) * wsma) + b) / (wsma + 1)) << 16)
+        + ((((((r >>  8) & 255) * wsma) + b) / (wsma + 1)) <<  8)
+        + ((((((r >>  0) & 255) * wsma) + b) / (wsma + 1)) <<  0);
     }
   }
   return r;
 }
 
-auto PPUfast::Line::blend(uint x, uint y, bool halve) const -> uint15 {
+auto PPUfast::Line::blend(uint x, uint y, bool halve) const -> uint32 {
   if(!io.col.mathMode) {  //add
     if(!halve) {
       uint sum = x + y;
-      uint carry = (sum - ((x ^ y) & 0x0421)) & 0x8420;
-      return (sum - carry) | (carry - (carry >> 5));
+      uint carry = (sum - ((x ^ y) & 0x00010101)) & 0x01010100;
+      return (sum - carry) | (carry - (carry >> 8));
     } else {
-      return (x + y - ((x ^ y) & 0x0421)) >> 1;
+      return (x + y - ((x ^ y) & 0x00010101)) >> 1;
     }
   } else {  //sub
-    uint diff = x - y + 0x8420;
-    uint borrow = (diff - ((x ^ y) & 0x8420)) & 0x8420;
+    uint diff = x - y + 0x01010100;
+    uint borrow = (diff - ((x ^ y) & 0x01010100)) & 0x01010100;
     if(!halve) {
-      return   (diff - borrow) & (borrow - (borrow >> 5));
+      return   (diff - borrow) & (borrow - (borrow >> 8));
     } else {
-      return (((diff - borrow) & (borrow - (borrow >> 5))) & 0x7bde) >> 1;
+      return (((diff - borrow) & (borrow - (borrow >> 8))) & 0x00fefefe) >> 1;
     }
   }
 }
@@ -245,18 +370,20 @@ auto PPUfast::Line::directColor(uint paletteIndex, uint paletteColor) const -> u
        + (paletteColor << 7 & 0x6000) + (paletteIndex << 10 & 0x1000);  //B
 }
 
-auto PPUfast::Line::plotAbove(int x, uint source, uint priority, uint color) -> void {
+auto PPUfast::Line::plotAbove(int x, uint source, uint priority, uint col) -> void {
+  uint32 color = Emulator::video.processColor(col, io.displayBrightness);
   if(ppufast.hd() || ppufast.ss()) return plotHD(above, x, source, priority, color, false, false);
   if(priority > above[x].priority) above[x] = {source, priority, color};
 }
 
-auto PPUfast::Line::plotBelow(int x, uint source, uint priority, uint color) -> void {
+auto PPUfast::Line::plotBelow(int x, uint source, uint priority, uint col) -> void {
+  uint32 color = Emulator::video.processColor(col, io.displayBrightness);
   if(ppufast.hd() || ppufast.ss()) return plotHD(below, x, source, priority, color, false, false);
   if(priority > below[x].priority) below[x] = {source, priority, color};
 }
 
 //todo: name these variables more clearly ...
-auto PPUfast::Line::plotHD(Pixel* pixel, int x, uint source, uint priority, uint color, bool hires, bool subpixel) -> void {
+auto PPUfast::Line::plotHD(Pixel* pixel, int x, uint source, uint priority, uint32 color, bool hires, bool subpixel) -> void {
   int scale = ppufast.hdScale();
   int wss = ppufast.widescreen() * scale;
   int xss = hires && subpixel ? scale / 2 : 0;

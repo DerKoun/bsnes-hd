@@ -23,14 +23,21 @@ Extending the scenes to the left and right, without distorting them. Works for m
 - **Demo video**: *Chrono Trigger* ending credits: [Beyond Time](https://www.youtube.com/watch?v=YE1gp6BWilg) by *retroprez* (youtube)
 - **Demo video**: *Chrono Trigger* ending credits: [Float Away](https://www.youtube.com/watch?v=Ss49vVbULOQ) by *retroprez* (youtube)
 
-### more to come
+### True color
 
-For example higher color depth and interpolation for the colors blending that help the sense of depth.
+Color calculation are done at true color instead of the SNES color depth (3*8 instead of 3*5 bit). With the optional line color smoothing color "steps" turn into actual gradients (without influencing the sharpness of the artwork).
+
+### Other high resolution features
+
+Smother color gradients and window effect, not limited by the original resolution or integer precision.
 
 ### plus some non-HD related features
 
 like the ability to disable background layers, sprites and window effects for screenshots for wallpapers or soft crop to zoom in, leaving maps or static art off the sides of the screen.
 
+### more to come
+
+Feel free to suggest features. Please remember that this fork focuses on HD and visual output.
 
 
 ## Help Wanted
@@ -127,6 +134,14 @@ Settings for sprites/objects.
 ### Fallback x-coordinate
 
 The x-coordinate used as fallback for "*ignore window*". (defaults to 128 (the center))
+
+### Line color HD
+
+The amount of neighboring lines used to smooth color gradients that are applied to the frame, e.g. to improve perspective Mode 7 effects, by fading to dark for the "far away" top. "*0*" disables this smoothing. The default is "*4*".
+
+### Window HD
+
+The amount of neighboring lines used to smooth Window effects, like iris transitions, shadows or spell effects. "*0*" disables smoothing and is the default. (*This feature is considered a preview, as the lines at the top and bottom of effects are currently not entirely HD and it, in general, is not that well tested. Please let me know about any games/scenes/effects that work noticeable badly or well*)
 
 ### Soft crop
 

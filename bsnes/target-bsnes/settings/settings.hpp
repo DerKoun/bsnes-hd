@@ -91,6 +91,8 @@ struct Settings : Markup::Node {
           uint wsobj = 0;
           uint igwin = 1;
           uint igwinx = 128;
+          uint bgGrad = 4;
+		  uint windRad = 0;
           uint wsMode = 1;
           uint wsBgCol = 1;
           uint unintrMode = 1;
@@ -329,6 +331,10 @@ public:
       ComboButton igwin{&hdDLayout, Size{0, 0}};
       Label igwinxLabel{&hdDLayout, Size{0, 0}};
       ComboButton igwinx{&hdDLayout, Size{0, 0}};
+      Label bgGradLabel{&hdDLayout, Size{0, 0}};
+      ComboButton bgGrad{&hdDLayout, Size{0, 0}};
+      Label windRadLabel{&hdDLayout, Size{0, 0}};
+      ComboButton windRad{&hdDLayout, Size{0, 0}};
     HorizontalLayout hdELayout{&layout, Size{~0, 0}};
       Label unintrModeLabel{&hdELayout, Size{0, 0}};
       ComboButton unintrMode{&hdELayout, Size{0, 0}};
