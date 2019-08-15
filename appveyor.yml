@@ -13,8 +13,8 @@ build_script:
 - sh: make -j 4 -C bsnes
 
 after_build:
-- cmd: cd bsnes/out && 7z a ../../bsnes_hd.zip bsnes.exe
-- sh: cd bsnes/out && 7z a ../../bsnes_hd.zip bsnes
+- cmd: cd bsnes/out && 7z a ../../bsnes_hd_build.zip bsnes.exe
+- sh: cd bsnes/out && 7z a ../../bsnes_hd_build.zip bsnes
 
 test: off
 
