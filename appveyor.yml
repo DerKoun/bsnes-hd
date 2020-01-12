@@ -9,8 +9,8 @@ install:
 - sh: sudo apt-get update && sudo apt-get -y install build-essential libgtk2.0-dev libpulse-dev mesa-common-dev libgtksourceview2.0-dev libcairo2-dev libsdl2-dev libxv-dev libao-dev libopenal-dev libudev-dev zip
 
 build_script:
-- cmd: mingw32-make -j 4 -C bsnes
-- sh: make -j 4 -C bsnes
+- cmd: mingw32-make -C bsnes
+- sh: make -C bsnes
 
 after_build:
 - cmd: cd bsnes/out && 7z a ../../bsnes_hd_build.zip bsnes.exe
