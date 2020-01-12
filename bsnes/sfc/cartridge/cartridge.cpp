@@ -37,6 +37,17 @@ auto Cartridge::titles() const -> vector<string> {
   return titles;
 }
 
+auto Cartridge::title() const -> string {
+  if(slotGameBoy.label) return slotGameBoy.label;
+  if(has.MCC && slotBSMemory.label) return slotBSMemory.label;
+  if(slotBSMemory.label) return {game.label, " + ", slotBSMemory.label};
+  if(slotSufamiTurboA.label && slotSufamiTurboB.label) return {slotSufamiTurboA.label, " + ", slotSufamiTurboB.label};
+  if(slotSufamiTurboA.label) return slotSufamiTurboA.label;
+  if(slotSufamiTurboB.label) return slotSufamiTurboB.label;
+  if(has.Cx4 || has.DSP1 || has.DSP2 || has.DSP4 || has.ST0010) return {"[HLE] ", game.label};
+  return game.label;
+}
+
 auto Cartridge::load() -> bool {
   information = {};
   has = {};
@@ -54,6 +65,7 @@ auto Cartridge::load() -> bool {
   if(auto fp = platform->open(ID::SuperFamicom, "manifest.bml", File::Read, File::Required)) {
     game.load(fp->reads());
   } else return false;
+
   loadCartridge(game.document);
 
   //Game Boy
@@ -101,14 +113,6 @@ auto Cartridge::load() -> bool {
   return true;
 }
 
-auto Cartridge::loadGameBoy() -> bool {
-  //invoked from ICD::load()
-  information.sha256 = GameBoy::cartridge.hash();
-  slotGameBoy.load(GameBoy::cartridge.manifest());
-  loadCartridgeGameBoy(slotGameBoy.document);
-  return true;
-}
-
 auto Cartridge::loadBSMemory() -> bool {
   if(auto fp = platform->open(bsmemory.pathID, "manifest.bml", File::Read, File::Required)) {
     slotBSMemory.load(fp->reads());
@@ -136,7 +140,7 @@ auto Cartridge::loadSufamiTurboB() -> bool {
 auto Cartridge::save() -> void {
   saveCartridge(game.document);
   if(has.GameBoySlot) {
-    saveCartridgeGameBoy(slotGameBoy.document);
+    icd.save();
   }
   if(has.BSMemorySlot) {
     saveCartridgeBSMemory(slotBSMemory.document);

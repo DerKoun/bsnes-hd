@@ -38,7 +38,8 @@ auto SM83::instructionADD_Direct_Relative(uint16& target) -> void {
   idle();
   CF = (uint8)target + (uint8)data > 0xff;
   HF = (uint4)target + (uint4)data > 0x0f;
-  NF = ZF = 0;
+  NF = 0;
+  ZF = 0;
   target += (int8)data;
 }
 
@@ -73,7 +74,8 @@ auto SM83::instructionCALL_Condition_Address(bool take) -> void {
 
 auto SM83::instructionCCF() -> void {
   CF = !CF;
-  HF = NF = 0;
+  HF = 0;
+  NF = 0;
 }
 
 auto SM83::instructionCP_Direct_Data(uint8& target) -> void {
@@ -90,7 +92,8 @@ auto SM83::instructionCP_Direct_Indirect(uint8& target, uint16& source) -> void 
 
 auto SM83::instructionCPL() -> void {
   A = ~A;
-  HF = NF = 1;
+  HF = 1;
+  NF = 1;
 }
 
 auto SM83::instructionDAA() -> void {
@@ -106,7 +109,7 @@ auto SM83::instructionDAA() -> void {
     if(CF) a -= 0x60;
   }
   A = a;
-  CF |= a.bit(8);
+  CF |= bit1(a,8);
   HF = 0;
   ZF = A == 0;
 }
@@ -135,7 +138,7 @@ auto SM83::instructionEI() -> void {
 
 auto SM83::instructionHALT() -> void {
   r.halt = 1;
-  while(r.halt) idle();
+  while(r.halt) halt();
 }
 
 auto SM83::instructionINC_Direct(uint8& data) -> void {
@@ -204,7 +207,8 @@ auto SM83::instructionLD_Direct_DirectRelative(uint16& target, uint16& source) -
   idle();
   CF = (uint8)source + (uint8)data > 0xff;
   HF = (uint4)source + (uint4)data > 0x0f;
-  NF = ZF = 0;
+  NF = 0;
+  ZF = 0;
   target = source + (int8)data;
 }
 
@@ -277,12 +281,12 @@ auto SM83::instructionPUSH_Direct(uint16& data) -> void {
 }
 
 auto SM83::instructionRES_Index_Direct(uint3 index, uint8& data) -> void {
-  data.bit(index) = 0;
+  bit1(data,index) = 0;
 }
 
 auto SM83::instructionRES_Index_Indirect(uint3 index, uint16& address) -> void {
   auto data = read(address);
-  data.bit(index) = 0;
+  bit1(data,index) = 0;
   write(address, data);
 }
 
@@ -382,16 +386,17 @@ auto SM83::instructionSBC_Direct_Indirect(uint8& target, uint16& source) -> void
 
 auto SM83::instructionSCF() -> void {
   CF = 1;
-  HF = NF = 0;
+  HF = 0;
+  NF = 0;
 }
 
 auto SM83::instructionSET_Index_Direct(uint3 index, uint8& data) -> void {
-  data.bit(index) = 1;
+  bit1(data,index) = 1;
 }
 
 auto SM83::instructionSET_Index_Indirect(uint3 index, uint16& address) -> void {
   auto data = read(address);
-  data.bit(index) = 1;
+  bit1(data,index) = 1;
   write(address, data);
 }
 
@@ -423,9 +428,9 @@ auto SM83::instructionSRL_Indirect(uint16& address) -> void {
 }
 
 auto SM83::instructionSTOP() -> void {
-  if(stop()) return;
+  if(!stoppable()) return;
   r.stop = 1;
-  while(r.stop) idle();
+  while(r.stop) stop();
 }
 
 auto SM83::instructionSUB_Direct_Data(uint8& target) -> void {

@@ -2,6 +2,7 @@
 
 namespace SuperFamicom {
 
+bool Memory::GlobalWriteEnable = false;
 Bus bus;
 
 Bus::~Bus() {
@@ -10,7 +11,7 @@ Bus::~Bus() {
 }
 
 auto Bus::reset() -> void {
-  for(auto id : range(256)) {
+  for(uint id : range(256)) {
     reader[id].reset();
     writer[id].reset();
     counter[id] = 0;
@@ -22,13 +23,13 @@ auto Bus::reset() -> void {
   lookup = new uint8 [16 * 1024 * 1024]();
   target = new uint32[16 * 1024 * 1024]();
 
-  reader[0] = [](uint24, uint8 data) -> uint8 { return data; };
-  writer[0] = [](uint24, uint8) -> void {};
+  reader[0] = [](uint, uint8 data) -> uint8 { return data; };
+  writer[0] = [](uint, uint8) -> void {};
 }
 
 auto Bus::map(
-  const function<uint8 (uint24, uint8)>& read,
-  const function<void (uint24, uint8)>& write,
+  const function<uint8 (uint, uint8)>& read,
+  const function<void  (uint, uint8)>& write,
   const string& addr, uint size, uint base, uint mask
 ) -> uint {
   uint id = 1;
@@ -60,6 +61,7 @@ auto Bus::map(
           }
 
           uint offset = reduce(bank << 16 | addr, mask);
+          if(size) base = mirror(base, size);
           if(size) offset = base + mirror(offset, size - base);
           lookup[bank << 16 | addr] = id;
           target[bank << 16 | addr] = offset;

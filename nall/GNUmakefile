@@ -12,6 +12,12 @@ MAKEFLAGS := Rr
 
 # platform detection
 ifeq ($(platform),)
+  ifeq ($(OS),Windows_NT)
+    platform := windows
+  endif
+endif
+
+ifeq ($(platform),)
   uname := $(shell uname)
   ifeq ($(uname),)
     platform := windows
@@ -69,7 +75,7 @@ endif
 
 # build optimization levels
 ifeq ($(build),debug)
-  flags += -Og -DBUILD_DEBUG
+  flags += -Og -g -DBUILD_DEBUG
 else ifeq ($(build),stable)
   flags += -O1 -DBUILD_STABLE
 else ifeq ($(build),size)

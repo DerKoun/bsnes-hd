@@ -65,8 +65,8 @@ auto mTableView::columns() const -> vector<TableViewColumn> {
   return columns;
 }
 
-auto mTableView::doActivate() const -> void {
-  if(state.onActivate) return state.onActivate();
+auto mTableView::doActivate(sTableViewCell cell) const -> void {
+  if(state.onActivate) return state.onActivate(cell);
 }
 
 auto mTableView::doChange() const -> void {
@@ -112,7 +112,7 @@ auto mTableView::items() const -> vector<TableViewItem> {
   return items;
 }
 
-auto mTableView::onActivate(const function<void ()>& callback) -> type& {
+auto mTableView::onActivate(const function<void (TableViewCell)>& callback) -> type& {
   state.onActivate = callback;
   return *this;
 }
@@ -170,6 +170,21 @@ auto mTableView::reset() -> type& {
 
 auto mTableView::resizeColumns() -> type& {
   signal(resizeColumns);
+  return *this;
+}
+
+auto mTableView::selectAll() -> type& {
+  if(!state.batchable) return *this;
+  for(auto& item : state.items) {
+    item->setSelected(true);
+  }
+  return *this;
+}
+
+auto mTableView::selectNone() -> type& {
+  for(auto& item : state.items) {
+    item->setSelected(false);
+  }
   return *this;
 }
 

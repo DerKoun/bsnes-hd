@@ -5,10 +5,14 @@
 #include <nall/range.hpp>
 #include <nall/serializer.hpp>
 #include <nall/stdint.hpp>
+#if !defined(PLATFORM_ANDROID)
 #include <nall/cipher/chacha20.hpp>
+#endif
 
 #if defined(PLATFORM_LINUX) && __has_include(<sys/random.h>)
   #include <sys/random.h>
+#elif defined(PLATFORM_ANDROID) && __has_include(<sys/syscall.h>)
+  #include <sys/syscall.h>
 #elif defined(PLATFORM_WINDOWS) && __has_include(<wincrypt.h>)
   #include <wincrypt.h>
 #else
@@ -41,6 +45,8 @@ protected:
     for(uint n : range(8)) seed = seed << 32 | (uint32_t)arc4random();
     #elif defined(PLATFORM_LINUX) && __has_include(<sys/random.h>)
     getrandom(&seed, 32, GRND_NONBLOCK);
+    #elif defined(PLATFORM_ANDROID) && __has_include(<sys/syscall.h>)
+    syscall(__NR_getrandom, &seed, 32, 0x0001);  //GRND_NONBLOCK
     #elif defined(PLATFORM_WINDOWS) && __has_include(<wincrypt.h>)
     HCRYPTPROV provider;
     if(CryptAcquireContext(&provider, nullptr, MS_STRONG_PROV, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT)) {
@@ -63,6 +69,8 @@ namespace PRNG {
 
 //Galois linear feedback shift register using CRC64 polynomials
 struct LFSR : RNG<LFSR> {
+  LFSR() { seed(); }
+
   auto seed(maybe<uint64_t> seed = {}) -> void {
     lfsr = seed ? seed() : (uint64_t)randomSeed();
     for(uint n : range(8)) read();  //hide the CRC64 polynomial from initial output
@@ -84,6 +92,8 @@ private:
 };
 
 struct PCG : RNG<PCG> {
+  PCG() { seed(); }
+
   auto seed(maybe<uint32_t> seed = {}, maybe<uint32_t> sequence = {}) -> void {
     if(!seed) seed = (uint32_t)randomSeed();
     if(!sequence) sequence = 0;
@@ -117,6 +127,7 @@ private:
 
 }
 
+#if !defined(PLATFORM_ANDROID)
 namespace CSPRNG {
 
 //XChaCha20 cryptographically secure pseudo-random number generator
@@ -145,6 +156,7 @@ private:
 };
 
 }
+#endif
 
 //
 

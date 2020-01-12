@@ -33,11 +33,12 @@ namespace hiro {
   #include "color.cpp"
   #include "gradient.cpp"
   #include "alignment.cpp"
-  #include "cursor.cpp"
+  #include "text-cursor.cpp"
   #include "position.cpp"
   #include "size.cpp"
   #include "geometry.cpp"
   #include "font.cpp"
+  #include "mouse-cursor.cpp"
 
   #include "application.cpp"
   #include "desktop.cpp"
@@ -47,7 +48,7 @@ namespace hiro {
   #include "browser-window.cpp"
   #include "message-window.cpp"
 
-  #include "property.cpp"
+  #include "attribute.cpp"
 
   #include "object.cpp"
   #include "group.cpp"

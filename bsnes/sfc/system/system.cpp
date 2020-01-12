@@ -9,20 +9,106 @@ Cheat cheat;
 #include "serialization.cpp"
 
 auto System::run() -> void {
-  if(scheduler.enter() == Scheduler::Event::Frame) ppu.refresh();
+  scheduler.mode = Scheduler::Mode::Run;
+  scheduler.enter();
+  if(scheduler.event == Scheduler::Event::Frame) frameEvent();
 }
 
 auto System::runToSave() -> void {
-  scheduler.synchronize(cpu);
-  scheduler.synchronize(smp);
-  scheduler.synchronize(ppu);
-  for(auto coprocessor : cpu.coprocessors) scheduler.synchronize(*coprocessor);
-  for(auto peripheral : cpu.peripherals) scheduler.synchronize(*peripheral);
+  auto method = configuration.system.serialization.method;
+
+  //these games will periodically deadlock when using "Fast" synchronization
+  if(cartridge.headerTitle() == "Star Ocean") method = "Strict";
+  if(cartridge.headerTitle() == "TALES OF PHANTASIA") method = "Strict";
+
+  //fallback in case of unrecognized method specified
+  if(method != "Fast" && method != "Strict") method = "Fast";
+
+  scheduler.mode = Scheduler::Mode::Synchronize;
+  if(method == "Fast") runToSaveFast();
+  if(method == "Strict") runToSaveStrict();
+
+  scheduler.mode = Scheduler::Mode::Run;
+  scheduler.active = cpu.thread;
+}
+
+auto System::runToSaveFast() -> void {
+  //run the emulator normally until the CPU thread naturally hits a synchronization point
+  while(true) {
+    scheduler.enter();
+    if(scheduler.event == Scheduler::Event::Frame) frameEvent();
+    if(scheduler.event == Scheduler::Event::Synchronized) {
+      if(scheduler.active != cpu.thread) continue;
+      break;
+    }
+    if(scheduler.event == Scheduler::Event::Desynchronized) continue;
+  }
+
+  //ignore any desynchronization events to force all other threads to their synchronization points
+  auto synchronize = [&](cothread_t thread) -> void {
+    scheduler.active = thread;
+    while(true) {
+      scheduler.enter();
+      if(scheduler.event == Scheduler::Event::Frame) frameEvent();
+      if(scheduler.event == Scheduler::Event::Synchronized) break;
+      if(scheduler.event == Scheduler::Event::Desynchronized) continue;
+    }
+  };
+
+  synchronize(smp.thread);
+  synchronize(ppu.thread);
+  for(auto coprocessor : cpu.coprocessors) {
+    synchronize(coprocessor->thread);
+  }
+}
+
+auto System::runToSaveStrict() -> void {
+  //run every thread until it cleanly hits a synchronization point
+  //if it fails, start resynchronizing every thread again
+  auto synchronize = [&](cothread_t thread) -> bool {
+    scheduler.active = thread;
+    while(true) {
+      scheduler.enter();
+      if(scheduler.event == Scheduler::Event::Frame) frameEvent();
+      if(scheduler.event == Scheduler::Event::Synchronized) break;
+      if(scheduler.event == Scheduler::Event::Desynchronized) return false;
+    }
+    return true;
+  };
+
+  while(true) {
+    //SMP thread is synchronized twice to ensure the CPU and SMP are closely aligned:
+    //this is extremely critical for Tales of Phantasia and Star Ocean.
+    if(!synchronize(smp.thread)) continue;
+    if(!synchronize(cpu.thread)) continue;
+    if(!synchronize(smp.thread)) continue;
+    if(!synchronize(ppu.thread)) continue;
+
+    bool synchronized = true;
+    for(auto coprocessor : cpu.coprocessors) {
+      if(!synchronize(coprocessor->thread)) { synchronized = false; break; }
+    }
+    if(!synchronized) continue;
+
+    break;
+  }
+}
+
+auto System::frameEvent() -> void {
+  ppu.refresh();
+
+  //refresh all cheat codes once per frame
+  Memory::GlobalWriteEnable = true;
+  for(auto& code : cheat.codes) {
+    if(code.enable) {
+      bus.write(code.address, code.data);
+    }
+  }
+  Memory::GlobalWriteEnable = false;
 }
 
 auto System::load(Emulator::Interface* interface) -> bool {
   information = {};
-  hacks.fastPPU = configuration.hacks.ppu.fast;
 
   bus.reset();
   if(!cpu.load()) return false;
@@ -40,10 +126,18 @@ auto System::load(Emulator::Interface* interface) -> bool {
     information.cpuFrequency = Emulator::Constants::Colorburst::PAL * 4.8;
   }
 
-  if(cartridge.has.ICD) icd.load();
+  if(configuration.hacks.hotfixes) {
+    //due to poor programming, Rendering Ranger R2 will rarely lock up at 32040 * 768hz.
+    if(cartridge.headerTitle() == "RENDERING RANGER R2") {
+      information.apuFrequency = 32000.0 * 768.0;
+    }
+  }
+
+  if(cartridge.has.ICD) {
+    if(!icd.load()) return false;
+  }
   if(cartridge.has.BSMemorySlot) bsmemory.load();
 
-  serializeInit();
   this->interface = interface;
   return information.loaded = true;
 }
@@ -57,7 +151,6 @@ auto System::save() -> void {
 auto System::unload() -> void {
   if(!loaded()) return;
 
-  cpu.peripherals.reset();
   controllerPort1.unload();
   controllerPort2.unload();
   expansionPort.unload();
@@ -81,14 +174,15 @@ auto System::unload() -> void {
 }
 
 auto System::power(bool reset) -> void {
-  Emulator::video.reset(interface);
-  Emulator::video.setPalette();
+  hacks.fastPPU = configuration.hacks.ppu.fast;
 
   Emulator::audio.reset(interface);
 
-  random.entropy(Random::Entropy::Low);
+  random.entropy(Random::Entropy::Low);  //fallback case
+  if(configuration.hacks.entropy == "None") random.entropy(Random::Entropy::None);
+  if(configuration.hacks.entropy == "Low" ) random.entropy(Random::Entropy::Low );
+  if(configuration.hacks.entropy == "High") random.entropy(Random::Entropy::High);
 
-  scheduler.reset();
   cpu.power(reset);
   smp.power(reset);
   dsp.power(reset);
@@ -131,7 +225,7 @@ auto System::power(bool reset) -> void {
   if(cartridge.has.MSU1) cpu.coprocessors.append(&msu1);
   if(cartridge.has.BSMemorySlot) cpu.coprocessors.append(&bsmemory);
 
-  scheduler.primary(cpu);
+  scheduler.active = cpu.thread;
 
   controllerPort1.power(ID::Port::Controller1);
   controllerPort2.power(ID::Port::Controller2);
@@ -140,6 +234,9 @@ auto System::power(bool reset) -> void {
   controllerPort1.connect(settings.controllerPort1);
   controllerPort2.connect(settings.controllerPort2);
   expansionPort.connect(settings.expansionPort);
+
+  information.serializeSize[0] = serializeInit(0);
+  information.serializeSize[1] = serializeInit(1);
 }
 
 }

@@ -11,8 +11,15 @@ namespace SuperFamicom {
 #include "serialization.cpp"
 SA1 sa1;
 
+auto SA1::synchronizeCPU() -> void {
+  if(clock >= 0) scheduler.resume(cpu.thread);
+}
+
 auto SA1::Enter() -> void {
-  while(true) scheduler.synchronize(), sa1.main();
+  while(true) {
+    scheduler.synchronize();
+    sa1.main();
+  }
 }
 
 auto SA1::main() -> void {
@@ -31,21 +38,20 @@ auto SA1::main() -> void {
     return;
   }
 
-//print(disassemble(), "\n");
   instruction();
 }
 
 //override R65816::interrupt() to support SA-1 vector location IO registers
 auto SA1::interrupt() -> void {
-  read(r.pc);
+  read(r.pc.d);
   idle();
-  if(!r.e) push(r.pc >> 16);
-  push(r.pc >> 8);
-  push(r.pc >> 0);
+  if(!r.e) push(r.pc.b);
+  push(r.pc.h);
+  push(r.pc.l);
   push(r.e ? r.p & ~0x10 : r.p);
   r.p.i = 1;
   r.p.d = 0;
-  r.pc = r.vector;  //PC bank set to 0x00
+  r.pc.d = r.vector;  //PC bank set to 0x00
 }
 
 auto SA1::lastCycle() -> void {
@@ -79,13 +85,9 @@ auto SA1::interruptPending() const -> bool {
   return status.interruptPending;
 }
 
-auto SA1::synchronizing() const -> bool {
-  return scheduler.synchronizing();
-}
-
 auto SA1::step() -> void {
-  Thread::step(2);
-  synchronize(cpu);
+  clock += (uint64_t)cpu.frequency << 1;
+  synchronizeCPU();
 
   //adjust counters:
   //note that internally, status counters are in clocks;
@@ -128,8 +130,10 @@ auto SA1::unload() -> void {
 }
 
 auto SA1::power() -> void {
+  double overclock = max(1.0, min(4.0, configuration.hacks.sa1.overclock / 100.0));
+
   WDC65816::power();
-  create(SA1::Enter, system.cpuFrequency());
+  create(SA1::Enter, system.cpuFrequency() * overclock);
 
   bwram.dma = false;
   for(uint address : range(iram.size())) {

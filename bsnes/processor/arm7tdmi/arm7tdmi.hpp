@@ -148,14 +148,14 @@ struct ARM7TDMI {
     }
 
     inline auto operator=(uint32 data) -> PSR& {
-      m = data.bits(0,4);
-      t = data.bit(5);
-      f = data.bit(6);
-      i = data.bit(7);
-      v = data.bit(28);
-      c = data.bit(29);
-      z = data.bit(30);
-      n = data.bit(31);
+      m = data >>  0 & 31;
+      t = data >>  5 & 1;
+      f = data >>  6 & 1;
+      i = data >>  7 & 1;
+      v = data >> 28 & 1;
+      c = data >> 29 & 1;
+      z = data >> 30 & 1;
+      n = data >> 31 & 1;
       return *this;
     }
 

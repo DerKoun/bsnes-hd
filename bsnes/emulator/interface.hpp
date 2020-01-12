@@ -61,6 +61,7 @@ struct Interface {
   virtual auto hashes() -> vector<string> { return {}; }
   virtual auto manifests() -> vector<string> { return {}; }
   virtual auto titles() -> vector<string> { return {}; }
+  virtual auto title() -> string { return {}; }
   virtual auto load() -> bool { return false; }
   virtual auto save() -> void {}
   virtual auto unload() -> void {}
@@ -80,10 +81,11 @@ struct Interface {
   virtual auto synchronize(uint64 timestamp = 0) -> void {}
 
   //state functions
-  virtual auto serialize() -> serializer { return {}; }
+  virtual auto serialize(bool synchronize = true) -> serializer { return {}; }
   virtual auto unserialize(serializer&) -> bool { return false; }
 
   //cheat functions
+  virtual auto read(uint24 address) -> uint8 { return 0; }
   virtual auto cheats(const vector<string>& = {}) -> void {}
 
   //configuration
@@ -99,6 +101,9 @@ struct Interface {
 
   virtual auto frameSkip() -> uint { return 0; }
   virtual auto setFrameSkip(uint frameSkip) -> void {}
+
+  virtual auto runAhead() -> bool { return false; }
+  virtual auto setRunAhead(bool runAhead) -> void {}
 };
 
 }

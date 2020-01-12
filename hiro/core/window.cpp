@@ -188,10 +188,10 @@ auto mWindow::resizable() const -> bool {
 }
 
 auto mWindow::setAlignment(Alignment alignment) -> type& {
-  auto workspace = Desktop::workspace();
+  auto workspace = Monitor::workspace();
   auto geometry = frameGeometry();
-  auto x = alignment.horizontal() * (workspace.width() - geometry.width());
-  auto y = alignment.vertical() * (workspace.height() - geometry.height());
+  auto x = workspace.x() + alignment.horizontal() * (workspace.width() - geometry.width());
+  auto y = workspace.y() + alignment.vertical() * (workspace.height() - geometry.height());
   setFramePosition({(int)x, (int)y});
   return *this;
 }
@@ -206,10 +206,10 @@ auto mWindow::setAlignment(sWindow relativeTo, Alignment alignment) -> type& {
   //-1 .. -0 => beyond parent window
   //... I know, relying on -0 IEE754 here is ... less than ideal
   if(signbit(alignment.horizontal())) {
-    x = (parent.x() - window.width()) + (parent.width() + window.width()) * abs(alignment.horizontal());
+    x = (parent.x() - window.width()) + abs(alignment.horizontal()) * (parent.width() + window.width());
   }
   if(signbit(alignment.vertical())) {
-    y = (parent.y() - window.height()) + (parent.height() + window.height()) * abs(alignment.vertical());
+    y = (parent.y() - window.height()) + abs(alignment.vertical()) * (parent.height() + window.height());
   }
   setFramePosition({(int)x, (int)y});
   return *this;
@@ -266,9 +266,27 @@ auto mWindow::setFullScreen(bool fullScreen) -> type& {
 }
 
 auto mWindow::setGeometry(Geometry geometry) -> type& {
+  //round fractional bits of geometry coordinates that window managers cannot display.
+  //the pWindow classes lose this precision and so not doing so here can cause off-by-1 issues.
+  geometry.setX(round(geometry.x()));
+  geometry.setY(round(geometry.y()));
+  geometry.setWidth(round(geometry.width()));
+  geometry.setHeight(round(geometry.height()));
+
   state.geometry = geometry;
   signal(setGeometry, geometry);
   if(auto& sizable = state.sizable) sizable->setGeometry(sizable->geometry());
+  return *this;
+}
+
+auto mWindow::setGeometry(Alignment alignment, Size size) -> type& {
+  auto margin = signal(frameMargin);
+  auto width = margin.width() + size.width();
+  auto height = margin.height() + size.height();
+  auto workspace = Monitor::workspace();
+  auto x = workspace.x() + alignment.horizontal() * (workspace.width() - width);
+  auto y = workspace.y() + alignment.vertical() * (workspace.height() - height);
+  setFrameGeometry({(int)x, (int)y, (int)width, (int)height});
   return *this;
 }
 

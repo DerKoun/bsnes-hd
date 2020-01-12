@@ -5,7 +5,7 @@
 -(id) initWith:(hiro::mTableView&)tableViewReference {
   if(self = [super initWithFrame:NSMakeRect(0, 0, 0, 0)]) {
     tableView = &tableViewReference;
-    content = [[CocoaTableViewContent alloc] initWithFrame:NSMakeRect(0, 0, 0, 0)];
+    content = [[CocoaTableViewContent alloc] initWith:tableViewReference];
 
     [self setDocumentView:content];
     [self setBorderType:NSBezelBorder];
@@ -104,19 +104,22 @@
 }
 
 -(void) tableViewSelectionDidChange:(NSNotification*)notification {
+  if(tableView->self()->locked()) return;
   for(auto& tableViewItem : tableView->state.items) {
     tableViewItem->state.selected = tableViewItem->offset() == [content selectedRow];
   }
   tableView->doChange();
 }
 
--(IBAction) activate:(id)sender {
-  tableView->doActivate();
-}
-
 -(IBAction) doubleAction:(id)sender {
-  if([content clickedRow] >= 0) {
-    [self activate:self];
+  int row = [content clickedRow];
+  if(row >= 0 && row < tableView->state.items.size()) {
+    int column = [content clickedColumn];
+    if(column >= 0 && column < tableView->state.columns.size()) {
+      auto item = tableView->state.items[row];
+      auto cell = item->cell(column);
+      tableView->doActivate(cell);
+    }
   }
 }
 
@@ -124,12 +127,24 @@
 
 @implementation CocoaTableViewContent : NSTableView
 
+-(id) initWith:(hiro::mTableView&)tableViewReference {
+  if(self = [super initWithFrame:NSMakeRect(0, 0, 0, 0)]) {
+    tableView = &tableViewReference;
+  }
+  return self;
+}
+
 -(void) keyDown:(NSEvent*)event {
   auto character = [[event characters] characterAtIndex:0];
   if(character == NSEnterCharacter || character == NSCarriageReturnCharacter) {
-    if([self selectedRow] >= 0) {
-      [[self delegate] activate:self];
-      return;
+    int row = [self selectedRow];
+    if(row >= 0 && row < tableView->state.items.size()) {
+      int column = max(0, [self selectedColumn]);  //can be -1?
+      if(column >= 0 && column < tableView->state.columns.size()) {
+        auto item = tableView->state.items[row];
+        auto cell = item->cell(column);
+        tableView->doActivate(cell);
+      }
     }
   }
 
@@ -365,7 +380,6 @@ auto pTableView::setForegroundColor(Color color) -> void {
 
 auto pTableView::setHeadered(bool headered) -> void {
   @autoreleasepool {
-    if(headered == state().headered) return;
     if(headered) {
       [[cocoaView content] setHeaderView:[[[NSTableHeaderView alloc] init] autorelease]];
     } else {

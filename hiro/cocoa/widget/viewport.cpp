@@ -9,6 +9,12 @@
   return self;
 }
 
+-(void) resetCursorRects {
+  if(auto mouseCursor = NSMakeCursor(viewport->mouseCursor())) {
+    [self addCursorRect:self.bounds cursor:mouseCursor];
+  }
+}
+
 -(void) drawRect:(NSRect)rect {
   [[NSColor blackColor] setFill];
   NSRectFillUsingOperation(rect, NSCompositeSourceOver);
@@ -65,6 +71,10 @@ auto pViewport::setDroppable(bool droppable) -> void {
       [cocoaViewport unregisterDraggedTypes];
     }
   }
+}
+
+auto pViewport::setFocusable(bool focusable) -> void {
+  //TODO
 }
 
 }

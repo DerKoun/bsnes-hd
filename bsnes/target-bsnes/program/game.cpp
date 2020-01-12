@@ -1,15 +1,29 @@
 auto Program::load() -> void {
   unload();
 
-  if(auto configuration = string::read(locate("configuration.bml"))) {
-    emulator->configure(configuration);
-    emulatorSettings.updateConfiguration();
-  }
+  emulator->configure("System/Serialization/Method", settings.emulator.serialization.method);
+  emulator->configure("Hacks/Hotfixes", settings.emulator.hack.hotfixes);
+  emulator->configure("Hacks/Entropy", settings.emulator.hack.entropy);
+  emulator->configure("Hacks/CPU/Overclock", settings.emulator.hack.cpu.overclock);
+  emulator->configure("Hacks/CPU/FastMath", settings.emulator.hack.cpu.fastMath);
+  emulator->configure("Hacks/PPU/Fast", settings.emulator.hack.ppu.fast);
+  emulator->configure("Hacks/PPU/Deinterlace", settings.emulator.hack.ppu.deinterlace);
+  emulator->configure("Hacks/PPU/NoSpriteLimit", settings.emulator.hack.ppu.noSpriteLimit);
+  emulator->configure("Hacks/PPU/NoVRAMBlocking", settings.emulator.hack.ppu.noVRAMBlocking);
+  emulator->configure("Hacks/PPU/Mode7/Scale", settings.emulator.hack.ppu.mode7.scale);
+  emulator->configure("Hacks/PPU/Mode7/Perspective", settings.emulator.hack.ppu.mode7.perspective);
+  emulator->configure("Hacks/PPU/Mode7/Supersample", settings.emulator.hack.ppu.mode7.supersample);
+  emulator->configure("Hacks/PPU/Mode7/Mosaic", settings.emulator.hack.ppu.mode7.mosaic);
+  emulator->configure("Hacks/DSP/Fast", settings.emulator.hack.dsp.fast);
+  emulator->configure("Hacks/DSP/Cubic", settings.emulator.hack.dsp.cubic);
+  emulator->configure("Hacks/DSP/EchoShadow", settings.emulator.hack.dsp.echoShadow);
+  emulator->configure("Hacks/Coprocessor/DelayedSync", settings.emulator.hack.coprocessor.delayedSync);
+  emulator->configure("Hacks/Coprocessor/PreferHLE", settings.emulator.hack.coprocessor.preferHLE);
+  emulator->configure("Hacks/SuperFX/Overclock", settings.emulator.hack.superfx.overclock);
   if(!emulator->load()) return;
 
   gameQueue = {};
   screenshot = {};
-  frameAdvance = false;
   if(!verified() && emulatorSettings.warnOnUnverifiedGames.checked()) {
     //Emulator::loaded() is true at this point:
     //prevent Program::main() from calling Emulator::run() during this dialog window
@@ -36,16 +50,19 @@ auto Program::load() -> void {
     verified() ? "Verified game loaded" : "Game loaded",
     appliedPatch() ? " and patch applied" : ""
   });
-  presentation.setTitle(emulator->titles().merge(" + "));
+  presentation.setFocused();
+  presentation.setTitle({Emulator::Name, " ", Emulator::Version, " - ", emulator->title()});
   presentation.resetSystem.setEnabled(true);
   presentation.unloadGame.setEnabled(true);
   presentation.toolsMenu.setVisible(true);
   presentation.updateStateMenus();
   presentation.speedNormal.setChecked();
-  presentation.pauseEmulation.setChecked(false);
+  presentation.runEmulation.setChecked().doActivate();
+  presentation.updateProgramIcon();
   presentation.updateStatusIcon();
-  presentation.viewportLayout.remove(presentation.iconLayout);
-  presentation.resizeViewport();
+  rewindReset();  //starts rewind state recording
+  movieMode(Movie::Mode::Inactive);  //to set initial movie menu state
+  cheatFinder.restart();  //clear any old cheat search results
   cheatEditor.loadCheats();
   stateManager.loadStates();
   manifestViewer.loadManifest();
@@ -59,22 +76,25 @@ auto Program::load() -> void {
   presentation.addRecentGame(games.trimRight("|", 1L));
 
   updateVideoPalette();
+  updateVideoEffects();
   updateAudioEffects();
   updateAudioFrequency();
 }
 
 auto Program::loadFile(string location) -> vector<uint8_t> {
-  if(Location::suffix(location) == ".zip") {
+  if(Location::suffix(location).downcase() == ".zip") {
     Decode::ZIP archive;
     if(archive.open(location)) {
       for(auto& file : archive.file) {
-        auto type = Location::suffix(file.name);
+        auto type = Location::suffix(file.name).downcase();
         if(type == ".sfc" || type == ".smc" || type == ".gb" || type == ".gbc" || type == ".bs" || type == ".st") {
           return archive.extract(file);
         }
       }
     }
     return {};
+  } else if(Location::suffix(location).downcase() == ".7z") {
+    return LZMA::extract(location);
   } else {
     return file::read(location);
   }
@@ -98,27 +118,28 @@ auto Program::loadSuperFamicom(string location) -> bool {
   }
   if(rom.size() < 0x8000) return false;
 
-  //assume ROM and IPS agree on whether a copier header is present
-  superFamicom.patched = applyPatchIPS(rom, location);
   if((rom.size() & 0x7fff) == 512) {
     //remove copier header
     memory::move(&rom[0], &rom[512], rom.size() - 512);
     rom.resize(rom.size() - 512);
   }
-  //assume BPS is made against a ROM without a copier header
+
+  if(!superFamicom.patched) superFamicom.patched = applyPatchIPS(rom, location);
   if(!superFamicom.patched) superFamicom.patched = applyPatchBPS(rom, location);
   auto heuristics = Heuristics::SuperFamicom(rom, location);
   auto sha256 = Hash::SHA256(rom).digest();
-  if(auto document = BML::unserialize(string::read(locate("database/Super Famicom.bml")))) {
+  superFamicom.title = heuristics.title();
+  superFamicom.region = heuristics.videoRegion();
+  if(auto document = BML::unserialize(string::read(locate("Database/Super Famicom.bml")))) {
     if(auto game = document[{"game(sha256=", sha256, ")"}]) {
       manifest = BML::serialize(game);
+      //the internal ROM header title is not present in the database, but is needed for internal core overrides
+      manifest.append("  title: ", superFamicom.title, "\n");
       superFamicom.verified = true;
     }
   }
-  superFamicom.title = heuristics.title();
   superFamicom.manifest = manifest ? manifest : heuristics.manifest();
   hackPatchMemory(rom);
-  hackOverclockSuperFX();
   superFamicom.document = BML::unserialize(superFamicom.manifest);
   superFamicom.location = location;
 
@@ -163,13 +184,13 @@ auto Program::loadGameBoy(string location) -> bool {
   gameBoy.patched = applyPatchIPS(rom, location) || applyPatchBPS(rom, location);
   auto heuristics = Heuristics::GameBoy(rom, location);
   auto sha256 = Hash::SHA256(rom).digest();
-  if(auto document = BML::unserialize(string::read(locate("database/Game Boy.bml")))) {
+  if(auto document = BML::unserialize(string::read(locate("Database/Game Boy.bml")))) {
     if(auto game = document[{"game(sha256=", sha256, ")"}]) {
       manifest = BML::serialize(game);
       gameBoy.verified = true;
     }
   }
-  if(auto document = BML::unserialize(string::read(locate("database/Game Boy Color.bml")))) {
+  if(auto document = BML::unserialize(string::read(locate("Database/Game Boy Color.bml")))) {
     if(auto game = document[{"game(sha256=", sha256, ")"}]) {
       manifest = BML::serialize(game);
       gameBoy.verified = true;
@@ -200,7 +221,7 @@ auto Program::loadBSMemory(string location) -> bool {
   bsMemory.patched = applyPatchIPS(rom, location) || applyPatchBPS(rom, location);
   auto heuristics = Heuristics::BSMemory(rom, location);
   auto sha256 = Hash::SHA256(rom).digest();
-  if(auto document = BML::unserialize(string::read(locate("database/BS Memory.bml")))) {
+  if(auto document = BML::unserialize(string::read(locate("Database/BS Memory.bml")))) {
     if(auto game = document[{"game(sha256=", sha256, ")"}]) {
       manifest = BML::serialize(game);
       bsMemory.verified = true;
@@ -230,7 +251,7 @@ auto Program::loadSufamiTurboA(string location) -> bool {
   sufamiTurboA.patched = applyPatchIPS(rom, location) || applyPatchBPS(rom, location);
   auto heuristics = Heuristics::SufamiTurbo(rom, location);
   auto sha256 = Hash::SHA256(rom).digest();
-  if(auto document = BML::unserialize(string::read(locate("database/Sufami Turbo.bml")))) {
+  if(auto document = BML::unserialize(string::read(locate("Database/Sufami Turbo.bml")))) {
     if(auto game = document[{"game(sha256=", sha256, ")"}]) {
       manifest = BML::serialize(game);
       sufamiTurboA.verified = true;
@@ -260,7 +281,7 @@ auto Program::loadSufamiTurboB(string location) -> bool {
   sufamiTurboB.patched = applyPatchIPS(rom, location) || applyPatchBPS(rom, location);
   auto heuristics = Heuristics::SufamiTurbo(rom, location);
   auto sha256 = Hash::SHA256(rom).digest();
-  if(auto document = BML::unserialize(string::read(locate("database/Sufami Turbo.bml")))) {
+  if(auto document = BML::unserialize(string::read(locate("Database/Sufami Turbo.bml")))) {
     if(auto game = document[{"game(sha256=", sha256, ")"}]) {
       manifest = BML::serialize(game);
       sufamiTurboB.verified = true;
@@ -281,6 +302,7 @@ auto Program::save() -> void {
 
 auto Program::reset() -> void {
   if(!emulator->loaded()) return;
+  rewindReset();  //don't allow rewinding past a reset point
   hackCompatibility();
   emulator->reset();
   showMessage("Game reset");
@@ -288,13 +310,19 @@ auto Program::reset() -> void {
 
 auto Program::unload() -> void {
   if(!emulator->loaded()) return;
+  //todo: video.clear() is not working on macOS/OpenGL 3.2
+  if(auto [output, length] = video.acquire(1, 1); output) {
+    *output = 0;
+    video.release();
+    video.output();
+  }
+  audio.clear();
+  rewindReset();  //free up memory that is no longer needed
+  movieStop();  //in case a movie is currently being played or recorded
   cheatEditor.saveCheats();
   toolsWindow.setVisible(false);
   if(emulatorSettings.autoSaveStateOnUnload.checked()) {
     saveUndoState();
-  }
-  if(auto configuration = emulator->configuration()) {
-    file::write(locate("configuration.bml"), configuration);
   }
   emulator->unload();
   showMessage("Game unloaded");
@@ -303,13 +331,12 @@ auto Program::unload() -> void {
   bsMemory = {};
   sufamiTurboA = {};
   sufamiTurboB = {};
-  presentation.setTitle({"bsnes v", Emulator::Version});
+  presentation.setTitle({Emulator::Name, " ", Emulator::Version});
   presentation.resetSystem.setEnabled(false);
   presentation.unloadGame.setEnabled(false);
   presentation.toolsMenu.setVisible(false);
+  presentation.updateProgramIcon();
   presentation.updateStatusIcon();
-  presentation.clearViewport();
-  presentation.viewportLayout.append(presentation.iconLayout, Size{0, ~0});
 }
 
 //a game is considered verified if the game plus its slot(s) are found in the games database

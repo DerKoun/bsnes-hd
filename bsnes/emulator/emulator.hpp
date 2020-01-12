@@ -1,9 +1,10 @@
 #pragma once
 
+#include <libco/libco.h>
+
 #include <nall/platform.hpp>
 #include <nall/adaptive-array.hpp>
 #include <nall/any.hpp>
-#include <nall/bit-field.hpp>
 #include <nall/chrono.hpp>
 #include <nall/dl.hpp>
 #include <nall/endian.hpp>
@@ -21,23 +22,20 @@
 #include <nall/hash/sha256.hpp>
 using namespace nall;
 
-#include <libco/libco.h>
 #include <emulator/types.hpp>
 #include <emulator/memory/readable.hpp>
 #include <emulator/memory/writable.hpp>
 #include <emulator/audio/audio.hpp>
-#include <emulator/video/video.hpp>
-#include <emulator/resource/resource.hpp>
 
 namespace Emulator {
-  static const string Name    = "bsnes";
-  static const string Version = "107.3";
-  static const string Author  = "byuu";
-  static const string License = "GPLv3";
-  static const string Website = "https://byuu.org/";
+  static const string Name      = "bsnes-hd beta";
+  static const string Version   = "10";//bsnes/target-bsnes/presentation/presentation.cpp:create:about:setVersion
+  static const string Author    = "DerKoun(byuu)";
+  static const string License   = "GPLv3";
+  static const string Website   = "https://github.com/DerKoun/bsnes-hd";
 
   //incremented only when serialization format changes
-  static const string SerializerVersion = "107.3";
+  static const string SerializerVersion = "112";
 
   namespace Constants {
     namespace Colorburst {
@@ -48,7 +46,7 @@ namespace Emulator {
 
   //nall/vfs shorthand constants for open(), load()
   namespace File {
-    static const auto Read = vfs::file::mode::read;
+    static const auto Read  = vfs::file::mode::read;
     static const auto Write = vfs::file::mode::write;
     static const auto Optional = false;
     static const auto Required = true;

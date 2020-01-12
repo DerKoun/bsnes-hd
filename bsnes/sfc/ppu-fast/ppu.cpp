@@ -4,7 +4,10 @@ namespace SuperFamicom {
 
 PPU& ppubase = ppu;
 
-PPUfast ppufast;
+#define PPU PPUfast
+#define ppu ppufast
+
+PPU ppu;
 #include "io.cpp"
 #include "line.cpp"
 #include "background.cpp"
@@ -14,91 +17,116 @@ PPUfast ppufast;
 #include "window.cpp"
 #include "serialization.cpp"
 
-auto PPUfast::interlace() const -> bool { return ppubase.display.interlace; }
-auto PPUfast::overscan() const -> bool { return ppubase.display.overscan; }
-auto PPUfast::vdisp() const -> uint { return ppubase.display.vdisp; }
-auto PPUfast::hires() const -> bool { return latch.hires; }
-auto PPUfast::hd() const -> bool { return latch.hd; }
-auto PPUfast::ss() const -> bool { return latch.ss; }
-auto PPUfast::hdScale() const -> uint { return configuration.hacks.ppu.mode7.scale; }
-auto PPUfast::hdPerspective() const -> uint { return configuration.hacks.ppu.mode7.perspective; }
-auto PPUfast::hdSupersample() const -> uint { return configuration.hacks.ppu.mode7.supersample; }
-auto PPUfast::hdMosaic() const -> uint { return configuration.hacks.ppu.mode7.mosaic; }
-auto PPUfast::widescreen() const -> uint { return !hd() || configuration.hacks.ppu.mode7.wsMode == 0 ? 0 : configuration.hacks.ppu.mode7.widescreen; }
-auto PPUfast::wsbg(uint bg) const -> uint {
+auto PPU::interlace() const -> bool { return ppubase.display.interlace; }
+auto PPU::overscan() const -> bool { return ppubase.display.overscan; }
+auto PPU::vdisp() const -> uint { return ppubase.display.vdisp; }
+auto PPU::hires() const -> bool { return latch.hires; }
+auto PPU::hd() const -> bool { return latch.hd; }
+auto PPU::ss() const -> bool { return latch.ss; }
+#undef ppu
+auto PPU::hdScale() const -> uint { return configuration.hacks.ppu.mode7.scale; }
+auto PPU::hdPerspective() const -> uint { return configuration.hacks.ppu.mode7.perspective; }
+auto PPU::hdSupersample() const -> uint { return configuration.hacks.ppu.mode7.supersample; }
+auto PPU::hdMosaic() const -> uint { return configuration.hacks.ppu.mode7.mosaic; }
+auto PPU::widescreen() const -> uint { return !hd() || configuration.hacks.ppu.mode7.wsMode == 0 ? 0 : configuration.hacks.ppu.mode7.widescreen; }
+auto PPU::wsbg(uint bg) const -> uint {
   if (bg == Source::BG1) return configuration.hacks.ppu.mode7.wsbg1;
   if (bg == Source::BG2) return configuration.hacks.ppu.mode7.wsbg2;
   if (bg == Source::BG3) return configuration.hacks.ppu.mode7.wsbg3;
   if (bg == Source::BG4) return configuration.hacks.ppu.mode7.wsbg4;
   return 0; }
-auto PPUfast::wsobj() const -> uint { return configuration.hacks.ppu.mode7.wsobj; }
-auto PPUfast::winXad(uint x, bool bel) const -> uint {
+auto PPU::wsobj() const -> uint { return configuration.hacks.ppu.mode7.wsobj; }
+auto PPU::winXad(uint x, bool bel) const -> uint {
   return (configuration.hacks.ppu.mode7.igwin != 0 && (configuration.hacks.ppu.mode7.igwin >= 3
        || configuration.hacks.ppu.mode7.igwin >= 2 && ((bel ? io.col.window.belowMask : io.col.window.aboveMask) == 0)
        || configuration.hacks.ppu.mode7.igwin >= 1 && ((bel ? io.col.window.belowMask : io.col.window.aboveMask) == 2)))
     ? configuration.hacks.ppu.mode7.igwinx : (x < 0 ? 0 : (x > 255 ? 255 : x)); }
-auto PPUfast::bgGrad() const -> uint { return !hd() ? 0 : configuration.hacks.ppu.mode7.bgGrad; }
-auto PPUfast::windRad() const -> uint { return !hd() ? 0 : configuration.hacks.ppu.mode7.windRad; }
-auto PPUfast::wsOverrideCandidate() const -> bool { return configuration.hacks.ppu.mode7.wsMode == 1; }
-auto PPUfast::wsOverride() const -> bool { return ind < 1 && wsOverrideCandidate(); }
-auto PPUfast::wsBgCol() const -> bool { return configuration.hacks.ppu.mode7.wsBgCol == 2
+auto PPU::bgGrad() const -> uint { return !hd() ? 0 : configuration.hacks.ppu.mode7.bgGrad; }
+auto PPU::windRad() const -> uint { return !hd() ? 0 : configuration.hacks.ppu.mode7.windRad; }
+auto PPU::wsOverrideCandidate() const -> bool { return configuration.hacks.ppu.mode7.wsMode == 1; }
+auto PPU::wsOverride() const -> bool { return mode7LineGroups.count < 1 && wsOverrideCandidate(); }
+auto PPU::wsBgCol() const -> bool { return configuration.hacks.ppu.mode7.wsBgCol == 2
                                             || configuration.hacks.ppu.mode7.wsBgCol == 1 && wsOverride(); }
-auto PPUfast::wsMarker() const -> uint { return configuration.hacks.ppu.mode7.wsMarker; }
-auto PPUfast::wsMarkerAlpha() const -> uint { return configuration.hacks.ppu.mode7.wsMarkerAlpha; }
+auto PPU::wsMarker() const -> uint { return configuration.hacks.ppu.mode7.wsMarker; }
+auto PPU::wsMarkerAlpha() const -> uint { return configuration.hacks.ppu.mode7.wsMarkerAlpha; }
+auto PPU::deinterlace() const -> bool { return configuration.hacks.ppu.deinterlace; }
+auto PPU::renderCycle() const -> uint { return configuration.hacks.ppu.renderCycle; }
+auto PPU::noVRAMBlocking() const -> bool { return configuration.hacks.ppu.noVRAMBlocking; }
+#define ppu ppufast
 
-PPUfast::PPUfast() {
-  output = new uint32[256 * 61440] + 8 * 61440;  //overscan offset
-  tilecache[TileMode::BPP2] = new uint8[4096 * 8 * 8];
-  tilecache[TileMode::BPP4] = new uint8[2048 * 8 * 8];
-  tilecache[TileMode::BPP8] = new uint8[1024 * 8 * 8];
+PPU::PPU() {
+  output = new uint32_t[256 * 61440]();
 
-  for(uint y : range(lines.size())) {
+  for(uint l : range(16)) {
+    lightTable[l] = new uint32_t[32768];
+    for(uint r : range(32)) {
+      for(uint g : range(32)) {
+        for(uint b : range(32)) {
+          double luma = (double)l * 8.0 / 15.0;
+          uint ar = (luma * r + 0.5);
+          uint ag = (luma * g + 0.5);
+          uint ab = (luma * b + 0.5);
+          lightTable[l][r << 10 | g << 5 | b << 0] = ab << 16 | ag << 8 | ar << 0;
+        }
+      }
+    }
+  }
+
+  for(uint y : range(240)) {
     lines[y].y = y;
   }
 }
 
-PPUfast::~PPUfast() {
-  delete[] (output - 8 * 61440);  //overscan offset
-  delete[] tilecache[TileMode::BPP2];
-  delete[] tilecache[TileMode::BPP4];
-  delete[] tilecache[TileMode::BPP8];
+PPU::~PPU() {
+  delete[] output;
+  for(uint l : range(16)) delete[] lightTable[l];
 }
 
-auto PPUfast::Enter() -> void {
-  while(true) scheduler.synchronize(), ppufast.main();
+auto PPU::synchronizeCPU() -> void {
+  if(ppubase.clock >= 0) scheduler.resume(cpu.thread);
 }
 
-auto PPUfast::step(uint clocks) -> void {
+auto PPU::Enter() -> void {
+  while(true) {
+    scheduler.synchronize();
+    ppu.main();
+  }
+}
+
+auto PPU::step(uint clocks) -> void {
   tick(clocks);
-  Thread::step(clocks);
-  synchronize(cpu);
+  ppubase.clock += clocks;
+  synchronizeCPU();
 }
 
-auto PPUfast::main() -> void {
+auto PPU::main() -> void {
   scanline();
 
-  if(system.frameCounter == 0) {
+  if(system.frameCounter == 0 && !system.runAhead) {
     uint y = vcounter();
-    step(512);
     if(y >= 1 && y <= 239) {
-      if(io.displayDisable || y >= vdisp()) {
-        lines[y].io.displayDisable = true;
-      } else {
-        memcpy(&lines[y].io, &io, sizeof(io));
-        memcpy(&lines[y].cgram, &cgram, sizeof(cgram));
-      }
-      if(!Line::count) Line::start = y;
-      Line::count++;
+      step(renderCycle());
+      lines[y].cache();
     }
   }
 
-  step(lineclocks() - hcounter());
+  step(hperiod() - hcounter());
 }
 
-auto PPUfast::scanline() -> void {
+auto PPU::scanline() -> void {
   if(vcounter() == 0) {
+    if(latch.overscan && !io.overscan) {
+      //when disabling overscan, clear the overscan area that won't be rendered to:
+      for(uint y = 1; y <= 240; y++) {
+        if(y >= 8 && y <= 231) continue;
+        auto output = ppu.output + y * 1024;
+        memory::fill<uint16>(output, 1024);
+      }
+    }
+
     ppubase.display.interlace = io.interlace;
     ppubase.display.overscan = io.overscan;
+    latch.overscan = io.overscan;
     latch.hires = false;
     latch.hd = false;
     latch.ss = false;
@@ -108,59 +136,69 @@ auto PPUfast::scanline() -> void {
 
   if(vcounter() > 0 && vcounter() < vdisp()) {
     latch.hires |= io.pseudoHires || io.bgMode == 5 || io.bgMode == 6;
-    latch.hd |= /*io.bgMode == 7 &&*/ hdScale() > 0; //deactivated dynamic scale switching for widescreen
-    latch.ss |= /*io.bgMode == 7 &&*/ hdScale() > 0 && hdSupersample() > 1;
+    //supersampling and EXTBG mode are not compatible, so disable supersampling in EXTBG mode //HD:disabled
+    latch.hd |= /* io.bgMode == 7 && */ hdScale() > 0 /*&& (hdSupersample() == 0*/ /* || io.extbg == 1 */ /*)*/; //HD:deactivated dynamic scale switching for widescreen
+    latch.ss |= /* io.bgMode == 7 && */ hdScale() > 0 && (hdSupersample() > 1 /* && io.extbg == 0 */ ); //HD:irrelevant, because always used ORed with latch.hd
   }
 
-  if(vcounter() == vdisp() && !io.displayDisable) {
-    oamAddressReset();
+  if(vcounter() == vdisp()) {
+    if(!io.displayDisable) oamAddressReset();
   }
 
   if(vcounter() == 240) {
     Line::flush();
-    scheduler.exit(Scheduler::Event::Frame);
   }
 }
 
-auto PPUfast::refresh() -> void {
-  if(system.frameCounter == 0) {
+auto PPU::refresh() -> void {
+  if(system.frameCounter == 0 && !system.runAhead) {
     auto output = this->output;
     uint pitch, width, height;
     if(!hd()) {
-      if(!overscan()) output -= 7 * 1024;
       pitch  = 512 << !interlace();
       width  = 256 << hires();
       height = 240 << interlace();
     } else {
-      if(!overscan()) output -= 7 * (256+2*widescreen()) * hdScale() * hdScale();
       pitch  = (256+2*widescreen()) * hdScale();
       width  = (256+2*widescreen()) * hdScale();
       height = 240 * hdScale();
     }
-    Emulator::video.setEffect(Emulator::Video::Effect::ColorBleed, configuration.video.blurEmulation && hires());
-    Emulator::video.refresh(output, pitch * sizeof(uint32), width, height);
+
+    //clear the areas of the screen that won't be rendered:
+    //previous video frames may have drawn data here that would now be stale otherwise.
+    if(!latch.overscan && pitch != frame.pitch && width != frame.width && height != frame.height) {
+      for(uint y : range(240)) {
+        if(y >= 8 && y <= 230) continue;  //these scanlines are always rendered.
+        auto output = this->output + (!hd() ? (y * 1024 + (interlace() && field() ? 512 : 0)) : (y * 256 * hdScale() * hdScale()));
+        auto width = (!hd() ? (!hires() ? 256 : 512) : (256 * hdScale() * hdScale()));
+        memory::fill<uint32>(output, width);
+      }
+    }
+
+    if(auto device = controllerPort2.device) device->draw(output, pitch * sizeof(uint32), width, height);
+    platform->videoFrame(output, pitch * sizeof(uint32), width, height, hd() ? hdScale() : 1);
+
+    frame.pitch  = pitch;
+    frame.width  = width;
+    frame.height = height;
   }
   if(system.frameCounter++ >= system.frameSkip) system.frameCounter = 0;
 }
 
-auto PPUfast::load() -> bool {
+auto PPU::load() -> bool {
   return true;
 }
 
-auto PPUfast::power(bool reset) -> void {
-  create(Enter, system.cpuFrequency());
+auto PPU::power(bool reset) -> void {
   PPUcounter::reset();
-  memory::fill<uint32>(output, 1024 * 960);
+  memory::fill<uint16>(output, 256 * 61440);
 
-  function<auto (uint24, uint8) -> uint8> reader{&PPUfast::readIO, this};
-  function<auto (uint24, uint8) -> void> writer{&PPUfast::writeIO, this};
+  function<uint8 (uint, uint8)> reader{&PPU::readIO, this};
+  function<void  (uint, uint8)> writer{&PPU::writeIO, this};
   bus.map(reader, writer, "00-3f,80-bf:2100-213f");
 
   if(!reset) {
-    for(auto address : range(32768)) {
-      vram[address] = 0x0000;
-      updateTiledata(address);
-    }
+    for(auto& word : vram) word = 0x0000;
     for(auto& color : cgram) color = 0x0000;
     for(auto& object : objects) object = {};
   }
@@ -169,11 +207,14 @@ auto PPUfast::power(bool reset) -> void {
   io = {};
   updateVideoMode();
 
+  #undef ppu
   ItemLimit = !configuration.hacks.ppu.noSpriteLimit ? 32 : 128;
   TileLimit = !configuration.hacks.ppu.noSpriteLimit ? 34 : 128;
 
   Line::start = 0;
   Line::count = 0;
+
+  frame = {};
 }
 
 }

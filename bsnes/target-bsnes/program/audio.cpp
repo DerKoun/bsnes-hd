@@ -56,7 +56,7 @@ auto Program::updateAudioFrequency() -> void {
   double frequency = settings.audio.frequency + settings.audio.skew;
   if(!settings.video.blocking && settings.audio.blocking) {
     for(auto item : presentation.speedGroup.objects<MenuRadioItem>()) {
-      if(item.checked()) frequency *= item.property("multiplier").real();
+      if(item.checked()) frequency *= item.attribute("multiplier").real();
     }
   }
   Emulator::audio.setFrequency(frequency);
@@ -71,9 +71,9 @@ auto Program::updateAudioLatency() -> void {
 }
 
 auto Program::updateAudioEffects() -> void {
-  double volume = settings.audio.mute ? 0.0 : settings.audio.volume * 0.01;
+  double volume = settings.audio.volume * 0.01;
   Emulator::audio.setVolume(volume);
 
-  double balance = max(-1.0, min(+1.0, (settings.audio.balance - 50) / 50.0));
+  double balance = max(-1.0, min(+1.0, ((int)settings.audio.balance - 50) / 50.0));
   Emulator::audio.setBalance(balance);
 }

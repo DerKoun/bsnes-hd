@@ -5,7 +5,9 @@
 //* vertical mosaic coordinates are not exact
 //* (hardware-mod) 128KB VRAM mode not supported
 
-struct PPUfast : Thread, PPUcounter {
+#define PPU PPUfast
+
+struct PPU : PPUcounter {
   alwaysinline auto interlace() const -> bool;
   alwaysinline auto overscan() const -> bool;
   alwaysinline auto vdisp() const -> uint;
@@ -27,11 +29,15 @@ struct PPUfast : Thread, PPUcounter {
   alwaysinline auto wsBgCol() const -> bool;
   alwaysinline auto wsMarker() const -> uint;
   alwaysinline auto wsMarkerAlpha() const -> uint;
+  alwaysinline auto deinterlace() const -> bool;
+  alwaysinline auto renderCycle() const -> uint;
+  alwaysinline auto noVRAMBlocking() const -> bool;
 
   //ppu.cpp
-  PPUfast();
-  ~PPUfast();
+  PPU();
+  ~PPU();
 
+  auto synchronizeCPU() -> void;
   static auto Enter() -> void;
   alwaysinline auto step(uint clocks) -> void;
   auto main() -> void;
@@ -44,38 +50,38 @@ struct PPUfast : Thread, PPUcounter {
   auto serialize(serializer&) -> void;
 
 public:
-  struct Source { enum : uint { BG1, BG2, BG3, BG4, OBJ1, OBJ2, COL }; };
-  struct TileMode { enum : uint { BPP2, BPP4, BPP8, Mode7, Inactive }; };
-  struct ScreenMode { enum : uint { Above, Below }; };
+  struct Source { enum : uint8 { BG1, BG2, BG3, BG4, OBJ1, OBJ2, COL }; };
+  struct TileMode { enum : uint8 { BPP2, BPP4, BPP8, Mode7, Inactive }; };
+  struct ScreenMode { enum : uint8 { Above, Below }; };
 
   struct Latch {
     //serialization.cpp
     auto serialize(serializer&) -> void;
 
-     uint1 interlace;
-     uint1 overscan;
-     uint1 hires;
-     uint1 hd;
-     uint1 ss;
+    bool interlace = 0;
+    bool overscan = 0;
+    bool hires = 0;
+    bool hd = 0;
+    bool ss = 0;
 
-    uint16 vram;
-     uint8 oam;
-     uint8 cgram;
+    uint16 vram = 0;
+    uint8 oam = 0;
+    uint8 cgram = 0;
 
-    uint10 oamAddress;
-     uint8 cgramAddress;
+    uint16 oamAddress = 0;
+    uint8 cgramAddress = 0;
 
-     uint8 mode7;
-     uint1 counters;
-     uint1 hcounter;  //hdot
-     uint1 vcounter;
+    uint8 mode7 = 0;
+    bool counters = 0;
+    bool hcounter = 0;  //hdot
+    bool vcounter = 0;
 
-    struct PPU {
+    struct PPUstate {
       //serialization.cpp
       auto serialize(serializer&) -> void;
 
-      uint8 mdr;
-      uint8 bgofs;
+      uint8 mdr = 0;
+      uint8 bgofs = 0;
     } ppu1, ppu2;
   };
 
@@ -83,78 +89,78 @@ public:
     //serialization.cpp
     auto serialize(serializer&) -> void;
 
-     uint1 displayDisable;
-     uint4 displayBrightness;
-    uint10 oamBaseAddress;
-    uint10 oamAddress;
-     uint1 oamPriority;
-     uint1 bgPriority;
-     uint3 bgMode;
-     uint4 mosaicSize;
-     uint1 vramIncrementMode;
-     uint2 vramMapping;
-     uint8 vramIncrementSize;
-    uint16 vramAddress;
-     uint8 cgramAddress;
-     uint1 cgramAddressLatch;
-     uint9 hcounter;  //hdot
-     uint9 vcounter;
-     uint1 interlace;
-     uint1 overscan;
-     uint1 pseudoHires;
-     uint1 extbg;
+    bool displayDisable = 1;
+    uint8 displayBrightness = 0;
+    uint16 oamBaseAddress = 0;
+    uint16 oamAddress = 0;
+    bool oamPriority = 0;
+    bool bgPriority = 0;
+    uint8 bgMode = 0;
+    uint8 mosaicSize = 0;
+    bool vramIncrementMode = 0;
+    uint8 vramMapping = 0;
+    uint8 vramIncrementSize = 0;
+    uint16 vramAddress = 0;
+    uint8 cgramAddress = 0;
+    bool cgramAddressLatch = 0;
+    uint16 hcounter = 0;  //hdot
+    uint16 vcounter = 0;
+    bool interlace = 0;
+    bool overscan = 0;
+    bool pseudoHires = 0;
+    bool extbg = 0;
 
     struct Mode7 {
       //serialization.cpp
       auto serialize(serializer&) -> void;
 
-       uint1 hflip;
-       uint1 vflip;
-       uint2 repeat;
-      uint16 a;
-      uint16 b;
-      uint16 c;
-      uint16 d;
-      uint16 x;
-      uint16 y;
-      uint16 hoffset;
-      uint16 voffset;
+      bool hflip = 0;
+      bool vflip = 0;
+      uint repeat = 0;
+      uint16 a = 0;
+      uint16 b = 0;
+      uint16 c = 0;
+      uint16 d = 0;
+      uint16 x = 0;
+      uint16 y = 0;
+      uint16 hoffset = 0;
+      uint16 voffset = 0;
     } mode7;
 
     struct Window {
       //serialization.cpp
       auto serialize(serializer&) -> void;
 
-      uint8 oneLeft;
-      uint8 oneRight;
-      uint8 twoLeft;
-      uint8 twoRight;
+      uint8 oneLeft = 0;
+      uint8 oneRight = 0;
+      uint8 twoLeft = 0;
+      uint8 twoRight = 0;
     } window;
 
     struct WindowLayer {
       //serialization.cpp
       auto serialize(serializer&) -> void;
 
-      uint1 oneEnable;
-      uint1 oneInvert;
-      uint1 twoEnable;
-      uint1 twoInvert;
-      uint2 mask;
-      uint1 aboveEnable;
-      uint1 belowEnable;
+      bool oneEnable = 0;
+      bool oneInvert = 0;
+      bool twoEnable = 0;
+      bool twoInvert = 0;
+      uint mask = 0;
+      bool aboveEnable = 0;
+      bool belowEnable = 0;
     };
 
     struct WindowColor {
       //serialization.cpp
       auto serialize(serializer&) -> void;
 
-      uint1 oneEnable;
-      uint1 oneInvert;
-      uint1 twoEnable;
-      uint1 twoInvert;
-      uint2 mask;
-      uint2 aboveMask;
-      uint2 belowMask;
+      bool oneEnable = 0;
+      bool oneInvert = 0;
+      bool twoEnable = 0;
+      bool twoInvert = 0;
+      uint mask = 0;
+      uint aboveMask = 0;
+      uint belowMask = 0;
     };
 
     struct Background {
@@ -162,17 +168,20 @@ public:
       auto serialize(serializer&) -> void;
 
       WindowLayer window;
-       uint1 aboveEnable;
-       uint1 belowEnable;
-       uint1 mosaicEnable;
-      uint15 tiledataAddress;
-      uint15 screenAddress;
-       uint2 screenSize;
-       uint1 tileSize;
-      uint16 hoffset;
-      uint16 voffset;
-       uint3 tileMode;
-       uint4 priority[2];
+
+      bool aboveEnable = 0;
+      bool belowEnable = 0;
+      bool mosaicEnable = 0;
+      uint16 mosaicCounter = 0;
+      uint16 mosaicOffset = 0;
+      uint16 tiledataAddress = 0;
+      uint16 screenAddress = 0;
+      uint8 screenSize = 0;
+      bool tileSize = 0;
+      uint16 hoffset = 0;
+      uint16 voffset = 0;
+      uint8 tileMode = 0;
+      uint8 priority[2] = {};
     } bg1, bg2, bg3, bg4;
 
     struct Object {
@@ -180,16 +189,17 @@ public:
       auto serialize(serializer&) -> void;
 
       WindowLayer window;
-       uint1 aboveEnable;
-       uint1 belowEnable;
-       uint1 interlace;
-       uint3 baseSize;
-       uint2 nameselect;
-      uint15 tiledataAddress;
-       uint7 first;
-       uint1 rangeOver;
-       uint1 timeOver;
-       uint4 priority[4];
+
+      bool aboveEnable = 0;
+      bool belowEnable = 0;
+      bool interlace = 0;
+      uint8 baseSize = 0;
+      uint8 nameselect = 0;
+      uint16 tiledataAddress = 0;
+      uint8 first = 0;
+      bool rangeOver = 0;
+      bool timeOver = 0;
+      uint8 priority[4] = {};
     } obj;
 
     struct Color {
@@ -197,12 +207,13 @@ public:
       auto serialize(serializer&) -> void;
 
       WindowColor window;
-       uint1 enable[7];
-       uint1 directColor;
-       uint1 blendMode;  //0 = fixed; 1 = pixel
-       uint1 halve;
-       uint1 mathMode;   //0 = add; 1 = sub
-      uint15 fixedColor;
+
+      bool enable[7] = {};
+      bool directColor = 0;
+      bool blendMode = 0;  //0 = fixed; 1 = pixel
+      bool halve = 0;
+      bool mathMode = 0;   //0 = add; 1 = sub
+      uint16 fixedColor = 0;
     } col;
   };
 
@@ -210,52 +221,52 @@ public:
     //serialization.cpp
     auto serialize(serializer&) -> void;
 
-    uint9 x;
-    uint8 y;
-    uint8 character;
-    uint1 nameselect;
-    uint1 vflip;
-    uint1 hflip;
-    uint2 priority;
-    uint3 palette;
-    uint1 size;
+    uint16 x = 0;
+    uint8 y = 0;
+    uint8 character = 0;
+    bool nameselect = 0;
+    bool vflip = 0;
+    bool hflip = 0;
+    uint8 priority = 0;
+    uint8 palette = 0;
+    bool size = 0;
   };
 
   struct ObjectItem {
-    uint1 valid;
-    uint7 index;
-    uint8 width;
-    uint8 height;
+    bool valid = 0;
+    uint8 index = 0;
+    uint8 width = 0;
+    uint8 height = 0;
   };
 
   struct ObjectTile {
-     uint1 valid;
-     uint9 x;
-     uint8 y;
-     uint2 priority;
-     uint8 palette;
-     uint1 hflip;
-    uint11 number;
+    bool valid = 0;
+    uint16 x = 0;
+    uint8 y = 0;
+    uint8 priority = 0;
+    uint8 palette = 0;
+    bool hflip = 0;
+    uint32 data = 0;
   };
 
   struct Pixel {
-     uint8 source;
-     uint8 priority;
-    uint32 color;
+    uint8 source = 0;
+    uint8 priority = 0;
+    uint32 color = 0;
   };
 
   //io.cpp
+  auto latchCounters(uint hcounter, uint vcounter) -> void;
   auto latchCounters() -> void;
-  alwaysinline auto vramAddress() const -> uint15;
+  alwaysinline auto vramAddress() const -> uint;
   alwaysinline auto readVRAM() -> uint16;
-  alwaysinline auto writeVRAM(uint1 byte, uint8 data) -> void;
-  alwaysinline auto updateTiledata(uint15 address) -> void;
+  template<bool Byte> alwaysinline auto writeVRAM(uint8 data) -> void;
   alwaysinline auto readOAM(uint10 address) -> uint8;
   alwaysinline auto writeOAM(uint10 address, uint8 data) -> void;
-  alwaysinline auto readCGRAM(uint1 byte, uint8 address) -> uint8;
+  template<bool Byte> alwaysinline auto readCGRAM(uint8 address) -> uint8;
   alwaysinline auto writeCGRAM(uint8 address, uint15 data) -> void;
-  auto readIO(uint24 address, uint8 data) -> uint8;
-  auto writeIO(uint24 address, uint8 data) -> void;
+  auto readIO(uint address, uint8 data) -> uint8;
+  auto writeIO(uint address, uint8 data) -> void;
   auto updateVideoMode() -> void;
 
   //object.cpp
@@ -264,60 +275,77 @@ public:
   auto readObject(uint10 address) -> uint8;
   auto writeObject(uint10 address, uint8 data) -> void;
 
-  //[serialized]
+//serialized:
   Latch latch;
   IO io;
 
-  uint16 vram[32 * 1024];
-  uint15 cgram[256];
-  Object objects[128];
+  uint16 vram[32 * 1024] = {};
+  uint16 cgram[256] = {};
+  Object objects[128] = {};
 
   //[unserialized]
-  uint32* output;
-   uint8* tilecache[3];  //bitplane -> bitmap tiledata
-  uint32 ItemLimit;
-  uint32 TileLimit;
+  uint32* output = {};
+  uint32* lightTable[16] = {};
+
+  uint ItemLimit = 0;
+  uint TileLimit = 0;
 
   struct Line {
     //line.cpp
+    inline auto field() const -> bool { return fieldID; }
     static auto flush() -> void;
-    auto render() -> void;
+    auto cache() -> void;
+    auto render(bool field) -> void;
+
     alwaysinline auto pixel(uint x, Pixel above, Pixel below, uint wsm, uint wsma, uint32 bgFixedColor) const -> uint32;
     alwaysinline auto blend(uint x, uint y, bool halve) const -> uint32;
-    alwaysinline auto directColor(uint paletteIndex, uint paletteColor) const -> uint15;
-    alwaysinline auto plotAbove(int x, uint source, uint priority, uint color) -> void;
-    alwaysinline auto plotBelow(int x, uint source, uint priority, uint color) -> void;
-    alwaysinline auto plotHD(Pixel*, int x, uint source, uint priority, uint32 color, bool hires, bool subpixel) -> void;
+    alwaysinline auto directColor(uint paletteIndex, uint paletteColor) const -> uint32;
+    alwaysinline auto plotAbove(int x, uint8 source, uint8 priority, uint32 color) -> void;
+    alwaysinline auto plotBelow(int x, uint8 source, uint8 priority, uint32 color) -> void;
+    alwaysinline auto plotHD(Pixel*, int x, uint8 source, uint8 priority, uint32 color, bool hires, bool subpixel) -> void;
 
     alwaysinline auto avgBgC(uint dist, uint offset) const -> uint32;
 
     //background.cpp
-    auto renderBackground(PPUfast::IO::Background&, uint source) -> void;
-    alwaysinline auto getTile(PPUfast::IO::Background&, uint hoffset, uint voffset) -> uint;
+    auto cacheBackground(PPU::IO::Background&) -> void;
+    auto renderBackground(PPU::IO::Background&, uint8 source) -> void;
+    alwaysinline auto getTile(PPU::IO::Background&, uint hoffset, uint voffset) -> uint;
 
     //mode7.cpp
-    auto renderMode7(PPUfast::IO::Background&, uint source) -> void;
+    auto renderMode7(PPU::IO::Background&, uint8 source) -> void;
 
     //mode7hd.cpp
-    auto renderMode7HD(PPUfast::IO::Background&, uint source) -> void;
+    static auto cacheMode7HD() -> void;
+    auto renderMode7HD(PPU::IO::Background&, uint8 source) -> void;
     alwaysinline auto lerp(float pa, float va, float pb, float vb, float pr) -> float;
 
+    //mode7hd-avx2.cpp
+    auto renderMode7HD_AVX2(
+      PPU::IO::Background&, uint8 source,
+      Pixel* above, Pixel* below,
+      bool* windowAbove, bool* windowBelow,
+      float originX, float a,
+      float originY, float c
+    ) -> void;
+
     //object.cpp
-    auto renderObject(PPUfast::IO::Object&) -> void;
+    auto renderObject(PPU::IO::Object&) -> void;
 
     //window.cpp
-    alwaysinline auto renderWindow(PPUfast::IO::WindowLayer&, bool, array<bool[256]>&) -> void;
-    alwaysinline auto renderWindow(PPUfast::IO::WindowColor&, uint, bool *output,
-                                   uint oneLeft, uint oneRight, uint twoLeft, uint twoRight, uint scale, uint offset) -> void;
+    alwaysinline auto renderWindow(PPU::IO::WindowLayer&, bool enable, bool output[256]) -> void;
+    alwaysinline auto renderWindow(PPU::IO::WindowColor&, uint mask, bool *output,
+                                   uint oneLeft, uint oneRight, uint twoLeft, uint twoRight,
+                                   uint scale, uint offset) -> void;
 
-    //[unserialized]
-    uint9 y;  //constant
+  //unserialized:
+    uint y;  //constant
+    bool fieldID;
 
     IO io;
-    array<uint15[256]> cgram;
+    uint16 cgram[256];
 
-    array<ObjectItem[128]> items;  //32 on real hardware
-    array<ObjectTile[128]> tiles;  //34 on real hardware; 1024 max (128 * 64-width tiles)
+    ObjectItem items[128];  //32 on real hardware
+    ObjectTile tiles[128];  //34 on real hardware; 1024 max (128 * 64-width tiles)
 
     Pixel *above = new Pixel[61440];
     Pixel *below = new Pixel[61440];
@@ -329,15 +357,26 @@ public:
     static uint start;
     static uint count;
   };
-  array<Line[240]> lines;
 
+//unserialized:
+  Line lines[240];
 
-    array<int[32]> starts;
-    array<int[32]> ends;
-    int ind = 0;
-    array<int[32]> startsp;
-    array<int[32]> endsp;
+  //used to help detect when the video output size changes between frames to clear overscan area.
+  struct Frame {
+    uint pitch = 0;
+    uint width = 0;
+    uint height = 0;
+  } frame;
 
+  struct Mode7LineGroups {
+    int count = -1;
+    int startLine[32];
+    int endLine[32];
+    int startLerpLine[32];
+    int endLerpLine[32];
+  } mode7LineGroups;
 };
 
-extern PPUfast ppufast;
+extern PPU ppufast;
+
+#undef PPU

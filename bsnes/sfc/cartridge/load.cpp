@@ -72,9 +72,6 @@ auto Cartridge::loadCartridge(Markup::Node node) -> void {
   if(auto fp = platform->open(pathID(), "msu1/data.rom", File::Read)) loadMSU1();
 }
 
-auto Cartridge::loadCartridgeGameBoy(Markup::Node node) -> void {
-}
-
 auto Cartridge::loadCartridgeBSMemory(Markup::Node node) -> void {
   if(auto memory = Emulator::Game::Memory{node["game/board/memory(content=Program)"]}) {
     bsmemory.ROM = memory.type == "ROM";
@@ -143,8 +140,8 @@ auto Cartridge::loadMap(Markup::Node map, T& memory) -> uint {
 
 auto Cartridge::loadMap(
   Markup::Node map,
-  const function<uint8 (uint24, uint8)>& reader,
-  const function<void (uint24, uint8)>& writer
+  const function<uint8 (uint, uint8)>& reader,
+  const function<void  (uint, uint8)>& writer
 ) -> uint {
   auto addr = map["address"].text();
   auto size = map["size"].natural();
@@ -431,7 +428,7 @@ auto Cartridge::loadHitachiDSP(Markup::Node node, uint roms) -> void {
     }
   }
 
-  if(configuration.hacks.coprocessors.hle) {
+  if(configuration.hacks.coprocessor.preferHLE) {
     has.Cx4 = true;
     for(auto map : node.find("map")) {
       loadMap(map, {&Cx4::read, &cx4}, {&Cx4::write, &cx4});
@@ -446,8 +443,14 @@ auto Cartridge::loadHitachiDSP(Markup::Node node, uint roms) -> void {
 
   if(auto memory = node["memory(type=ROM,content=Data,architecture=HG51BS169)"]) {
     if(auto file = game.memory(memory)) {
-      if(auto fp = platform->open(ID::SuperFamicom, file->name(), File::Read, File::Required)) {
+      if(auto fp = platform->open(ID::SuperFamicom, file->name(), File::Read)) {
         for(auto n : range(1 * 1024)) hitachidsp.dataROM[n] = fp->readl(3);
+      } else {
+        for(auto n : range(1 * 1024)) {
+          hitachidsp.dataROM[n]  = hitachidsp.staticDataROM[n * 3 + 0] <<  0;
+          hitachidsp.dataROM[n] |= hitachidsp.staticDataROM[n * 3 + 1] <<  8;
+          hitachidsp.dataROM[n] |= hitachidsp.staticDataROM[n * 3 + 2] << 16;
+        }
       }
     }
   }
@@ -500,7 +503,7 @@ auto Cartridge::loaduPD7725(Markup::Node node) -> void {
     }
   }
 
-  if(failed || configuration.hacks.coprocessors.hle) {
+  if(failed || configuration.hacks.coprocessor.preferHLE) {
     auto manifest = BML::serialize(game.document);
     if(manifest.find("identifier: DSP1")) {  //also matches DSP1B
       has.DSP1 = true;
@@ -527,7 +530,7 @@ auto Cartridge::loaduPD7725(Markup::Node node) -> void {
 
   if(failed) {
     //throw an error to the user
-    platform->open(ID::SuperFamicom, "<DSP1-4>", File::Read, File::Required);
+    platform->open(ID::SuperFamicom, "DSP3", File::Read, File::Required);
     return;
   }
 
@@ -576,11 +579,11 @@ auto Cartridge::loaduPD96050(Markup::Node node) -> void {
     if(auto file = game.memory(memory)) {
       if(auto fp = platform->open(ID::SuperFamicom, file->name(), File::Read)) {
         for(auto n : range(2048)) necdsp.dataROM[n] = fp->readl(2);
-      } else failed = false;
+      } else failed = true;
     }
   }
 
-  if(failed || configuration.hacks.coprocessors.hle) {
+  if(failed || configuration.hacks.coprocessor.preferHLE) {
     auto manifest = BML::serialize(game.document);
     if(manifest.find("identifier: ST010")) {
       has.ST0010 = true;
@@ -595,7 +598,7 @@ auto Cartridge::loaduPD96050(Markup::Node node) -> void {
 
   if(failed) {
     //throw an error to the user
-    platform->open(ID::SuperFamicom, "<ST010-011>", File::Read, File::Required);
+    platform->open(ID::SuperFamicom, "ST011", File::Read, File::Required);
     return;
   }
 

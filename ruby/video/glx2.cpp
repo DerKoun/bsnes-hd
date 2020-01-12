@@ -23,22 +23,38 @@
 
 struct VideoGLX2 : VideoDriver {
   VideoGLX2& self = *this;
-  VideoGLX2(Video& super) : VideoDriver(super) {}
-  ~VideoGLX2() { terminate(); }
+  VideoGLX2(Video& super) : VideoDriver(super) { construct(); }
+  ~VideoGLX2() { destruct(); }
 
   auto create() -> bool {
-    super.setFormat("RGB24");
+    VideoDriver::exclusive = true;
+    VideoDriver::format = "ARGB24";
     return initialize();
   }
 
   auto driver() -> string override { return "OpenGL 2.0"; }
   auto ready() -> bool override { return _ready; }
 
+  auto hasFullScreen() -> bool override { return true; }
+  auto hasMonitor() -> bool override { return true; }
   auto hasContext() -> bool override { return true; }
   auto hasBlocking() -> bool override { return true; }
   auto hasFlush() -> bool override { return true; }
-  auto hasFormats() -> vector<string> override { return {"RGB24", "RGB30"}; }
   auto hasShader() -> bool override { return true; }
+
+  auto hasFormats() -> vector<string> override {
+    if(_depth == 30) return {"ARGB30", "ARGB24"};
+    if(_depth == 24) return {"ARGB24"};
+    return {"ARGB24"};  //fallback
+  }
+
+  auto setFullScreen(bool fullScreen) -> bool override {
+    return initialize();
+  }
+
+  auto setMonitor(string monitor) -> bool override {
+    return initialize();
+  }
 
   auto setContext(uintptr context) -> bool override {
     return initialize();
@@ -50,12 +66,12 @@ struct VideoGLX2 : VideoDriver {
   }
 
   auto setFormat(string format) -> bool override {
-    if(format == "RGB24") {
+    if(format == "ARGB24") {
       _glFormat = GL_UNSIGNED_INT_8_8_8_8_REV;
       return initialize();
     }
 
-    if(format == "RGB30") {
+    if(format == "ARGB30") {
       _glFormat = GL_UNSIGNED_INT_2_10_10_10_REV;
       return initialize();
     }
@@ -67,17 +83,24 @@ struct VideoGLX2 : VideoDriver {
     return true;
   }
 
-  auto configure(uint width, uint height, double inputFrequency, double outputFrequency) -> bool override {
-    XResizeWindow(_display, _window, width, height);
-    return true;
-  }
-
   auto clear() -> void override {
     memory::fill<uint32_t>(_glBuffer, _glWidth * _glHeight);
     glClearColor(0.0, 0.0, 0.0, 1.0);
     glClear(GL_COLOR_BUFFER_BIT);
     glFlush();
     if(_isDoubleBuffered) glXSwapBuffers(_display, _glXWindow);
+  }
+
+  auto size(uint& width, uint& height) -> void override {
+    if(self.fullScreen) {
+      width = _monitorWidth;
+      height = _monitorHeight;
+    } else {
+      XWindowAttributes parent;
+      XGetWindowAttributes(_display, _parent, &parent);
+      width = parent.width;
+      height = parent.height;
+    }
   }
 
   auto acquire(uint32_t*& data, uint& pitch, uint width, uint height) -> bool override {
@@ -89,7 +112,32 @@ struct VideoGLX2 : VideoDriver {
   auto release() -> void override {
   }
 
-  auto output() -> void override {
+  auto output(uint width, uint height) -> void override {
+    XWindowAttributes window;
+    XGetWindowAttributes(_display, _window, &window);
+
+    XWindowAttributes parent;
+    XGetWindowAttributes(_display, _parent, &parent);
+
+    if(window.width != parent.width || window.height != parent.height) {
+      XResizeWindow(_display, _window, parent.width, parent.height);
+    }
+
+    uint viewportX = 0;
+    uint viewportY = 0;
+    uint viewportWidth = parent.width;
+    uint viewportHeight = parent.height;
+
+    if(self.fullScreen) {
+      viewportX = _monitorX;
+      viewportY = _monitorY;
+      viewportWidth = _monitorWidth;
+      viewportHeight = _monitorHeight;
+    }
+
+    if(!width) width = viewportWidth;
+    if(!height) height = viewportHeight;
+
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, self.shader == "Blur" ? GL_LINEAR : GL_NEAREST);
@@ -97,24 +145,47 @@ struct VideoGLX2 : VideoDriver {
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glOrtho(0, self.width, 0, self.height, -1.0, 1.0);
-    glViewport(0, 0, self.width, self.height);
+    //vertex coordinates range from (0,0) to (1,1) for the entire desktop (all monitors)
+    glOrtho(0, 1, 0, 1, -1.0, 1.0);
+    //set the viewport to the entire desktop (all monitors)
+    glViewport(0, 0, parent.width, parent.height);
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     glPixelStorei(GL_UNPACK_ROW_LENGTH, _glWidth);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, _width, _height, GL_BGRA, _glFormat, _glBuffer);
 
+    //normalize texture coordinates and adjust for NPOT textures
     double w = (double)_width / (double)_glWidth;
     double h = (double)_height / (double)_glHeight;
-    int u = self.width;
-    int v = self.height;
+
+    //size of the active monitor
+    double mw = (double)viewportWidth / (double)parent.width;
+    double mh = (double)viewportHeight / (double)parent.height;
+
+    //offset of the active monitor
+    double mx = (double)viewportX / (double)parent.width;
+    double my = (double)viewportY / (double)parent.height;
+
+    //size of the render area
+    double vw = (double)width / (double)parent.width;
+    double vh = (double)height / (double)parent.height;
+
+    //center the render area within the active monitor
+    double vl = mx + (mw - vw) / 2;
+    double vt = my + (mh - vh) / 2;
+    double vr = vl + vw;
+    double vb = vt + vh;
+
+    //OpenGL places (0,0) at the bottom left; convert our (0,0) at the top left to this form:
+    vt = 1.0 - vt;
+    vb = 1.0 - vb;
 
     glBegin(GL_TRIANGLE_STRIP);
-    glTexCoord2f(0, 0); glVertex3i(0, v, 0);
-    glTexCoord2f(w, 0); glVertex3i(u, v, 0);
-    glTexCoord2f(0, h); glVertex3i(0, 0, 0);
-    glTexCoord2f(w, h); glVertex3i(u, 0, 0);
+    glTexCoord2f(0, 0); glVertex3f(vl, vt, 0);
+    glTexCoord2f(w, 0); glVertex3f(vr, vt, 0);
+    glTexCoord2f(0, h); glVertex3f(vl, vb, 0);
+    glTexCoord2f(w, h); glVertex3f(vr, vb, 0);
     glEnd();
     glFlush();
 
@@ -135,19 +206,27 @@ struct VideoGLX2 : VideoDriver {
   }
 
 private:
-  auto initialize() -> bool {
-    terminate();
-    if(!self.context) return false;
-
+  auto construct() -> void {
     _display = XOpenDisplay(nullptr);
     _screen = DefaultScreen(_display);
+
+    XWindowAttributes attributes{};
+    XGetWindowAttributes(_display, RootWindow(_display, _screen), &attributes);
+    _depth = attributes.depth;
+  }
+
+  auto destruct() -> void {
+    terminate();
+    XCloseDisplay(_display);
+  }
+
+  auto initialize() -> bool {
+    terminate();
+    if(!self.fullScreen && !self.context) return false;
 
     int versionMajor = 0, versionMinor = 0;
     glXQueryVersion(_display, &versionMajor, &versionMinor);
     if(versionMajor < 1 || (versionMajor == 1 && versionMinor < 2)) return false;
-
-    XWindowAttributes windowAttributes;
-    XGetWindowAttributes(_display, (Window)self.context, &windowAttributes);
 
     int redDepth   = self.format == "RGB30" ? 10 : 8;
     int greenDepth = self.format == "RGB30" ? 10 : 8;
@@ -167,13 +246,27 @@ private:
     auto fbConfig = glXChooseFBConfig(_display, _screen, attributeList, &fbCount);
     if(fbCount == 0) return false;
 
-    auto vi = glXGetVisualFromFBConfig(_display, fbConfig[0]);
-    _colormap = XCreateColormap(_display, RootWindow(_display, vi->screen), vi->visual, AllocNone);
-    XSetWindowAttributes attributes = {};
-    attributes.colormap = _colormap;
+    auto visual = glXGetVisualFromFBConfig(_display, fbConfig[0]);
+
+    _parent = self.fullScreen ? RootWindow(_display, visual->screen) : (Window)self.context;
+    XWindowAttributes windowAttributes;
+    XGetWindowAttributes(_display, _parent, &windowAttributes);
+
+    auto monitor = Video::monitor(self.monitor);
+    _monitorX = monitor.x;
+    _monitorY = monitor.y;
+    _monitorWidth = monitor.width;
+    _monitorHeight = monitor.height;
+
+    _colormap = XCreateColormap(_display, RootWindow(_display, visual->screen), visual->visual, AllocNone);
+    XSetWindowAttributes attributes{};
     attributes.border_pixel = 0;
-    _window = XCreateWindow(_display, (Window)self.context, 0, 0, windowAttributes.width, windowAttributes.height,
-      0, vi->depth, InputOutput, vi->visual, CWColormap | CWBorderPixel, &attributes);
+    attributes.colormap = _colormap;
+    attributes.override_redirect = self.fullScreen;
+    _window = XCreateWindow(_display, _parent,
+      0, 0, windowAttributes.width, windowAttributes.height,
+      0, visual->depth, InputOutput, visual->visual,
+      CWBorderPixel | CWColormap | CWOverrideRedirect, &attributes);
     XSelectInput(_display, _window, ExposureMask);
     XSetWindowBackground(_display, _window, 0);
     XMapWindow(_display, _window);
@@ -184,7 +277,7 @@ private:
       XNextEvent(_display, &event);
     }
 
-    _glXContext = glXCreateContext(_display, vi, 0, GL_TRUE);
+    _glXContext = glXCreateContext(_display, visual, 0, GL_TRUE);
     glXMakeCurrent(_display, _glXWindow = _window, _glXContext);
 
     if(!glXSwapInterval) glXSwapInterval = (int (*)(int))glGetProcAddress("glXSwapIntervalMESA");
@@ -193,7 +286,7 @@ private:
     if(glXSwapInterval) glXSwapInterval(self.blocking);
 
     int value = 0;
-    glXGetConfig(_display, vi, GLX_DOUBLEBUFFER, &value);
+    glXGetConfig(_display, visual, GLX_DOUBLEBUFFER, &value);
     _isDoubleBuffered = value;
     _isDirect = glXIsDirect(_display, _glXContext);
 
@@ -240,11 +333,6 @@ private:
       XFreeColormap(_display, _colormap);
       _colormap = 0;
     }
-
-    if(_display) {
-      XCloseDisplay(_display);
-      _display = nullptr;
-    }
   }
 
   auto resize(uint width, uint height) -> void {
@@ -266,7 +354,13 @@ private:
   bool blur = false;
 
   Display* _display = nullptr;
+  uint _monitorX = 0;
+  uint _monitorY = 0;
+  uint _monitorWidth = 0;
+  uint _monitorHeight = 0;
   int _screen = 0;
+  uint _depth = 24;  //depth of the default root window
+  Window _parent = 0;
   Window _window = 0;
   Colormap _colormap = 0;
   GLXContext _glXContext = nullptr;

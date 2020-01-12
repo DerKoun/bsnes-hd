@@ -1,4 +1,4 @@
-auto Program::openRomSuperFamicom(string name, vfs::file::mode mode) -> vfs::shared::file {
+auto Program::openRomSuperFamicom(string name, vfs::file::mode mode) -> shared_pointer<vfs::file> {
   if(name == "program.rom" && mode == vfs::file::mode::read) {
     return vfs::memory::file::open(superFamicom.program.data(), superFamicom.program.size());
   }
@@ -16,7 +16,7 @@ auto Program::openRomSuperFamicom(string name, vfs::file::mode mode) -> vfs::sha
       return vfs::memory::file::open(&superFamicom.firmware.data()[0x00000], 0x20000);
     }
     if(auto memory = superFamicom.document["game/board/memory(type=ROM,content=Program,architecture=ARM6)"]) {
-      string location = locate({"firmware/", memory["identifier"].text().downcase(), ".program.rom"});
+      string location = locate({"Firmware/", memory["identifier"].text().downcase(), ".program.rom"});
       return vfs::fs::file::open(location, mode);
     }
   }
@@ -26,7 +26,7 @@ auto Program::openRomSuperFamicom(string name, vfs::file::mode mode) -> vfs::sha
       return vfs::memory::file::open(&superFamicom.firmware.data()[0x20000], 0x08000);
     }
     if(auto memory = superFamicom.document["game/board/memory(type=ROM,content=Data,architecture=ARM6)"]) {
-      string location = locate({"firmware/", memory["identifier"].text().downcase(), ".data.rom"});
+      string location = locate({"Firmware/", memory["identifier"].text().downcase(), ".data.rom"});
       return vfs::fs::file::open(location, mode);
     }
   }
@@ -36,7 +36,7 @@ auto Program::openRomSuperFamicom(string name, vfs::file::mode mode) -> vfs::sha
       return vfs::memory::file::open(superFamicom.firmware.data(), superFamicom.firmware.size());
     }
     if(auto memory = superFamicom.document["game/board/memory(type=ROM,content=Data,architecture=HG51BS169)"]) {
-      string location = locate({"firmware/", memory["identifier"].text().downcase(), ".data.rom"});
+      string location = locate({"Firmware/", memory["identifier"].text().downcase(), ".data.rom"});
       return vfs::fs::file::open(location, mode);
     }
   }
@@ -46,7 +46,7 @@ auto Program::openRomSuperFamicom(string name, vfs::file::mode mode) -> vfs::sha
       return vfs::memory::file::open(superFamicom.firmware.data(), superFamicom.firmware.size());
     }
     if(auto memory = superFamicom.document["game/board/memory(type=ROM,content=Boot,architecture=LR35902)"]) {
-      string location = locate({"firmware/", memory["identifier"].text().downcase(), ".boot.rom"});
+      string location = locate({"Firmware/", memory["identifier"].text().downcase(), ".boot.rom"});
       return vfs::fs::file::open(location, mode);
     }
   }
@@ -56,7 +56,7 @@ auto Program::openRomSuperFamicom(string name, vfs::file::mode mode) -> vfs::sha
       return vfs::memory::file::open(&superFamicom.firmware.data()[0x0000], 0x1800);
     }
     if(auto memory = superFamicom.document["game/board/memory(type=ROM,content=Program,architecture=uPD7725)"]) {
-      string location = locate({"firmware/", memory["identifier"].text().downcase(), ".program.rom"});
+      string location = locate({"Firmware/", memory["identifier"].text().downcase(), ".program.rom"});
       return vfs::fs::file::open(location, mode);
     }
   }
@@ -66,7 +66,7 @@ auto Program::openRomSuperFamicom(string name, vfs::file::mode mode) -> vfs::sha
       return vfs::memory::file::open(&superFamicom.firmware.data()[0x1800], 0x0800);
     }
     if(auto memory = superFamicom.document["game/board/memory(type=ROM,content=Data,architecture=uPD7725)"]) {
-      string location = locate({"firmware/", memory["identifier"].text().downcase(), ".data.rom"});
+      string location = locate({"Firmware/", memory["identifier"].text().downcase(), ".data.rom"});
       return vfs::fs::file::open(location, mode);
     }
   }
@@ -76,7 +76,7 @@ auto Program::openRomSuperFamicom(string name, vfs::file::mode mode) -> vfs::sha
       return vfs::memory::file::open(&superFamicom.firmware.data()[0x0000], 0xc000);
     }
     if(auto memory = superFamicom.document["game/board/memory(type=ROM,content=Program,architecture=uPD96050)"]) {
-      string location = locate({"firmware/", memory["identifier"].text().downcase(), ".program.rom"});
+      string location = locate({"Firmware/", memory["identifier"].text().downcase(), ".program.rom"});
       return vfs::fs::file::open(location, mode);
     }
   }
@@ -86,7 +86,7 @@ auto Program::openRomSuperFamicom(string name, vfs::file::mode mode) -> vfs::sha
       return vfs::memory::file::open(&superFamicom.firmware.data()[0xc000], 0x1000);
     }
     if(auto memory = superFamicom.document["game/board/memory(type=ROM,content=Data,architecture=uPD96050)"]) {
-      string location = locate({"firmware/", memory["identifier"].text().downcase(), ".data.rom"});
+      string location = locate({"Firmware/", memory["identifier"].text().downcase(), ".data.rom"});
       return vfs::fs::file::open(location, mode);
     }
   }
@@ -131,7 +131,7 @@ auto Program::openRomSuperFamicom(string name, vfs::file::mode mode) -> vfs::sha
   return {};
 }
 
-auto Program::openRomGameBoy(string name, vfs::file::mode mode) -> vfs::shared::file {
+auto Program::openRomGameBoy(string name, vfs::file::mode mode) -> shared_pointer<vfs::file> {
   if(name == "program.rom" && mode == vfs::file::mode::read) {
     return vfs::memory::file::open(gameBoy.program.data(), gameBoy.program.size());
   }
@@ -147,7 +147,7 @@ auto Program::openRomGameBoy(string name, vfs::file::mode mode) -> vfs::shared::
   return {};
 }
 
-auto Program::openRomBSMemory(string name, vfs::file::mode mode) -> vfs::shared::file {
+auto Program::openRomBSMemory(string name, vfs::file::mode mode) -> shared_pointer<vfs::file> {
   if(name == "program.rom" && mode == vfs::file::mode::read) {
     return vfs::memory::file::open(bsMemory.program.data(), bsMemory.program.size());
   }
@@ -160,7 +160,7 @@ auto Program::openRomBSMemory(string name, vfs::file::mode mode) -> vfs::shared:
   return {};
 }
 
-auto Program::openRomSufamiTurboA(string name, vfs::file::mode mode) -> vfs::shared::file {
+auto Program::openRomSufamiTurboA(string name, vfs::file::mode mode) -> shared_pointer<vfs::file> {
   if(name == "program.rom" && mode == vfs::file::mode::read) {
     return vfs::memory::file::open(sufamiTurboA.program.data(), sufamiTurboA.program.size());
   }
@@ -172,7 +172,7 @@ auto Program::openRomSufamiTurboA(string name, vfs::file::mode mode) -> vfs::sha
   return {};
 }
 
-auto Program::openRomSufamiTurboB(string name, vfs::file::mode mode) -> vfs::shared::file {
+auto Program::openRomSufamiTurboB(string name, vfs::file::mode mode) -> shared_pointer<vfs::file> {
   if(name == "program.rom" && mode == vfs::file::mode::read) {
     return vfs::memory::file::open(sufamiTurboB.program.data(), sufamiTurboB.program.size());
   }

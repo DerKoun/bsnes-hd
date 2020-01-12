@@ -27,10 +27,10 @@ auto Interface::display() -> Display {
 }
 
 auto Interface::color(uint32 color) -> uint64 {
-  uint r = color.bits( 0, 4);
-  uint g = color.bits( 5, 9);
-  uint b = color.bits(10,14);
-  uint l = color.bits(15,18);
+  uint r = color >>  0 & 31;
+  uint g = color >>  5 & 31;
+  uint b = color >> 10 & 31;
+  uint l = color >> 15 & 15;
 
   //luma=0 is not 100% black; but it's much darker than normal linear scaling
   //exact effect seems to be analog; requires > 24-bit color depth to represent accurately
@@ -68,6 +68,10 @@ auto Interface::manifests() -> vector<string> {
 
 auto Interface::titles() -> vector<string> {
   return cartridge.titles();
+}
+
+auto Interface::title() -> string {
+  return cartridge.title();
 }
 
 auto Interface::load() -> bool {
@@ -235,19 +239,73 @@ auto Interface::synchronize(uint64 timestamp) -> void {
   if(cartridge.has.SharpRTC) sharprtc.synchronize(timestamp);
 }
 
-auto Interface::serialize() -> serializer {
-  system.runToSave();
-  return system.serialize();
+auto Interface::serialize(bool synchronize) -> serializer {
+  return system.serialize(synchronize);
 }
 
 auto Interface::unserialize(serializer& s) -> bool {
   return system.unserialize(s);
 }
 
+auto Interface::read(uint24 address) -> uint8 {
+  return cpu.readDisassembler(address);
+}
+
 auto Interface::cheats(const vector<string>& list) -> void {
-  cheat.reset();
-  if(cartridge.has.ICD) return GameBoy::cheat.assign(list);
-  cheat.assign(list);
+  if(cartridge.has.ICD) {
+    icd.cheats.assign(list);
+    return;
+  }
+
+  //make all ROM data writable temporarily
+  Memory::GlobalWriteEnable = true;
+
+  Cheat oldCheat = cheat;
+  Cheat newCheat;
+  newCheat.assign(list);
+
+  //determine all old codes to remove
+  for(auto& oldCode : oldCheat.codes) {
+    bool found = false;
+    for(auto& newCode : newCheat.codes) {
+      if(oldCode == newCode) {
+        found = true;
+        break;
+      }
+    }
+    if(!found) {
+      //remove old cheat
+      if(oldCode.enable) {
+        bus.write(oldCode.address, oldCode.restore);
+      }
+    }
+  }
+
+  //determine all new codes to create
+  for(auto& newCode : newCheat.codes) {
+    bool found = false;
+    for(auto& oldCode : oldCheat.codes) {
+      if(newCode == oldCode) {
+        found = true;
+        break;
+      }
+    }
+    if(!found) {
+      //create new cheat
+      newCode.restore = bus.read(newCode.address);
+      if(!newCode.compare || newCode.compare() == newCode.restore) {
+        newCode.enable = true;
+        bus.write(newCode.address, newCode.data);
+      } else {
+        newCode.enable = false;
+      }
+    }
+  }
+
+  cheat = newCheat;
+
+  //restore ROM write protection
+  Memory::GlobalWriteEnable = false;
 }
 
 auto Interface::configuration() -> string {
@@ -272,7 +330,15 @@ auto Interface::frameSkip() -> uint {
 
 auto Interface::setFrameSkip(uint frameSkip) -> void {
   system.frameSkip = frameSkip;
-  system.frameCounter = 0;
+  system.frameCounter = frameSkip;
+}
+
+auto Interface::runAhead() -> bool {
+  return system.runAhead;
+}
+
+auto Interface::setRunAhead(bool runAhead) -> void {
+  system.runAhead = runAhead;
 }
 
 }

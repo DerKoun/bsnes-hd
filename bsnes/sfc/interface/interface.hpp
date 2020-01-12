@@ -40,6 +40,7 @@ struct Interface : Emulator::Interface {
   auto hashes() -> vector<string> override;
   auto manifests() -> vector<string> override;
   auto titles() -> vector<string> override;
+  auto title() -> string override;
   auto load() -> bool override;
   auto save() -> void override;
   auto unload() -> void override;
@@ -57,9 +58,10 @@ struct Interface : Emulator::Interface {
   auto rtc() -> bool override;
   auto synchronize(uint64 timestamp) -> void override;
 
-  auto serialize() -> serializer override;
+  auto serialize(bool synchronize = true) -> serializer override;
   auto unserialize(serializer&) -> bool override;
 
+  auto read(uint24 address) -> uint8 override;
   auto cheats(const vector<string>&) -> void override;
 
   auto configuration() -> string override;
@@ -69,6 +71,9 @@ struct Interface : Emulator::Interface {
 
   auto frameSkip() -> uint override;
   auto setFrameSkip(uint frameSkip) -> void override;
+
+  auto runAhead() -> bool override;
+  auto setRunAhead(bool runAhead) -> void override;
 };
 
 #include "configuration.hpp"

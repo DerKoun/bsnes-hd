@@ -17,6 +17,9 @@ struct Configuration {
     struct PPU2 {
       uint version = 3;
     } ppu2;
+    struct Serialization {
+      string method = "Fast";
+    } serialization;
   } system;
 
   struct Video {
@@ -25,13 +28,23 @@ struct Configuration {
   } video;
 
   struct Hacks {
+    bool hotfixes = true;
+    string entropy = "Low";
+    struct CPU {
+      uint overclock = 100;
+      bool fastMath = false;
+      bool fastJoypadPolling = false;
+    } cpu;
     struct PPU {
       bool fast = true;
+      bool deinterlace = true;
       bool noSpriteLimit = true;
+      bool noVRAMBlocking = false;
+      uint renderCycle = 512;
       struct Mode7 {
         uint scale = 2;
         uint perspective = 1;
-        uint widescreen = 72;
+        uint widescreen = 64;
         uint wsbg1 = 16;
         uint wsbg2 = 16;
         uint wsbg3 = 16;
@@ -43,11 +56,6 @@ struct Configuration {
 		uint windRad = 0;
         uint wsMode = 1;
         uint wsBgCol = 1;
-        uint unintrMode = 1;
-        uint unintrTop = 10;
-        uint unintrBottom = 10;
-        uint unintrLeft = 20;
-        uint unintrRight = 20;
         uint wsMarker = 0;
         uint wsMarkerAlpha = 1;
         uint supersample = 1;
@@ -57,11 +65,18 @@ struct Configuration {
     struct DSP {
       bool fast = true;
       bool cubic = false;
+      bool echoShadow = false;
     } dsp;
-    struct Coprocessors {
+    struct Coprocessor {
       bool delayedSync = true;
-      bool hle = true;
-    } coprocessors;
+      bool preferHLE = false;
+    } coprocessor;
+    struct SA1 {
+      uint overclock = 100;
+    } sa1;
+    struct SuperFX {
+      uint overclock = 100;
+    } superfx;
   } hacks;
 
 private:

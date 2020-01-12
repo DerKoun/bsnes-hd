@@ -25,8 +25,13 @@ all: $(hiro.objects) $(ruby.objects) $(objects)
 ifeq ($(platform),macos)
 	rm -rf out/$(name).app
 	mkdir -p out/$(name).app/Contents/MacOS/
+	mkdir -p out/$(name).app/Contents/MacOS/Database/
+	mkdir -p out/$(name).app/Contents/MacOS/Firmware/
+	mkdir -p out/$(name).app/Contents/MacOS/Shaders/
 	mkdir -p out/$(name).app/Contents/Resources/
 	mv out/$(name) out/$(name).app/Contents/MacOS/$(name)
+	cp Database/* out/$(name).app/Contents/MacOS/Database/
+	cp -r ../shaders/* out/$(name).app/Contents/macOS/Shaders/
 	cp $(ui)/resource/$(name).plist out/$(name).app/Contents/Info.plist
 	sips -s format icns $(ui)/resource/$(name).png --out out/$(name).app/Contents/Resources/$(name).icns
 endif
@@ -34,32 +39,39 @@ endif
 verbose: hiro.verbose ruby.verbose nall.verbose all;
 
 install: all
-ifeq ($(shell id -un),root)
+ifeq ($(platform),windows)
+else ifeq ($(shell id -un),root)
 	$(error "make install should not be run as root")
-else ifeq ($(platform),windows)
 else ifeq ($(platform),macos)
 	mkdir -p ~/Library/Application\ Support/$(name)/
+	mkdir -p ~/Library/Application\ Support/$(name)/Database/
+	mkdir -p ~/Library/Application\ Support/$(name)/Firmware/
+	mkdir -p ~/Library/Application\ Support/$(name)/Shaders/
 	cp -R out/$(name).app /Applications/$(name).app
 else ifneq ($(filter $(platform),linux bsd),)
 	mkdir -p $(prefix)/bin/
 	mkdir -p $(prefix)/share/applications/
 	mkdir -p $(prefix)/share/icons/
 	mkdir -p $(prefix)/share/$(name)/
-	mkdir -p $(prefix)/share/$(name)/locales/
+	mkdir -p $(prefix)/share/$(name)/Database/
+	mkdir -p $(prefix)/share/$(name)/Firmware/
+	mkdir -p $(prefix)/share/$(name)/Shaders/
 	cp out/$(name) $(prefix)/bin/$(name)
-	cp $(ui)/resource/locales/* $(prefix)/share/$(name)/locales/
 	cp $(ui)/resource/$(name).desktop $(prefix)/share/applications/$(name).desktop
 	cp $(ui)/resource/$(name).png $(prefix)/share/icons/$(name).png
+	cp Database/* $(prefix)/share/$(name)/Database/
+	cp -r ../shaders/* $(prefix)/share/$(name)/Shaders/
 endif
 
 uninstall:
-ifeq ($(shell id -un),root)
+ifeq ($(platform),windows)
+else ifeq ($(shell id -un),root)
 	$(error "make uninstall should not be run as root")
-else ifeq ($(platform),windows)
 else ifeq ($(platform),macos)
 	rm -rf /Applications/$(name).app
 else ifneq ($(filter $(platform),linux bsd),)
 	rm -f $(prefix)/bin/$(name)
 	rm -f $(prefix)/share/applications/$(name).desktop
 	rm -f $(prefix)/share/icons/$(name).png
+	rm -rf $(prefix)/share/$(name)
 endif

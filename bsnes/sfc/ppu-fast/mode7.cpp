@@ -1,15 +1,11 @@
-auto PPUfast::Line::renderMode7(PPUfast::IO::Background& self, uint source) -> void {
-  //EXTBG is only really used by games to give the mode 7 layer two priority levels
-  //especially with HD mode 7, it's just wasteful to render BG1 just to be overwritten by BG2
-  if(io.extbg && source == Source::BG1) return;
-
+auto PPU::Line::renderMode7(PPU::IO::Background& self, uint8 source) -> void {
   //HD mode 7 support
   if(ppufast.hdScale() > 0 && (ppufast.hdMosaic() != 0
       || !self.mosaicEnable || !io.mosaicSize)) {
     return renderMode7HD(self, source);
   }
 
-  int Y = this->y - (self.mosaicEnable ? this->y % (1 + io.mosaicSize) : 0);
+  int Y = self.mosaicEnable ? self.mosaicOffset : this->y;
   int y = !io.mode7.vflip ? Y : 255 - Y;
 
   int a = (int16)io.mode7.a;
@@ -23,18 +19,19 @@ auto PPUfast::Line::renderMode7(PPUfast::IO::Background& self, uint source) -> v
 
   uint mosaicCounter = 1;
   uint mosaicPalette = 0;
-  uint mosaicPriority = 0;
-  uint mosaicColor = 0;
+  uint8 mosaicPriority = 0;
+  uint16 mosaicColor = 0;
 
   auto clip = [](int n) -> int { return n & 0x2000 ? (n | ~1023) : (n & 1023); };
   int originX = (a * clip(hoffset - hcenter) & ~63) + (b * clip(voffset - vcenter) & ~63) + (b * y & ~63) + (hcenter << 8);
   int originY = (c * clip(hoffset - hcenter) & ~63) + (d * clip(voffset - vcenter) & ~63) + (d * y & ~63) + (vcenter << 8);
 
-  array<bool[256]> windowAbove;
-  array<bool[256]> windowBelow;
+  bool windowAbove[256];
+  bool windowBelow[256];
   renderWindow(self.window, self.window.aboveEnable, windowAbove);
   renderWindow(self.window, self.window.belowEnable, windowBelow);
 
+  auto luma = ppu.lightTable[io.displayBrightness];
   for(int X : range(256)) {
     int x = !io.mode7.hflip ? X : 255 - X;
     int pixelX = originX + a * x >> 8;
@@ -44,10 +41,10 @@ auto PPUfast::Line::renderMode7(PPUfast::IO::Background& self, uint source) -> v
     bool outOfBounds = (pixelX | pixelY) & ~1023;
     uint15 tileAddress = tileY * 128 + tileX;
     uint15 paletteAddress = ((pixelY & 7) << 3) + (pixelX & 7);
-    uint8 tile = io.mode7.repeat == 3 && outOfBounds ? 0 : ppufast.vram[tileAddress].byte(0);
-    uint8 palette = io.mode7.repeat == 2 && outOfBounds ? 0 : ppufast.vram[paletteAddress + (tile << 6)].byte(1);
+    uint8 tile = io.mode7.repeat == 3 && outOfBounds ? 0 : ppu.vram[tileAddress] >> 0;
+    uint8 palette = io.mode7.repeat == 2 && outOfBounds ? 0 : ppu.vram[tile << 6 | paletteAddress] >> 8;
 
-    uint priority;
+    uint8 priority;
     if(source == Source::BG1) {
       priority = self.priority[0];
     } else if(source == Source::BG2) {
@@ -67,7 +64,9 @@ auto PPUfast::Line::renderMode7(PPUfast::IO::Background& self, uint source) -> v
     }
     if(!mosaicPalette) continue;
 
-    if(self.aboveEnable && !windowAbove[ppufast.winXad(X, false)]) plotAbove(X, source, mosaicPriority, mosaicColor);
-    if(self.belowEnable && !windowBelow[ppufast.winXad(X, true)]) plotBelow(X, source, mosaicPriority, mosaicColor);
+    uint32 mctc = luma[mosaicColor];
+
+    if(self.aboveEnable && !windowAbove[ppufast.winXad(X, false)]) plotAbove(X, source, mosaicPriority, mctc);
+    if(self.belowEnable && !windowBelow[ppufast.winXad(X, true)]) plotBelow(X, source, mosaicPriority, mctc);
   }
 }

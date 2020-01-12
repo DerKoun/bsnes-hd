@@ -1,137 +1,50 @@
-uint PPUfast::Line::start = 0;
-uint PPUfast::Line::count = 0;
+uint PPU::Line::start = 0;
+uint PPU::Line::count = 0;
 
-auto PPUfast::Line::flush() -> void {
-  ppufast.ind = 0;
-  uint perspCorMode = ppufast.hdPerspective();
-  if(perspCorMode > 0) {
-    #define isLineMode7(l) (l.io.bg1.tileMode == TileMode::Mode7 \
-        && !l.io.displayDisable && (l.io.bg1.aboveEnable || l.io.bg1.belowEnable))
-    bool state = false;
-    uint y;
-    int offsPart = 8;
-    if(perspCorMode == 2 || perspCorMode == 5) {
-      offsPart = 6;
-    } else if(perspCorMode == 3 || perspCorMode == 6) {
-      offsPart = 4;
-    }
-    for(y = 0; y < Line::count; y++) {
-      if(state != isLineMode7(ppufast.lines[Line::start + y])) {
-        state = !state;
-        if(state) {
-          ppufast.starts[ppufast.ind] = ppufast.lines[Line::start + y].y;
-        } else {
-          ppufast.ends[ppufast.ind] = ppufast.lines[Line::start + y].y - 1;
-          int offs = (ppufast.ends[ppufast.ind] - ppufast.starts[ppufast.ind]) / offsPart;
-          ppufast.startsp[ppufast.ind] = ppufast.starts[ppufast.ind] + offs;
-          ppufast.endsp[ppufast.ind] = ppufast.ends[ppufast.ind] - offs;
-          ppufast.ind++;
-        }
-      }
-    }
-    #undef isLineMode7
-    if(state) {
-      ppufast.ends[ppufast.ind] = ppufast.lines[Line::start + y].y - 1;
-      int offs = (ppufast.ends[ppufast.ind] - ppufast.starts[ppufast.ind]) / offsPart;
-      ppufast.startsp[ppufast.ind] = ppufast.starts[ppufast.ind] + offs;
-      ppufast.endsp[ppufast.ind] = ppufast.ends[ppufast.ind] - offs;
-      ppufast.ind++;
-    }
-
-    if(perspCorMode < 4) {  
-      for(int i = 0; i < ppufast.ind; i++) {
-        int la = -1;
-        int lb = -1;
-        int lc = -1;
-        int ld = -1;
-        bool abd= false;
-        bool bbd= false;
-        bool cbd= false;
-        bool dbd= false;
-        bool ab= false;
-        bool bb= false;
-        bool cb= false;
-        bool db= false;
-        for(y = ppufast.startsp[i]; y <= ppufast.endsp[i]; y++) {
-          int a = ((int)((int16)(ppufast.lines[y].io.mode7.a)));
-          int b = ((int)((int16)(ppufast.lines[y].io.mode7.b)));
-          int c = ((int)((int16)(ppufast.lines[y].io.mode7.c)));
-          int d = ((int)((int16)(ppufast.lines[y].io.mode7.d)));
-          if(la > 0 && a > 0 && a != la) {
-            if(!abd) {
-              abd = true;
-              ab = a > la;
-            } else if(ab != a > la) {
-              ppufast.startsp[i] = -1;
-              ppufast.endsp[i] = -1;
-              break;
-            }
-          }
-          if(lb > 0 && b > 0 && b != lb) {
-            if(!bbd) {
-              bbd = true;
-              bb = b > lb;
-            } else if(bb != b > lb) {
-              ppufast.startsp[i] = -1;
-              ppufast.endsp[i] = -1;
-              break;
-            }
-          }
-          if(lc > 0 && c > 0 && c != lc) {
-            if(!cbd) {
-              cbd = true;
-              cb = c > lc;
-            } else if(cb != c > lc) {
-              ppufast.startsp[i] = -1;
-              ppufast.endsp[i] = -1;
-              break;
-            }
-          }
-          if(ld > 0 && d > 0 && d != ld) {
-            if(!dbd) {
-              dbd = true;
-              db = d > ld;
-            } else if(db != d > ld) {
-              ppufast.startsp[i] = -1;
-              ppufast.endsp[i] = -1;
-              break;
-            }
-          }
-          la = a;
-          lb = b;
-          lc = c;
-          ld = d;
-        }
-      }
-    }
-  } else if(ppufast.wsOverrideCandidate()) {
-    #define isLineMode7(l) (l.io.bg1.tileMode == TileMode::Mode7 \
-        && !l.io.displayDisable && (l.io.bg1.aboveEnable || l.io.bg1.belowEnable))
-    for(uint y = 0; y < Line::count; y++) {
-      if(isLineMode7(ppufast.lines[Line::start + y])) {
-        ppufast.ind = 1;
-        ppufast.starts[0] = -1;
-        ppufast.ends[0] = -1;
-        ppufast.startsp[0] = -1;
-        ppufast.endsp[0] = -1;
-        break;
-      }
-    }
-    #undef isLineMode7
-  }
-
+auto PPU::Line::flush() -> void {
   if(Line::count) {
+    if(ppu.hdScale() > 1) cacheMode7HD();
     #pragma omp parallel for if(Line::count >= 8)
     for(uint y = 0; y < Line::count; y++) {
-      ppufast.lines[Line::start + y].render();
+      if(ppu.deinterlace()) {
+        if(!ppu.interlace()) {
+          //some games enable interlacing in 240p mode, just force these to even fields
+          ppu.lines[Line::start + y].render(0);
+        } else {
+          //for actual interlaced frames, render both fields every farme for 480i -> 480p
+          ppu.lines[Line::start + y].render(0);
+          ppu.lines[Line::start + y].render(1);
+        }
+      } else {
+        //standard 240p (progressive) and 480i (interlaced) rendering
+        ppu.lines[Line::start + y].render(ppu.field());
+      }
     }
     Line::start = 0;
     Line::count = 0;
   }
 }
 
-auto PPUfast::Line::avgBgC(uint dist, uint offset) const -> uint32 {
-  uint32 t = Emulator::video.processColor(io.col.fixedColor, io.displayBrightness);
+auto PPU::Line::cache() -> void {
+  cacheBackground(ppu.io.bg1);
+  cacheBackground(ppu.io.bg2);
+  cacheBackground(ppu.io.bg3);
+  cacheBackground(ppu.io.bg4);
+
+  uint y = ppu.vcounter();
+  if(ppu.io.displayDisable || y >= ppu.vdisp()) {
+    io.displayDisable = true;
+  } else {
+    memcpy(&io, &ppu.io, sizeof(io));
+    memcpy(&cgram, &ppu.cgram, sizeof(cgram));
+  }
+  if(!Line::count) Line::start = y;
+  Line::count++;
+}
+
+auto PPU::Line::avgBgC(uint dist, uint offset) const -> uint32 {
+  auto luma = ppu.lightTable[io.displayBrightness];
+  uint32 t = luma[io.col.fixedColor];
   if(dist < 1) return t;
   uint32 a = (t >> 16) & 255;
   uint32 b = (t >>  8) & 255;
@@ -159,11 +72,11 @@ auto PPUfast::Line::avgBgC(uint dist, uint offset) const -> uint32 {
         io.bg2.tileMode  != dL.io.bg2.tileMode  || io.bg2.tileMode  != uL.io.bg2.tileMode  ||
         io.bg3.tileMode  != dL.io.bg3.tileMode  || io.bg3.tileMode  != uL.io.bg3.tileMode  ||
         io.bg4.tileMode  != dL.io.bg4.tileMode  || io.bg4.tileMode  != uL.io.bg4.tileMode) break; 
-    t = Emulator::video.processColor(uL.io.col.fixedColor, io.displayBrightness);
+    t = luma[uL.io.col.fixedColor];
     a += (t >> 16) & 255;
     b += (t >>  8) & 255;
     c += (t >>  0) & 255;
-    t = Emulator::video.processColor(dL.io.col.fixedColor, io.displayBrightness);
+    t = luma[dL.io.col.fixedColor];
     a += (t >> 16) & 255;
     b += (t >>  8) & 255;
     c += (t >>  0) & 255;
@@ -175,17 +88,20 @@ auto PPUfast::Line::avgBgC(uint dist, uint offset) const -> uint32 {
   return (a << 16) + (b << 8) + (c << 0);
 }
 
-auto PPUfast::Line::render() -> void {
-  auto hd = ppufast.hd();
-  auto ss = ppufast.ss();
+auto PPU::Line::render(bool fieldID) -> void {
+  this->fieldID = fieldID;
+  uint y = this->y + (!ppu.latch.overscan ? 7 : 0);
+
+  auto hd = ppu.hd();
+  auto ss = ppu.ss();
   auto scale = ppufast.hd() ? ppufast.hdScale() : 1;
-  auto output = ppufast.output + (!hd
-  ? (y * 1024 + (ppufast.interlace() && ppufast.field() ? 512 : 0))
-  : (y * (256+2*ppufast.widescreen()) * scale * scale)
+  auto output = ppu.output + (!hd
+  ? (y * 1024 + (ppu.interlace() && field() ? 512 : 0))
+  : (y * (256+2*ppu.widescreen()) * scale * scale)
   );
   auto width = (!hd
-  ? (!ppufast.hires() ? 256 : 512)
-  : ((256+2*ppufast.widescreen()) * scale * scale));
+  ? (!ppu.hires() ? 256 : 512)
+  : ((256+2*ppu.widescreen()) * scale * scale));
 
   if(io.displayDisable) {
     memory::fill<uint32>(output, width);
@@ -193,19 +109,21 @@ auto PPUfast::Line::render() -> void {
   }
 
   bool hires = io.pseudoHires || io.bgMode == 5 || io.bgMode == 6;
-  auto aboveColor = Emulator::video.processColor(cgram[0], io.displayBrightness);
+  
+  auto luma = ppu.lightTable[io.displayBrightness];
+  auto aboveColor = luma[cgram[0]];
   uint32 *bgFixedColors = new uint32[10];
   uint32 *belowColors = new uint32[10];
   for (int i = 0; i < scale; i++) {
     bgFixedColors[i] = avgBgC(ppufast.bgGrad(), i);
     belowColors[i]  = hires ? aboveColor : bgFixedColors[i];
   }
-  
-  uint xa =  (hd || ss) && ppufast.interlace() && ppufast.field() ? 256 * scale * scale / 2 : 0;
-  uint xb = !(hd || ss) ? 256 : ppufast.interlace() && !ppufast.field() ? (256+2*ppufast.widescreen()) * scale * scale / 2 : (256+2*ppufast.widescreen()) * scale * scale;
-  if (hd && ppufast.wsBgCol()) {
+
+  uint xa =  (hd || ss) && ppu.interlace() && field() ? (256+2*ppu.widescreen())  * scale * scale / 2 : 0;
+  uint xb = !(hd || ss) ? 256 : ppu.interlace() && !ppu.field() ? (256+2*ppu.widescreen()) * scale * scale / 2 : (256+2*ppu.widescreen()) * scale * scale;
+  if (hd && ppu.wsBgCol() && ppu.widescreen() > 0) {
     for(uint x = xa; x < xb; x++) {
-      int cx = (x % ((256+2*ppufast.widescreen()) * scale)) - (ppufast.widescreen() * scale);
+      int cx = (x % ((256+2*ppu.widescreen()) * scale)) - (ppu.widescreen() * scale);
       if (cx >= 0 && cx <= (256 * scale)) {
         above[x] = {Source::COL, 0, aboveColor};
         below[x] = {Source::COL, 0, belowColors[x / ((256+2*ppufast.widescreen()) * scale)]};
@@ -221,12 +139,16 @@ auto PPUfast::Line::render() -> void {
     }
   }
 
+  //hack: generally, renderBackground/renderObject ordering do not matter.
+  //but for HD mode 7, a larger grid of pixels are generated, and so ordering ends up mattering.
+  //as a hack for Mohawk & Headphone Jack, we reorder things for BG2 to render properly.
+  //longer-term, we need to devise a better solution that can work for every game.
   renderBackground(io.bg1, Source::BG1);
-  if(!io.extbg) renderBackground(io.bg2, Source::BG2);
+  if(io.extbg == 0) renderBackground(io.bg2, Source::BG2);
   renderBackground(io.bg3, Source::BG3);
   renderBackground(io.bg4, Source::BG4);
   renderObject(io.obj);
-  if(io.extbg) renderBackground(io.bg2, Source::BG2);
+  if(io.extbg == 1) renderBackground(io.bg2, Source::BG2);
 
   //TODO: move to own method
   uint windRad = ppufast.windRad();
@@ -286,9 +208,10 @@ auto PPUfast::Line::render() -> void {
                 oneLeft, oneRight, twoLeft, twoRight, scale, 256*scale*offset);
   }
 
-  uint wsm = (ppufast.widescreen() == 0 || ppufast.wsOverride()) ? 0 : ppufast.wsMarker();
-  uint wsma = ppufast.wsMarkerAlpha();
+  uint wsm = (ppu.widescreen() == 0 || ppu.wsOverride()) ? 0 : ppu.wsMarker();
+  uint wsma = ppu.wsMarkerAlpha();
 
+  uint curr = 0, prev = 0;
   if(hd) {
     int x = 0;
     int xWindow = 0;
@@ -309,19 +232,27 @@ auto PPUfast::Line::render() -> void {
       }
       xWindow++;
     }
+
   } else if(width == 256) for(uint x : range(256)) {
     *output++ = pixel(x, above[x], below[x], wsm, wsma, bgFixedColors[0]);
   } else if(!hires) for(uint x : range(256)) {
     auto color = pixel(x, above[x], below[x], wsm, wsma, bgFixedColors[0]);
     *output++ = color;
     *output++ = color;
-  } else for(uint x : range(256)) {
+  } else if(!configuration.video.blurEmulation) for(uint x : range(256)) {
     *output++ = pixel(x, below[x], above[x], wsm, wsma, bgFixedColors[0]);
     *output++ = pixel(x, above[x], below[x], wsm, wsma, bgFixedColors[0]);
+  } else for(uint x : range(256)) {
+    curr = pixel(x, below[x], above[x], wsm, wsm, bgFixedColors[0]);
+    *output++ = (prev + curr - ((prev ^ curr) & 0x00010101)) >> 1;
+    prev = curr;
+    curr = pixel(x, above[x], below[x], wsm, wsma, bgFixedColors[0]);
+    *output++ = (prev + curr - ((prev ^ curr) & 0x00010101)) >> 1;
+    prev = curr;
   }
 }
 
-auto PPUfast::Line::pixel(uint x, Pixel above, Pixel below, uint wsm, uint wsma, uint32 bgFixedColor) const -> uint32 {
+auto PPU::Line::pixel(uint x, Pixel above, Pixel below, uint wsm, uint wsma, uint32 bgFixedColor) const -> uint32 { 
   uint32 r = 0;
   if(!windowAbove[x]) above.color = 0x0000;
   if(!windowBelow[x]) r = above.color;
@@ -341,7 +272,7 @@ auto PPUfast::Line::pixel(uint x, Pixel above, Pixel below, uint wsm, uint wsma,
   return r;
 }
 
-auto PPUfast::Line::blend(uint x, uint y, bool halve) const -> uint32 {
+auto PPU::Line::blend(uint x, uint y, bool halve) const -> uint32 {
   if(!io.col.mathMode) {  //add
     if(!halve) {
       uint sum = x + y;
@@ -361,7 +292,7 @@ auto PPUfast::Line::blend(uint x, uint y, bool halve) const -> uint32 {
   }
 }
 
-auto PPUfast::Line::directColor(uint paletteIndex, uint paletteColor) const -> uint15 {
+auto PPU::Line::directColor(uint paletteIndex, uint paletteColor) const -> uint32 {
   //paletteIndex = bgr
   //paletteColor = BBGGGRRR
   //output       = 0 BBb00 GGGg0 RRRr0
@@ -370,35 +301,33 @@ auto PPUfast::Line::directColor(uint paletteIndex, uint paletteColor) const -> u
        + (paletteColor << 7 & 0x6000) + (paletteIndex << 10 & 0x1000);  //B
 }
 
-auto PPUfast::Line::plotAbove(int x, uint source, uint priority, uint col) -> void {
-  uint32 color = Emulator::video.processColor(col, io.displayBrightness);
-  if(ppufast.hd() || ppufast.ss()) return plotHD(above, x, source, priority, color, false, false);
+auto PPU::Line::plotAbove(int x, uint8 source, uint8 priority, uint32 color) -> void {
+  if(ppu.hd() || ppu.ss()) return plotHD(above, x, source, priority, color, false, false);
   if(priority > above[x].priority) above[x] = {source, priority, color};
 }
 
-auto PPUfast::Line::plotBelow(int x, uint source, uint priority, uint col) -> void {
-  uint32 color = Emulator::video.processColor(col, io.displayBrightness);
-  if(ppufast.hd() || ppufast.ss()) return plotHD(below, x, source, priority, color, false, false);
+auto PPU::Line::plotBelow(int x, uint8 source, uint8 priority, uint32 color) -> void {
+  if(ppu.hd() || ppu.ss()) return plotHD(below, x, source, priority, color, false, false);
   if(priority > below[x].priority) below[x] = {source, priority, color};
 }
 
 //todo: name these variables more clearly ...
-auto PPUfast::Line::plotHD(Pixel* pixel, int x, uint source, uint priority, uint32 color, bool hires, bool subpixel) -> void {
-  int scale = ppufast.hdScale();
-  int wss = ppufast.widescreen() * scale;
+auto PPU::Line::plotHD(Pixel* pixel, int x, uint8 source, uint8 priority, uint32 color, bool hires, bool subpixel) -> void {
+  int scale = ppu.hdScale();
+  int wss = ppu.widescreen() * scale;
   int xss = hires && subpixel ? scale / 2 : 0;
-  int ys = ppufast.interlace() && ppufast.field() ? scale / 2 : 0;
+  int ys = ppu.interlace() && ppu.field() ? scale / 2 : 0;
   if(priority > pixel[x * scale + xss + ys * 256 * scale + wss].priority) {
     Pixel p = {source, priority, color};
     int xsm = hires && !subpixel ? scale / 2 : scale;
-    int ysm = ppufast.interlace() && !ppufast.field() ? scale / 2 : scale;
+    int ysm = ppu.interlace() && !ppu.field() ? scale / 2 : scale;
     for(int xs = xss; xs < xsm; xs++) {
       pixel[x * scale + xs + ys * 256 * scale + wss] = p;
     }
     int size = sizeof(Pixel) * (xsm - xss);
     Pixel* source = &pixel[x * scale + xss + ys * 256 * scale + wss];
     for(int yst = ys + 1; yst < ysm; yst++) {
-      memcpy(&pixel[x * scale + xss + yst * (256+2*ppufast.widescreen()) * scale + wss], source, size);
+      memcpy(&pixel[x * scale + xss + yst * (256+2*ppu.widescreen()) * scale + wss], source, size);
     }
   }
 }

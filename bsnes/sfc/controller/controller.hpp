@@ -11,16 +11,16 @@
 //  6:    iobit    $4201.d6 write; $4213.d6 read    $4201.d7 write; $4213.d7 read
 //  7:    gnd
 
-struct Controller : Thread {
+struct Controller {
   Controller(uint port);
   virtual ~Controller();
-  static auto Enter() -> void;
 
-  virtual auto main() -> void;
   auto iobit() -> bool;
   auto iobit(bool data) -> void;
   virtual auto data() -> uint2 { return 0; }
   virtual auto latch(bool data) -> void {}
+  virtual auto latch() -> void {}  //light guns
+  virtual auto draw(uint32_t* output, uint pitch, uint width, uint height) -> void {}  //light guns
 
   const uint port;
 };

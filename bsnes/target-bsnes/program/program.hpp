@@ -7,10 +7,10 @@ struct Program : Lock, Emulator::Platform {
   auto quit() -> void;
 
   //platform.cpp
-  auto open(uint id, string name, vfs::file::mode mode, bool required) -> vfs::shared::file override;
+  auto open(uint id, string name, vfs::file::mode mode, bool required) -> shared_pointer<vfs::file> override;
   auto load(uint id, string name, string type, vector<string> options = {}) -> Emulator::Platform::Load override;
-  auto videoFrame(const uint32* data, uint pitch, uint width, uint height) -> void override;
-  auto audioFrame(const double* samples, uint channels) -> void override;
+  auto videoFrame(const uint32* data, uint pitch, uint width, uint height, uint scale) -> void override;
+  auto audioFrame(const float* samples, uint channels) -> void override;
   auto inputPoll(uint port, uint device, uint input) -> int16 override;
   auto inputRumble(uint port, uint device, uint input, bool enable) -> void override;
 
@@ -28,18 +28,18 @@ struct Program : Lock, Emulator::Platform {
   auto verified() const -> bool;
 
   //game-pak.cpp
-  auto openPakSuperFamicom(string name, vfs::file::mode mode) -> vfs::shared::file;
-  auto openPakGameBoy(string name, vfs::file::mode mode) -> vfs::shared::file;
-  auto openPakBSMemory(string name, vfs::file::mode mode) -> vfs::shared::file;
-  auto openPakSufamiTurboA(string name, vfs::file::mode mode) -> vfs::shared::file;
-  auto openPakSufamiTurboB(string name, vfs::file::mode mode) -> vfs::shared::file;
+  auto openPakSuperFamicom(string name, vfs::file::mode mode) -> shared_pointer<vfs::file>;
+  auto openPakGameBoy(string name, vfs::file::mode mode) -> shared_pointer<vfs::file>;
+  auto openPakBSMemory(string name, vfs::file::mode mode) -> shared_pointer<vfs::file>;
+  auto openPakSufamiTurboA(string name, vfs::file::mode mode) -> shared_pointer<vfs::file>;
+  auto openPakSufamiTurboB(string name, vfs::file::mode mode) -> shared_pointer<vfs::file>;
 
   //game-rom.cpp
-  auto openRomSuperFamicom(string name, vfs::file::mode mode) -> vfs::shared::file;
-  auto openRomGameBoy(string name, vfs::file::mode mode) -> vfs::shared::file;
-  auto openRomBSMemory(string name, vfs::file::mode mode) -> vfs::shared::file;
-  auto openRomSufamiTurboA(string name, vfs::file::mode mode) -> vfs::shared::file;
-  auto openRomSufamiTurboB(string name, vfs::file::mode mode) -> vfs::shared::file;
+  auto openRomSuperFamicom(string name, vfs::file::mode mode) -> shared_pointer<vfs::file>;
+  auto openRomGameBoy(string name, vfs::file::mode mode) -> shared_pointer<vfs::file>;
+  auto openRomBSMemory(string name, vfs::file::mode mode) -> shared_pointer<vfs::file>;
+  auto openRomSufamiTurboA(string name, vfs::file::mode mode) -> shared_pointer<vfs::file>;
+  auto openRomSufamiTurboB(string name, vfs::file::mode mode) -> shared_pointer<vfs::file>;
 
   //paths.cpp
   auto path(string type, string location, string extension = "") -> string;
@@ -64,14 +64,41 @@ struct Program : Lock, Emulator::Platform {
   auto removeState(string filename) -> bool;
   auto renameState(string from, string to) -> bool;
 
+  //movies.cpp
+  struct Movie {
+    enum Mode : uint { Inactive, Playing, Recording } mode = Mode::Inactive;
+    serializer state;
+    vector<int16> input;
+  } movie;
+  auto movieMode(Movie::Mode) -> void;
+  auto moviePlay() -> void;
+  auto movieRecord(bool fromBeginning) -> void;
+  auto movieStop() -> void;
+
+  //rewind.cpp
+  struct Rewind {
+    enum Mode : uint { Playing, Rewinding } mode = Mode::Playing;
+    vector<serializer> history;
+    uint length = 0;
+    uint frequency = 0;
+    uint counter = 0;  //in frames
+  } rewind;
+  auto rewindMode(Rewind::Mode) -> void;
+  auto rewindReset() -> void;
+  auto rewindRun() -> void;
+
   //video.cpp
   auto updateVideoDriver(Window parent) -> void;
   auto updateVideoExclusive() -> void;
   auto updateVideoBlocking() -> void;
   auto updateVideoFlush() -> void;
+  auto updateVideoMonitor() -> void;
   auto updateVideoFormat() -> void;
   auto updateVideoShader() -> void;
   auto updateVideoPalette() -> void;
+  auto updateVideoEffects() -> void;
+  auto toggleVideoFullScreen() -> void;
+  auto toggleVideoPseudoFullScreen() -> void;
 
   //audio.cpp
   auto updateAudioDriver(Window parent) -> void;
@@ -102,7 +129,13 @@ struct Program : Lock, Emulator::Platform {
   //hacks.cpp
   auto hackCompatibility() -> void;
   auto hackPatchMemory(vector<uint8_t>& data) -> void;
-  auto hackOverclockSuperFX() -> void;
+
+  //filter.cpp
+  auto filterSelect(uint& width, uint& height, uint scale) -> Filter::Render;
+
+  //viewport.cpp
+  auto viewportSize(uint& width, uint& height, uint scale) -> void;
+  auto viewportRefresh() -> void;
 
 public:
   struct Game {
@@ -118,6 +151,7 @@ public:
 
   struct SuperFamicom : Game {
     string title;
+    string region;
     vector<uint8_t> program;
     vector<uint8_t> data;
     vector<uint8_t> expansion;
@@ -138,20 +172,37 @@ public:
 
   vector<string> gameQueue;
 
+  uint32_t palette[32768];
+  uint32_t paletteDimmed[32768];
+
   struct Screenshot {
     const uint32* data = nullptr;
-    uint pitch = 0;
-    uint width = 0;
+    uint pitch  = 0;
+    uint width  = 0;
     uint height = 0;
+    uint scale  = 0;
   } screenshot;
 
-  bool frameAdvance = false;
+  bool frameAdvanceLock = false;
 
   uint64 autoSaveTime;
 
   uint64 statusTime;
   string statusMessage;
   string statusFrameRate;
+
+  bool startFullScreen = false;
+
+  struct Mute { enum : uint {
+    Always      = 1 << 1,
+    Unfocused   = 1 << 2,
+    FastForward = 1 << 3,
+    Rewind      = 1 << 4,
+  };};
+  uint mute = 0;
+
+  bool fastForwarding = false;
+  bool rewinding = false;
 };
 
 extern Program program;

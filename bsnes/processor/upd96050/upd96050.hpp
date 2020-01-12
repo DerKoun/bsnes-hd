@@ -37,12 +37,12 @@ struct uPD96050 {
     }
 
     inline auto operator=(uint16 data) -> Flag& {
-      ov0 = data.bit(0);
-      ov1 = data.bit(1);
-      z   = data.bit(2);
-      c   = data.bit(3);
-      s0  = data.bit(4);
-      s1  = data.bit(5);
+      ov0 = data >> 0 & 1;
+      ov1 = data >> 1 & 1;
+      z   = data >> 2 & 1;
+      c   = data >> 3 & 1;
+      s0  = data >> 4 & 1;
+      s1  = data >> 5 & 1;
       return *this;
     }
 
@@ -64,17 +64,17 @@ struct uPD96050 {
     }
 
     inline auto operator=(uint16 data) -> Status& {
-      p0   = data.bit( 0);
-      p1   = data.bit( 1);
-      ei   = data.bit( 7);
-      sic  = data.bit( 8);
-      soc  = data.bit( 9);
-      drc  = data.bit(10);
-      dma  = data.bit(11);
-      drs  = data.bit(12);
-      usf0 = data.bit(13);
-      usf1 = data.bit(14);
-      rqm  = data.bit(15);
+      p0   = data >>  0 & 1;
+      p1   = data >>  1 & 1;
+      ei   = data >>  7 & 1;
+      sic  = data >>  8 & 1;
+      soc  = data >>  9 & 1;
+      drc  = data >> 10 & 1;
+      dma  = data >> 11 & 1;
+      drs  = data >> 12 & 1;
+      usf0 = data >> 13 & 1;
+      usf1 = data >> 14 & 1;
+      rqm  = data >> 15 & 1;
       return *this;
     }
 

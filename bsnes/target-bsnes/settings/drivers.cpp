@@ -1,22 +1,24 @@
 auto DriverSettings::create() -> void {
-  setIcon(Icon::Place::Settings);
-  setText("Drivers");
-
-  layout.setPadding(5_sx);
+  setCollapsible();
+  setVisible(false);
 
   videoLabel.setText("Video").setFont(Font().setBold());
-  videoLayout.setSize({2, 2});
   videoDriverLabel.setText("Driver:");
   videoDriverOption.onChange([&] {
     videoDriverUpdate.setText(videoDriverOption.selected().text() != video.driver() ? "Change" : "Reload");
   });
   videoDriverUpdate.setText("Change").onActivate([&] { videoDriverChange(); });
+  videoMonitorLabel.setText("Fullscreen monitor:").setToolTip(
+    "Sets which monitor video is sent to in fullscreen mode."
+  );
+  videoMonitorOption.onChange([&] { videoMonitorChange(); });
   videoFormatLabel.setText("Format:");
   videoFormatOption.onChange([&] { videoFormatChange(); });
-  videoExclusiveToggle.setText("Exclusive fullscreen mode").setToolTip(
-    "(Direct3D driver only)\n\n"
-    "Acquires exclusive access to the display in fullscreen mode.\n"
-    "Eliminates compositing issues such as video stuttering."
+  videoExclusiveToggle.setText("Exclusive mode").setToolTip(
+    "Causes fullscreen mode to take over all monitors.\n"
+    "This allows adaptive sync to work better and reduces input latency.\n"
+    "However, multi-monitor users should turn this option off.\n"
+    "Note: Direct3D exclusive mode also does not honor the requested monitor."
   ).onToggle([&] {
     settings.video.exclusive = videoExclusiveToggle.checked();
     program.updateVideoExclusive();
@@ -45,20 +47,19 @@ auto DriverSettings::create() -> void {
   videoSpacer.setColor({192, 192, 192});
 
   audioLabel.setText("Audio").setFont(Font().setBold());
-  audioLayout.setSize({2, 2});
   audioDriverLabel.setText("Driver:");
   audioDriverOption.onChange([&] {
     audioDriverUpdate.setText(audioDriverOption.selected().text() != audio.driver() ? "Change" : "Reload");
   });
   audioDriverUpdate.setText("Change").onActivate([&] { audioDriverChange(); });
-  audioDeviceLabel.setText("Device:");
+  audioDeviceLabel.setText("Output device:");
   audioDeviceOption.onChange([&] { audioDeviceChange(); });
   audioFrequencyLabel.setText("Frequency:");
   audioFrequencyOption.onChange([&] { audioFrequencyChange(); });
   audioLatencyLabel.setText("Latency:");
   audioLatencyOption.onChange([&] { audioLatencyChange(); });
   audioExclusiveToggle.setText("Exclusive mode").setToolTip(
-    "(ASIO, WASAPI drivers only)\n\n"
+    "(WASAPI driver only)\n\n"
     "Acquires exclusive control of the sound card device.\n"
     "This can significantly reduce audio latency.\n"
     "However, it will block sounds from all other applications."
@@ -90,7 +91,6 @@ auto DriverSettings::create() -> void {
   audioSpacer.setColor({192, 192, 192});
 
   inputLabel.setText("Input").setFont(Font().setBold());
-  inputLayout.setSize({2, 1});
   inputDriverLabel.setText("Driver:");
   inputDriverOption.onChange([&] {
     inputDriverUpdate.setText(inputDriverOption.selected().text() != input.driver() ? "Change" : "Reload");
@@ -100,11 +100,52 @@ auto DriverSettings::create() -> void {
     "This is useful for APIs that lack auto-hotplug support,\n"
     "such as DirectInput and SDL."
   ).onActivate([&] { inputDriverChange(); });
+  inputSpacer.setColor({192, 192, 192});
 
-  //this will hide the video format setting for simplicity, as it's not very useful just yet ...
-  //videoLayout.setSize({2, 1});
-  //videoLayout.remove(videoFormatLabel);
-  //videoLayout.remove(videoPropertyLayout);
+  syncModeLabel.setText("Synchronization Mode Presets:").setFont(Font().setBold());
+  syncModeRequirements.setText(
+    "Adaptive Sync: requires G-sync or FreeSync monitor.\n"
+    "Dynamic Rate Control: requires monitor and SNES refresh rates to match."
+  );
+  adaptiveSyncMode.setText("Adaptive Sync").onActivate([&] {
+    if(!audioBlockingToggle.enabled()) {
+      return (void)MessageDialog().setAlignment(settingsWindow).setTitle("Failure").setText({
+        "Sorry, the current driver configuration is not compatible with adaptive sync mode.\n"
+        "Adaptive sync requires audio synchronization support."
+      }).error();
+    }
+
+    if(videoExclusiveToggle.enabled() && !videoExclusiveToggle.checked()) videoExclusiveToggle.setChecked(true).doToggle();
+    if(videoBlockingToggle.enabled() && videoBlockingToggle.checked()) videoBlockingToggle.setChecked(false).doToggle();
+    if(audioBlockingToggle.enabled() && !audioBlockingToggle.checked()) audioBlockingToggle.setChecked(true).doToggle();
+    if(audioDynamicToggle.enabled() && audioDynamicToggle.checked()) audioDynamicToggle.setChecked(false).doToggle();
+
+    MessageDialog().setAlignment(settingsWindow).setTitle("Success").setText({
+      "Adaptive sync works best in fullscreen exclusive mode.\n"
+      "Use the lowest audio latency setting your system can manage.\n"
+      "A G-sync or FreeSync monitor is required.\n"
+      "Adaptive sync must be enabled in your driver settings panel."
+    }).information();
+  });
+  dynamicRateControlMode.setText("Dynamic Rate Control").onActivate([&] {
+    if(!videoBlockingToggle.enabled() || !audioDynamicToggle.enabled()) {
+      return (void)MessageDialog().setAlignment(settingsWindow).setTitle("Failure").setText({
+        "Sorry, the current driver configuration is not compatible with dynamic rate control mode.\n"
+        "Dynamic rate control requires video synchronization and audio dynamic rate support."
+      }).error();
+    }
+
+    if(videoBlockingToggle.enabled() && !videoBlockingToggle.checked()) videoBlockingToggle.setChecked(true).doToggle();
+    if(audioExclusiveToggle.enabled() && !audioExclusiveToggle.checked()) audioExclusiveToggle.setChecked(true).doToggle();
+    if(audioBlockingToggle.enabled() && audioBlockingToggle.checked()) audioBlockingToggle.setChecked(false).doToggle();
+    if(audioDynamicToggle.enabled() && !audioDynamicToggle.checked()) audioDynamicToggle.setChecked(true).doToggle();
+
+    MessageDialog().setAlignment(settingsWindow).setTitle("Success").setText({
+      "Dynamic rate control requires your monitor to be running at:\n"
+      "60hz refresh rate for NTSC games, 50hz refresh rate for PAL games.\n"
+      "Use the lowest audio latency setting your system can manage."
+    }).information();
+  });
 }
 
 //
@@ -118,11 +159,12 @@ auto DriverSettings::videoDriverChanged() -> void {
   }
   videoDriverActive.setText({"Active driver: ", video.driver()});
   videoDriverOption.doChange();
+  videoMonitorChanged();
   videoFormatChanged();
-  videoExclusiveToggle.setChecked(settings.video.exclusive && video.hasExclusive()).setEnabled(video.hasExclusive());
+  videoExclusiveToggle.setChecked(video.exclusive()).setEnabled(video.hasExclusive());
   videoBlockingToggle.setChecked(video.blocking()).setEnabled(video.hasBlocking());
   videoFlushToggle.setChecked(video.flush()).setEnabled(video.hasFlush());
-  layout.setGeometry(layout.geometry());
+  setGeometry(geometry());
 }
 
 auto DriverSettings::videoDriverChange() -> void {
@@ -144,6 +186,24 @@ auto DriverSettings::videoDriverChange() -> void {
   }
 }
 
+auto DriverSettings::videoMonitorChanged() -> void {
+  videoMonitorOption.reset();
+  for(auto& monitor : Video::hasMonitors()) {
+    ComboButtonItem item{&videoMonitorOption};
+    item.setText(monitor.name);
+    if(monitor.name == video.monitor()) item.setSelected();
+  }
+  videoMonitorOption.setEnabled(videoMonitorOption.itemCount() > 1);
+  setGeometry(geometry());
+  videoMonitorChange();
+}
+
+auto DriverSettings::videoMonitorChange() -> void {
+  auto item = videoMonitorOption.selected();
+  settings.video.monitor = item.text();
+  program.updateVideoMonitor();
+}
+
 auto DriverSettings::videoFormatChanged() -> void {
   videoFormatOption.reset();
   for(auto& format : video.hasFormats()) {
@@ -151,8 +211,8 @@ auto DriverSettings::videoFormatChanged() -> void {
     item.setText(format);
     if(format == video.format()) item.setSelected();
   }
-//videoFormatOption.setEnabled(video.hasFormat());
-  layout.setGeometry(layout.geometry());
+  videoFormatOption.setEnabled(videoFormatOption.itemCount() > 1);
+  setGeometry(geometry());
   videoFormatChange();
 }
 
@@ -179,7 +239,7 @@ auto DriverSettings::audioDriverChanged() -> void {
   audioExclusiveToggle.setChecked(audio.exclusive()).setEnabled(audio.hasExclusive());
   audioBlockingToggle.setChecked(audio.blocking()).setEnabled(audio.hasBlocking());
   audioDynamicToggle.setChecked(audio.dynamic()).setEnabled(audio.hasDynamic());
-  layout.setGeometry(layout.geometry());
+  setGeometry(geometry());
 }
 
 auto DriverSettings::audioDriverChange() -> void {
@@ -209,7 +269,7 @@ auto DriverSettings::audioDeviceChanged() -> void {
     if(device == audio.device()) item.setSelected();
   }
 //audioDeviceOption.setEnabled(audio->hasDevice());
-  layout.setGeometry(layout.geometry());
+  setGeometry(geometry());
 }
 
 auto DriverSettings::audioDeviceChange() -> void {
@@ -228,7 +288,7 @@ auto DriverSettings::audioFrequencyChanged() -> void {
     if(frequency == audio.frequency()) item.setSelected();
   }
 //audioFrequencyOption.setEnabled(audio->hasFrequency());
-  layout.setGeometry(layout.geometry());
+  setGeometry(geometry());
 }
 
 auto DriverSettings::audioFrequencyChange() -> void {
@@ -245,7 +305,7 @@ auto DriverSettings::audioLatencyChanged() -> void {
     if(latency == audio.latency()) item.setSelected();
   }
 //audioLatencyOption.setEnabled(audio->hasLatency());
-  layout.setGeometry(layout.geometry());
+  setGeometry(geometry());
 }
 
 auto DriverSettings::audioLatencyChange() -> void {
@@ -265,7 +325,7 @@ auto DriverSettings::inputDriverChanged() -> void {
   }
   inputDriverActive.setText({"Active driver: ", input.driver()});
   inputDriverOption.doChange();
-  layout.setGeometry(layout.geometry());
+  setGeometry(geometry());
 }
 
 auto DriverSettings::inputDriverChange() -> void {

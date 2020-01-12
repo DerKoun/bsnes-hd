@@ -1,10 +1,107 @@
-auto PPUfast::Line::renderMode7HD(PPUfast::IO::Background& self, uint source) -> void {
-  const bool extbg = source == Source::BG2;
-  bool mosSing = self.mosaicEnable && io.mosaicSize && ppufast.hdMosaic() == 1;
-  const uint sampScale = mosSing ? 1 : ppufast.hdSupersample();
-  const uint scale = mosSing ? 1 : ppufast.hdScale() * sampScale;
+//determine mode 7 line groups for perspective correction
+auto PPU::Line::cacheMode7HD() -> void {
+  ppu.mode7LineGroups.count = 0;
+  if(ppu.hdPerspective()) {
+    #define isLineMode7(line) (line.io.bg1.tileMode == TileMode::Mode7 && !line.io.displayDisable && ( \
+      (line.io.bg1.aboveEnable || line.io.bg1.belowEnable) \
+    ))
+    bool state = false;
+    uint y;
+    //find the moe 7 groups
+    for(y = 0; y < Line::count; y++) {
+      if(state != isLineMode7(ppu.lines[Line::start + y])) {
+        state = !state;
+        if(state) {
+          ppu.mode7LineGroups.startLine[ppu.mode7LineGroups.count] = ppu.lines[Line::start + y].y;
+        } else {
+          ppu.mode7LineGroups.endLine[ppu.mode7LineGroups.count] = ppu.lines[Line::start + y].y - 1;
+          //the lines at the edges of mode 7 groups may be erroneous, so start and end lines for interpolation are moved inside
+          int offset = (ppu.mode7LineGroups.endLine[ppu.mode7LineGroups.count] - ppu.mode7LineGroups.startLine[ppu.mode7LineGroups.count]) / 8;
+          ppu.mode7LineGroups.startLerpLine[ppu.mode7LineGroups.count] = ppu.mode7LineGroups.startLine[ppu.mode7LineGroups.count] + offset;
+          ppu.mode7LineGroups.endLerpLine[ppu.mode7LineGroups.count] = ppu.mode7LineGroups.endLine[ppu.mode7LineGroups.count] - offset;
+          ppu.mode7LineGroups.count++;
+        }
+      }
+    }
+    #undef isLineMode7
+    if(state) {
+      //close the last group if necessary
+      ppu.mode7LineGroups.endLine[ppu.mode7LineGroups.count] = ppu.lines[Line::start + y].y - 1;
+      int offset = (ppu.mode7LineGroups.endLine[ppu.mode7LineGroups.count] - ppu.mode7LineGroups.startLine[ppu.mode7LineGroups.count]) / 8;
+      ppu.mode7LineGroups.startLerpLine[ppu.mode7LineGroups.count] = ppu.mode7LineGroups.startLine[ppu.mode7LineGroups.count] + offset;
+      ppu.mode7LineGroups.endLerpLine[ppu.mode7LineGroups.count] = ppu.mode7LineGroups.endLine[ppu.mode7LineGroups.count] - offset;
+      ppu.mode7LineGroups.count++;
+    }
 
-  int sampSize = sampScale < 2 ? 0 : (256+2*ppufast.widescreen()) * 4 * scale/sampScale;
+    //detect groups that do not have perspective
+    for(int i : range(ppu.mode7LineGroups.count)) {
+      int a = -1, b = -1, c = -1, d = -1;  //the mode 7 scale factors of the current line
+      int aPrev = -1, bPrev = -1, cPrev = -1, dPrev = -1;  //the mode 7 scale factors of the previous line
+      bool aVar = false, bVar = false, cVar = false, dVar = false;  //has a varying value been found for the factors?
+      bool aInc = false, bInc = false, cInc = false, dInc = false;  //has the variation been an increase or decrease?
+      for(y = ppu.mode7LineGroups.startLerpLine[i]; y <= ppu.mode7LineGroups.endLerpLine[i]; y++) {
+        a = ((int)((int16)(ppu.lines[y].io.mode7.a)));
+        b = ((int)((int16)(ppu.lines[y].io.mode7.b)));
+        c = ((int)((int16)(ppu.lines[y].io.mode7.c)));
+        d = ((int)((int16)(ppu.lines[y].io.mode7.d)));
+        //has the value of 'a' changed compared to the last line?
+        //(and is the factor larger than zero, which happens sometimes and seems to be game-specific, mostly at the edges of the screen)
+        if(aPrev > 0 && a > 0 && a != aPrev) {
+          if(!aVar) {
+            //if there has been no variation yet, store that there is one and store if it is an increase or decrease
+            aVar = true;
+            aInc = a > aPrev;
+          } else if(aInc != a > aPrev) {
+            //if there has been an increase and now we have a decrease, or vice versa, set the interpolation lines to -1
+            //to deactivate perspective correction for this group and stop analyzing it further
+            ppu.mode7LineGroups.startLerpLine[i] = -1;
+            ppu.mode7LineGroups.endLerpLine[i] = -1;
+            break;
+          }
+        }
+        if(bPrev > 0 && b > 0 && b != bPrev) {
+          if(!bVar) {
+            bVar = true;
+            bInc = b > bPrev;
+          } else if(bInc != b > bPrev) {
+            ppu.mode7LineGroups.startLerpLine[i] = -1;
+            ppu.mode7LineGroups.endLerpLine[i] = -1;
+            break;
+          }
+        }
+        if(cPrev > 0 && c > 0 && c != cPrev) {
+          if(!cVar) {
+            cVar = true;
+            cInc = c > cPrev;
+          } else if(cInc != c > cPrev) {
+            ppu.mode7LineGroups.startLerpLine[i] = -1;
+            ppu.mode7LineGroups.endLerpLine[i] = -1;
+            break;
+          }
+        }
+        if(dPrev > 0 && d > 0 && d != bPrev) {
+          if(!dVar) {
+            dVar = true;
+            dInc = d > dPrev;
+          } else if(dInc != d > dPrev) {
+            ppu.mode7LineGroups.startLerpLine[i] = -1;
+            ppu.mode7LineGroups.endLerpLine[i] = -1;
+            break;
+          }
+        }
+        aPrev = a, bPrev = b, cPrev = c, dPrev = d;
+      }
+    }
+  }
+}
+
+auto PPU::Line::renderMode7HD(PPU::IO::Background& self, uint8 source) -> void {
+  const bool extbg = source == Source::BG2;
+  bool mosSing = self.mosaicEnable && io.mosaicSize && ppu.hdMosaic() == 1;
+  const uint sampScale = mosSing ? 1 : ppu.hdSupersample();
+  const uint scale = mosSing ? 1 : ppu.hdScale() * sampScale;
+
+  int sampSize = sampScale < 2 ? 0 : (256+2*ppu.widescreen()) * 4 * scale/sampScale;
   uint *sampTmp = new uint[sampSize];
   memory::fill<uint>(sampTmp, sampSize);
 
@@ -15,19 +112,21 @@ auto PPUfast::Line::renderMode7HD(PPUfast::IO::Background& self, uint source) ->
   //find the first and last scanline for interpolation
   int y_a = -1;
   int y_b = -1;
-  #define isLineMode7(n) (ppufast.lines[n].io.bg1.tileMode == TileMode::Mode7 && !ppufast.lines[n].io.displayDisable && ( \
-    (ppufast.lines[n].io.bg1.aboveEnable || ppufast.lines[n].io.bg1.belowEnable) \
+  #define isLineMode7(n) (ppu.lines[n].io.bg1.tileMode == TileMode::Mode7 && !ppu.lines[n].io.displayDisable && ( \
+    (ppu.lines[n].io.bg1.aboveEnable || ppu.lines[n].io.bg1.belowEnable) \
   ))
-  if(ppufast.hdPerspective() > 0) {
-    for(int i = 0; i < ppufast.ind; i++) {
-      if(y >= ppufast.starts[i] && y <= ppufast.ends[i]) {
-        y_a = ppufast.startsp[i];
-        y_b = ppufast.endsp[i];
+  if(ppu.hdPerspective()) {
+    //find the mode 7 line group this line is in and use its interpolation lines
+    for(int i : range(ppu.mode7LineGroups.count)) {
+      if(y >= ppu.mode7LineGroups.startLine[i] && y <= ppu.mode7LineGroups.endLine[i]) {
+        y_a = ppu.mode7LineGroups.startLerpLine[i];
+        y_b = ppu.mode7LineGroups.endLerpLine[i];
         break;
       }
     }
   }
   if(y_a == -1 || y_b == -1) {
+    //if perspective correction is disabled or the group was detected as non-perspective, use the neighboring lines
     y_a = y;
     y_b = y;
     if(y_a >   1 && isLineMode7(y_a)) y_a--;
@@ -35,13 +134,13 @@ auto PPUfast::Line::renderMode7HD(PPUfast::IO::Background& self, uint source) ->
   }
   #undef isLineMode7
 
-  Line line_a = ppufast.lines[y_a];
+  Line line_a = ppu.lines[y_a];
   float a_a = (int16)line_a.io.mode7.a;
   float b_a = (int16)line_a.io.mode7.b;
   float c_a = (int16)line_a.io.mode7.c;
   float d_a = (int16)line_a.io.mode7.d;
 
-  Line line_b = ppufast.lines[y_b];
+  Line line_b = ppu.lines[y_b];
   float a_b = (int16)line_b.io.mode7.a;
   float b_b = (int16)line_b.io.mode7.b;
   float c_b = (int16)line_b.io.mode7.c;
@@ -57,11 +156,12 @@ auto PPUfast::Line::renderMode7HD(PPUfast::IO::Background& self, uint source) ->
     y_b = 255 - y_b;
   }
 
-  array<bool[256]> windowAbove;
-  array<bool[256]> windowBelow;
+  bool windowAbove[256];
+  bool windowBelow[256];
   renderWindow(self.window, self.window.aboveEnable, windowAbove);
   renderWindow(self.window, self.window.belowEnable, windowBelow);
 
+  auto luma = ppu.lightTable[io.displayBrightness];
   int pixelYp = INT_MIN;
   for(int ys : range(scale)) {
     float yf = y + ys * 1.0 / scale - 0.5;
@@ -83,7 +183,6 @@ auto PPUfast::Line::renderMode7HD(PPUfast::IO::Background& self, uint source) ->
       bool doAbove = self.aboveEnable && !windowAbove[ppufast.winXad(x, false)];
       bool doBelow = self.belowEnable && !windowBelow[ppufast.winXad(x, true)];
 
-      uint color;
       for(int xs : range(scale)) {
         float xf = x + xs * 1.0 / scale - 0.5;
         if(io.mode7.hflip) xf = 255 - xf;
@@ -92,12 +191,13 @@ auto PPUfast::Line::renderMode7HD(PPUfast::IO::Background& self, uint source) ->
         int pixelY = (originY + c * xf) / 256;
 
         bool skip = false;
+
         //only compute color again when coordinates have changed
         if(pixelX != pixelXp || pixelY != pixelYp) {
-          uint tile    = io.mode7.repeat == 3 && ((pixelX | pixelY) & ~1023) ? 0 : ppufast.vram[(pixelY >> 3 & 127) * 128 + (pixelX >> 3 & 127)].byte(0);
-          uint palette = io.mode7.repeat == 2 && ((pixelX | pixelY) & ~1023) ? 0 : ppufast.vram[(((pixelY & 7) << 3) + (pixelX & 7)) + (tile << 6)].byte(1);
+          uint tile    = io.mode7.repeat == 3 && ((pixelX | pixelY) & ~1023) ? 0 : (ppu.vram[(pixelY >> 3 & 127) * 128 + (pixelX >> 3 & 127)] & 0xff);
+          uint palette = io.mode7.repeat == 2 && ((pixelX | pixelY) & ~1023) ? 0 : (ppu.vram[(((pixelY & 7) << 3) + (pixelX & 7)) + (tile << 6)] >> 8);
 
-          uint priority;
+          uint8 priority;
           if(!extbg) {
             priority = self.priority[0];
           } else {
@@ -107,21 +207,24 @@ auto PPUfast::Line::renderMode7HD(PPUfast::IO::Background& self, uint source) ->
           skip = !palette;
 
           if(!skip) {
+            uint32 color;
             if(io.col.directColor && !extbg) {
               color = directColor(0, palette);
             } else {
               color = cgram[palette];
             }
 
-            pixel = {source, priority, Emulator::video.processColor(color, io.displayBrightness)};
+            color = luma[color];
+
+            pixel = {source, priority, color};
             pixelXp = pixelX;
             pixelYp = pixelY;
           }
         }
 
         if(mosSing) {
-          if(self.aboveEnable && !windowAbove[ppufast.winXad(x, false)]) plotAbove(x, pixel.source, pixel.priority, color);
-          if(self.belowEnable && !windowBelow[ppufast.winXad(x, true)]) plotBelow(x, pixel.source, pixel.priority, color);
+          if(self.aboveEnable && !windowAbove[ppufast.winXad(x, false)]) plotAbove(x, pixel.source, pixel.priority, pixel.color);
+          if(self.belowEnable && !windowBelow[ppufast.winXad(x, true)]) plotBelow(x, pixel.source, pixel.priority, pixel.color);
         } else
         if(sampScale == 1) {
           if(!skip && doAbove && (!extbg || pixel.priority > above->priority)) *above = pixel;
@@ -135,10 +238,10 @@ auto PPUfast::Line::renderMode7HD(PPUfast::IO::Background& self, uint source) ->
           sampTmp[p+2] += (pixel.color >>  8) & 255;
           sampTmp[p+3] += (pixel.color >>  0) & 255;
           if((ys+1) % sampScale == 0 && (xs+1) % sampScale == 0) {
-            uint priority = sampTmp[p] / sampScale / sampScale;
-            uint color = ((sampTmp[p+1] / sampScale / sampScale) << 16)
-                       + ((sampTmp[p+2] / sampScale / sampScale) <<  8)
-                       + ((sampTmp[p+3] / sampScale / sampScale) <<  0);
+            uint8 priority = sampTmp[p] / sampScale / sampScale;
+            uint32 color = ((sampTmp[p+1] / sampScale / sampScale) << 16)
+                         + ((sampTmp[p+2] / sampScale / sampScale) <<  8)
+                         + ((sampTmp[p+3] / sampScale / sampScale) <<  0);
             if(!skip && doAbove && (!extbg || priority > above->priority)) *above = {source, priority, color};
             if(!skip && doBelow && (!extbg || priority > below->priority)) *below = {source, priority, color};
             above++;
@@ -147,8 +250,9 @@ auto PPUfast::Line::renderMode7HD(PPUfast::IO::Background& self, uint source) ->
             sampTmp[p+1] = 0;
             sampTmp[p+2] = 0;
             sampTmp[p+3] = 0;
-           }
+          }
         }
+        
       }
     }
   }
@@ -156,7 +260,7 @@ auto PPUfast::Line::renderMode7HD(PPUfast::IO::Background& self, uint source) ->
 }
 
 //interpolation and extrapolation
-auto PPUfast::Line::lerp(float pa, float va, float pb, float vb, float pr) -> float {
+auto PPU::Line::lerp(float pa, float va, float pb, float vb, float pr) -> float {
   if(va == vb || pr == pa) return va;
   if(pr == pb) return vb;
   return va + (vb - va) / (pb - pa) * (pr - pa);

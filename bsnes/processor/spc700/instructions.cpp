@@ -7,32 +7,33 @@ auto SPC700::instructionAbsoluteBitModify(uint3 mode) -> void {
   switch(mode) {
   case 0:  //or addr:bit
     idle();
-    CF |= data.bit(bit);
+    CF |= bool(data & 1 << bit);
     break;
   case 1:  //or !addr:bit
     idle();
-    CF |= !data.bit(bit);
+    CF |= !bool(data & 1 << bit);
     break;
   case 2:  //and addr:bit
-    CF &= data.bit(bit);
+    CF &= bool(data & 1 << bit);
     break;
   case 3:  //and !addr:bit
-    CF &= !data.bit(bit);
+    CF &= !bool(data & 1 << bit);
     break;
   case 4:  //eor addr:bit
     idle();
-    CF ^= data.bit(bit);
+    CF ^= bool(data & 1 << bit);
     break;
   case 5:  //ld addr:bit
-    CF = data.bit(bit);
+    CF = bool(data & 1 << bit);
     break;
   case 6:  //st addr:bit
     idle();
-    data.bit(bit) = CF;
+    data &= ~(1 << bit);
+    data |= CF << bit;
     write(address, data);
     break;
   case 7:  //not addr:bit
-    data.bit(bit) ^= 1;
+    data ^= 1 << bit;
     write(address, data);
     break;
   }
@@ -41,7 +42,8 @@ auto SPC700::instructionAbsoluteBitModify(uint3 mode) -> void {
 auto SPC700::instructionAbsoluteBitSet(uint3 bit, bool value) -> void {
   uint8 address = fetch();
   uint8 data = load(address);
-  data.bit(bit) = value;
+  data &= ~(1 << bit);
+  data |= value << bit;
   store(address, data);
 }
 
@@ -95,7 +97,7 @@ auto SPC700::instructionBranchBit(uint3 bit, bool match) -> void {
   uint8 data = load(address);
   idle();
   uint8 displacement = fetch();
-  if(data.bit(bit) != match) return;
+  if(bool(data & 1 << bit) != match) return;
   idle();
   idle();
   PC += (int8)displacement;
@@ -248,7 +250,7 @@ auto SPC700::instructionDirectDirectCompare(fpb op) -> void {
   uint8 target = fetch();
   uint8 lhs = load(target);
   lhs = alu(lhs, rhs);
-  load(target);
+  idle();
 }
 
 auto SPC700::instructionDirectDirectModify(fpb op) -> void {
@@ -272,7 +274,7 @@ auto SPC700::instructionDirectImmediateCompare(fpb op) -> void {
   uint8 address = fetch();
   uint8 data = load(address);
   data = alu(data, immediate);
-  load(address);
+  idle();
 }
 
 auto SPC700::instructionDirectImmediateModify(fpb op) -> void {
@@ -467,7 +469,7 @@ auto SPC700::instructionIndirectXCompareIndirectY(fpb op) -> void {
   uint8 rhs = load(Y);
   uint8 lhs = load(X);
   lhs = alu(lhs, rhs);
-  load(X);
+  idle();
 }
 
 auto SPC700::instructionIndirectXWriteIndirectY(fpb op) -> void {

@@ -7,15 +7,26 @@ namespace SuperFamicom {
 #include "serialization.cpp"
 SharpRTC sharprtc;
 
+auto SharpRTC::synchronizeCPU() -> void {
+  if(clock >= 0) scheduler.resume(cpu.thread);
+}
+
 auto SharpRTC::Enter() -> void {
-  while(true) scheduler.synchronize(), sharprtc.main();
+  while(true) {
+    scheduler.synchronize();
+    sharprtc.main();
+  }
 }
 
 auto SharpRTC::main() -> void {
   tickSecond();
 
   step(1);
-  synchronize(cpu);
+  synchronizeCPU();
+}
+
+auto SharpRTC::step(uint clocks) -> void {
+  clock += clocks * (uint64_t)cpu.frequency;
 }
 
 auto SharpRTC::initialize() -> void {
@@ -48,7 +59,7 @@ auto SharpRTC::synchronize(uint64 timestamp) -> void {
   weekday = timeinfo->tm_wday;
 }
 
-auto SharpRTC::read(uint24 addr, uint8 data) -> uint8 {
+auto SharpRTC::read(uint addr, uint8 data) -> uint8 {
   addr &= 1;
 
   if(addr == 0) {
@@ -68,7 +79,7 @@ auto SharpRTC::read(uint24 addr, uint8 data) -> uint8 {
   return data;
 }
 
-auto SharpRTC::write(uint24 addr, uint8 data) -> void {
+auto SharpRTC::write(uint addr, uint8 data) -> void {
   addr &= 1, data &= 15;
 
   if(addr == 1) {

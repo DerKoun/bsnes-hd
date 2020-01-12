@@ -4,8 +4,10 @@
 
 #include <assert.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <sys/mman.h>
+#ifdef LIBCO_MPROTECT
+  #include <unistd.h>
+  #include <sys/mman.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -40,23 +42,28 @@ cothread_t co_active() {
   return co_active_handle;
 }
 
-cothread_t co_create(unsigned int size, void (*entrypoint)(void)) {
-  unsigned long* handle = 0;
+cothread_t co_derive(void* memory, unsigned int size, void (*entrypoint)(void)) {
+  unsigned long* handle;
   if(!co_swap) {
     co_init();
     co_swap = (void (*)(cothread_t, cothread_t))co_swap_function;
   }
   if(!co_active_handle) co_active_handle = &co_active_buffer;
-  size += 256;
-  size &= ~15;
 
-  if(handle = (unsigned long*)malloc(size)) {
-    unsigned long* p = (unsigned long*)((unsigned char*)handle + size);
+  if(handle = (unsigned long*)memory) {
+    unsigned int offset = (size & ~15);
+    unsigned long* p = (unsigned long*)((unsigned char*)handle + offset);
     handle[8] = (unsigned long)p;
     handle[9] = (unsigned long)entrypoint;
   }
 
   return handle;
+}
+
+cothread_t co_create(unsigned int size, void (*entrypoint)(void)) {
+  void* memory = malloc(size);
+  if(!memory) return (cothread_t)0;
+  return co_derive(memory, size, entrypoint);
 }
 
 void co_delete(cothread_t handle) {
@@ -66,6 +73,10 @@ void co_delete(cothread_t handle) {
 void co_switch(cothread_t handle) {
   cothread_t co_previous_handle = co_active_handle;
   co_swap(co_active_handle = handle, co_previous_handle);
+}
+
+int co_serializable() {
+  return 1;
 }
 
 #ifdef __cplusplus

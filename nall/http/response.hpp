@@ -180,6 +180,7 @@ auto Response::findContentType(const string& s) const -> string {
   if(s == ".gz"  ) return "application/gzip";
   if(s == ".htm" ) return "text/html; charset=utf-8";
   if(s == ".html") return "text/html; charset=utf-8";
+  if(s == ".ico" ) return "image/x-icon";
   if(s == ".jpg" ) return "image/jpeg";
   if(s == ".jpeg") return "image/jpeg";
   if(s == ".js"  ) return "application/javascript";
@@ -240,11 +241,26 @@ auto Response::setFile(const string& value) -> type& {
   }
   if(!valid) return *this;
 
+  //cache images for seven days
+  auto suffix = Location::suffix(value);
+  uint maxAge = 0;
+  if(suffix == ".svg"
+  || suffix == ".ico"
+  || suffix == ".png"
+  || suffix == ".gif"
+  || suffix == ".jpg"
+  || suffix == ".jpeg") {
+    maxAge = 7 * 24 * 60 * 60;
+  }
+
   _file = value;
-  string eTag = {"\"", chrono::utc::datetime(file::timestamp(value, file::time::modify)), "\""};
   header.assign("Content-Length", file::size(value));
-  header.assign("Cache-Control", "public");
-  header.assign("ETag", eTag);
+  header.assign("ETag", {"\"", chrono::utc::datetime(file::timestamp(value, file::time::modify)), "\""});
+  if(maxAge == 0) {
+    header.assign("Cache-Control", {"public"});
+  } else {
+    header.assign("Cache-Control", {"public, max-age=", maxAge});
+  }
   return *this;
 }
 

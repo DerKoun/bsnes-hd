@@ -5,13 +5,11 @@ struct Presentation : Window {
   enum : uint { RecentGames = 9, QuickStates = 9 };
   enum : uint { StatusHeight = 24 };
 
+  auto onDrop(vector<string> locations) -> void;
+  auto updateProgramIcon() -> void;
   auto updateStatusIcon() -> void;
-  auto configureViewport() -> void;
-  auto clearViewport() -> void;
-  auto resizeViewport() -> void;
   auto resizeWindow() -> void;
   auto updateStatus() -> void;
-  auto toggleFullscreenMode() -> void;
   auto updateDeviceMenu() -> void;
   auto updateDeviceSelections() -> void;
   auto updateSizeMenu() -> void;
@@ -20,8 +18,6 @@ struct Presentation : Window {
   auto updateRecentGames() -> void;
   auto addRecentGame(string location) -> void;
   auto updateShaders() -> void;
-
-  bool startFullScreen = false;
 
   MenuBar menuBar{this};
     Menu systemMenu{&menuBar};
@@ -47,6 +43,39 @@ struct Presentation : Window {
         MenuCheckItem aspectCorrection{&outputMenu};
         MenuCheckItem showOverscanArea{&outputMenu};
         MenuCheckItem blurEmulation{&outputMenu};
+      /*Menu filterMenu{&settingsMenu};
+        MenuRadioItem filterNone{&filterMenu};
+        MenuRadioItem filterScanlinesLight{&filterMenu};
+        MenuRadioItem filterScanlinesDark{&filterMenu};
+        MenuRadioItem filterScanlinesBlack{&filterMenu};
+        MenuRadioItem filterPixellate2x{&filterMenu};
+        MenuRadioItem filterScale2x{&filterMenu};
+        MenuRadioItem filter2xSaI{&filterMenu};
+        MenuRadioItem filterSuper2xSaI{&filterMenu};
+        MenuRadioItem filterSuperEagle{&filterMenu};
+        MenuRadioItem filterLQ2x{&filterMenu};
+        MenuRadioItem filterHQ2x{&filterMenu};
+        MenuRadioItem filterNTSC_RF{&filterMenu};
+        MenuRadioItem filterNTSC_Composite{&filterMenu};
+        MenuRadioItem filterNTSC_SVideo{&filterMenu};
+        MenuRadioItem filterNTSC_RGB{&filterMenu};
+        Group filterGroup{
+          &filterNone,
+          &filterScanlinesLight,
+          &filterScanlinesDark,
+          &filterScanlinesBlack,
+          &filterPixellate2x,
+          &filterScale2x,
+          &filter2xSaI,
+          &filterSuper2xSaI,
+          &filterSuperEagle,
+          &filterLQ2x,
+          &filterHQ2x,
+          &filterNTSC_RF,
+          &filterNTSC_Composite,
+          &filterNTSC_SVideo,
+          &filterNTSC_RGB
+        };*/
       Menu shaderMenu{&settingsMenu};
       MenuSeparator settingsSeparatorA{&settingsMenu};
       MenuCheckItem muteAudio{&settingsMenu};
@@ -58,11 +87,13 @@ struct Presentation : Window {
       MenuItem hotkeySettings{&settingsMenu};
       MenuItem pathSettings{&settingsMenu};
       MenuItem emulatorSettings{&settingsMenu};
+      MenuItem enhancementSettings{&settingsMenu};
+      MenuItem compatibilitySettings{&settingsMenu};
       MenuItem driverSettings{&settingsMenu};
     Menu toolsMenu{&menuBar};
       Menu saveState{&toolsMenu};
       Menu loadState{&toolsMenu};
-      MenuSeparator toolsSeparatorA{&toolsMenu};
+      MenuSeparator toolsSeparatorB{&toolsMenu};
       Menu speedMenu{&toolsMenu};
         MenuRadioItem speedSlowest{&speedMenu};
         MenuRadioItem speedSlow{&speedMenu};
@@ -70,23 +101,35 @@ struct Presentation : Window {
         MenuRadioItem speedFast{&speedMenu};
         MenuRadioItem speedFastest{&speedMenu};
         Group speedGroup{&speedSlowest, &speedSlow, &speedNormal, &speedFast, &speedFastest};
-      MenuCheckItem pauseEmulation{&toolsMenu};
-      MenuItem frameAdvance{&toolsMenu};
+      Menu runMenu{&toolsMenu};
+        MenuRadioItem runEmulation{&runMenu};
+        MenuRadioItem pauseEmulation{&runMenu};
+        MenuRadioItem frameAdvance{&runMenu};
+        Group runGroup{&runEmulation, &pauseEmulation, &frameAdvance};
+      Menu movieMenu{&toolsMenu};
+        MenuItem moviePlay{&movieMenu};
+        MenuItem movieRecord{&movieMenu};
+        MenuItem movieRecordFromBeginning{&movieMenu};
+        MenuItem movieStop{&movieMenu};
       MenuItem captureScreenshot{&toolsMenu};
-      MenuSeparator toolsSeparatorB{&toolsMenu};
+      MenuSeparator toolsSeparatorC{&toolsMenu};
+      MenuItem cheatFinder{&toolsMenu};
       MenuItem cheatEditor{&toolsMenu};
       MenuItem stateManager{&toolsMenu};
       MenuItem manifestViewer{&toolsMenu};
     Menu helpMenu{&menuBar};
       MenuItem documentation{&helpMenu};
+      MenuItem documentationHd{&helpMenu};
       MenuSeparator helpSeparator{&helpMenu};
+      MenuItem aboutSameBoy{&helpMenu};
       MenuItem about{&helpMenu};
+      MenuItem aboutHd{&helpMenu};
 
   VerticalLayout layout{this};
     HorizontalLayout viewportLayout{&layout, Size{~0, ~0}, 0};
       Viewport viewport{&viewportLayout, Size{~0, ~0}, 0};
       VerticalLayout iconLayout{&viewportLayout, Size{0, ~0}, 0};
-        Widget iconSpacer{&iconLayout, Size{144, ~0}, 0};
+        Canvas iconSpacer{&iconLayout, Size{144, ~0}, 0};
         Canvas iconCanvas{&iconLayout, Size{128, 128}, 0};
     HorizontalLayout statusLayout{&layout, Size{~0, StatusHeight}, 0};
       Label spacerIcon{&statusLayout, Size{8, ~0}, 0};
@@ -97,4 +140,5 @@ struct Presentation : Window {
       Label spacerRight{&statusLayout, Size{8, ~0}, 0};
 };
 
-extern Presentation presentation;
+namespace Instances { extern Instance<Presentation> presentation; }
+extern Presentation& presentation;

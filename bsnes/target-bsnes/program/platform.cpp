@@ -1,14 +1,14 @@
 #include <nall/encode/bmp.hpp>
-#include <icarus/heuristics/heuristics.hpp>
-#include <icarus/heuristics/heuristics.cpp>
-#include <icarus/heuristics/super-famicom.cpp>
-#include <icarus/heuristics/game-boy.cpp>
-#include <icarus/heuristics/bs-memory.cpp>
-#include <icarus/heuristics/sufami-turbo.cpp>
+#include <heuristics/heuristics.hpp>
+#include <heuristics/heuristics.cpp>
+#include <heuristics/super-famicom.cpp>
+#include <heuristics/game-boy.cpp>
+#include <heuristics/bs-memory.cpp>
+#include <heuristics/sufami-turbo.cpp>
 
 //ROM data is held in memory to support compressed archives, soft-patching, and game hacks
-auto Program::open(uint id, string name, vfs::file::mode mode, bool required) -> vfs::shared::file {
-  vfs::shared::file result;
+auto Program::open(uint id, string name, vfs::file::mode mode, bool required) -> shared_pointer<vfs::file> {
+  shared_pointer<vfs::file> result;
 
   if(id == 0) {  //System
     if(name == "boards.bml" && mode == vfs::file::mode::read) {
@@ -112,7 +112,7 @@ auto Program::load(uint id, string name, string type, vector<string> options) ->
     } else {
       dialog.setTitle("Load SNES ROM");
       dialog.setPath(path("Games", settings.path.recent.superFamicom));
-      dialog.setFilters({string{"SNES ROMs|*.sfc:*.smc:*.zip:*.SFC:*.SMC:*.ZIP:*.Sfc:*.Smc:*.Zip"}, string{"All Files|*"}});
+      dialog.setFilters({string{"SNES ROMs|*.sfc:*.smc:*.zip:*.7z:*.SFC:*.SMC:*.ZIP:*.7Z:*.Sfc:*.Smc:*.Zip"}, string{"All Files|*"}});
       superFamicom.location = dialog.openObject();
       superFamicom.option = dialog.option();
     }
@@ -132,7 +132,7 @@ auto Program::load(uint id, string name, string type, vector<string> options) ->
     } else {
       dialog.setTitle("Load Game Boy ROM");
       dialog.setPath(path("Games", settings.path.recent.gameBoy));
-      dialog.setFilters({string{"Game Boy ROMs|*.gb:*.gbc:*.zip:*.GB:*.GBC:*.ZIP:*.Gb:*.Gbc:*.Zip"}, string{"All Files|*"}});
+      dialog.setFilters({string{"Game Boy ROMs|*.gb:*.gbc:*.zip:*.7z:*.GB:*.GBC:*.ZIP:*.7Z:*.Gb:*.Gbc:*.Zip"}, string{"All Files|*"}});
       gameBoy.location = dialog.openObject();
       gameBoy.option = dialog.option();
     }
@@ -152,7 +152,7 @@ auto Program::load(uint id, string name, string type, vector<string> options) ->
     } else {
       dialog.setTitle("Load BS Memory ROM");
       dialog.setPath(path("Games", settings.path.recent.bsMemory));
-      dialog.setFilters({string{"BS Memory ROMs|*.bs:*.zip:*.BS:*.ZIP:*.Bs:*.Zip"}, string{"All Files|*"}});
+      dialog.setFilters({string{"BS Memory ROMs|*.bs:*.zip:*.7z:*.BS:*.ZIP:*.7Z:*.Bs:*.Zip"}, string{"All Files|*"}});
       bsMemory.location = dialog.openObject();
       bsMemory.option = dialog.option();
     }
@@ -172,7 +172,7 @@ auto Program::load(uint id, string name, string type, vector<string> options) ->
     } else {
       dialog.setTitle("Load Sufami Turbo ROM - Slot A");
       dialog.setPath(path("Games", settings.path.recent.sufamiTurboA));
-      dialog.setFilters({string{"Sufami Turbo ROMs|*.st:*.zip:*.ST:*.ZIP:*.St:*.Zip"}, string{"All Files|*"}});
+      dialog.setFilters({string{"Sufami Turbo ROMs|*.st:*.zip:*.7z:*.ST:*.ZIP:*.7Z:*.St:*.Zip"}, string{"All Files|*"}});
       sufamiTurboA.location = dialog.openObject();
       sufamiTurboA.option = dialog.option();
     }
@@ -192,7 +192,7 @@ auto Program::load(uint id, string name, string type, vector<string> options) ->
     } else {
       dialog.setTitle("Load Sufami Turbo ROM - Slot B");
       dialog.setPath(path("Games", settings.path.recent.sufamiTurboB));
-      dialog.setFilters({string{"Sufami Turbo ROMs|*.st:*.zip:*.ST:*.ZIP:*.St:*.Zip"}, string{"All Files|*"}});
+      dialog.setFilters({string{"Sufami Turbo ROMs|*.st:*.zip:*.7z:*.ST:*.ZIP:*.7Z:*.St:*.Zip"}, string{"All Files|*"}});
       sufamiTurboB.location = dialog.openObject();
       sufamiTurboB.option = dialog.option();
     }
@@ -207,37 +207,42 @@ auto Program::load(uint id, string name, string type, vector<string> options) ->
   return {};
 }
 
-auto Program::videoFrame(const uint32* data, uint pitch, uint width, uint height) -> void {
+auto Program::videoFrame(const uint32* data, uint pitch, uint width, uint height, uint scale) -> void {
   //this relies on the UI only running between Emulator::Scheduler::Event::Frame events
   //this will always be the case; so we can avoid an unnecessary copy or one-frame delay here
   //if the core were to exit between a frame event, the next frame might've been only partially rendered
-  screenshot.data = data;
-  screenshot.pitch = pitch;
-  screenshot.width = width;
+  screenshot.data   = data;
+  screenshot.pitch  = pitch;
+  screenshot.width  = width;
   screenshot.height = height;
+  screenshot.scale  = scale;
 
-  pitch >>= 2;
-  if(!presentation.showOverscanArea.checked()) {
-    data += (height / 30) * pitch;
-    height -= height / 15;
-  }
+  uint offset = settings.video.overscan ? 8 : 12;
+  uint multiplier = height / 240;
+  data   += offset * multiplier * (pitch >> 2);
+  height -= offset * multiplier * 2;
 
-  if(auto [output, length] = video.acquire(width, height); output) {
-    length >>= 2;
+  uint outputWidth = width, outputHeight = height;
+  viewportSize(outputWidth, outputHeight, scale);
 
-    for(auto y : range(height)) {
-      memory::copy<uint32>(output + y * length, data + y * pitch, width);
+  uint filterWidth = width, filterHeight = height;
+  if(auto [output, length] = video.acquire(filterWidth, filterHeight); output) {
+    if (length == pitch) {
+      memory::copy<uint32>(output, data, width * height);
+    } else {
+      for(uint y = 0; y < height; y++) {
+        memory::copy<uint32>(output + y * (length >> 2), data + y * (pitch >> 2), width);
+      }
     }
 
     video.release();
-    video.output();
+    video.output(outputWidth, outputHeight);
   }
 
   inputManager.frame();
 
-  if(frameAdvance) {
-    frameAdvance = false;
-    presentation.pauseEmulation.setChecked();
+  if(presentation.frameAdvance.checked()) {
+    frameAdvanceLock = true;
   }
 
   static uint frameCounter = 0;
@@ -252,22 +257,39 @@ auto Program::videoFrame(const uint32* data, uint pitch, uint width, uint height
   }
 }
 
-auto Program::audioFrame(const double* samples, uint channels) -> void {
-  audio.output(samples);
+auto Program::audioFrame(const float* samples, uint channels) -> void {
+  if(mute) {
+    double silence[] = {0.0, 0.0};
+    return audio.output(silence);
+  }
+
+  double frame[] = {samples[0], samples[1]};
+  audio.output(frame);
 }
 
 auto Program::inputPoll(uint port, uint device, uint input) -> int16 {
-  if(focused() || emulatorSettings.allowInput().checked()) {
+  int16 value = 0;
+  if(focused() || inputSettings.allowInput().checked()) {
     inputManager.poll();
     if(auto mapping = inputManager.mapping(port, device, input)) {
-      return mapping->poll();
+      value = mapping->poll();
     }
   }
-  return 0;
+  if(movie.mode == Movie::Mode::Recording) {
+    movie.input.append(value);
+  } else if(movie.mode == Movie::Mode::Playing) {
+    if(movie.input) {
+      value = movie.input.takeFirst();
+    }
+    if(!movie.input) {
+      movieStop();
+    }
+  }
+  return value;
 }
 
 auto Program::inputRumble(uint port, uint device, uint input, bool enable) -> void {
-  if(focused() || emulatorSettings.allowInput().checked() || !enable) {
+  if(focused() || inputSettings.allowInput().checked() || !enable) {
     if(auto mapping = inputManager.mapping(port, device, input)) {
       return mapping->rumble(enable);
     }

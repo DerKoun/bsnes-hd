@@ -1,6 +1,6 @@
-auto PPUfast::Line::renderWindow(PPUfast::IO::WindowLayer& self, bool enable, array<bool[256]>& output) -> void {
+auto PPU::Line::renderWindow(PPU::IO::WindowLayer& self, bool enable, bool output[256]) -> void {
   if(!enable || (!self.oneEnable && !self.twoEnable)) {
-    output.fill(0);
+    memory::fill<bool>(output, 256, 0);
     return;
   }
 
@@ -32,24 +32,25 @@ auto PPUfast::Line::renderWindow(PPUfast::IO::WindowLayer& self, bool enable, ar
   }
 }
 
-auto PPUfast::Line::renderWindow(PPUfast::IO::WindowColor& self, uint mask, bool *output,
-                                 uint oneLeft, uint oneRight, uint twoLeft, uint twoRight, uint scale, uint offset) -> void {
+auto PPU::Line::renderWindow(PPU::IO::WindowColor& self, uint mask, bool *output,
+                             uint oneLeft, uint oneRight, uint twoLeft, uint twoRight,
+                             uint scale, uint offset) -> void {
   bool set, clear;
   switch(mask) {
-  case 0: /*output.fill(1)*/ for(uint x : range(256*scale*scale)) *output++ = 1; return;     //always
+  case 0: memory::fill<bool>(output, 256 * scale * scale, 1); return;  //always
   case 1: set = 1, clear = 0; break;  //inside
   case 2: set = 0, clear = 1; break;  //outside
-  case 3: /*output.fill(0)*/ for(uint x : range(256*scale*scale)) *output++ = 0; return;     //never
+  case 3: memory::fill<bool>(output, 256 * scale * scale, 0); return;  //never
   }
 
   if(!self.oneEnable && !self.twoEnable) {
-    for(uint x : range(256*scale*scale)) *output++ = clear;
+    memory::fill<bool>(output, 256 * scale * scale, clear);
     return;
   }
 
   if(self.oneEnable && !self.twoEnable) {
     if(self.oneInvert) set ^= 1, clear ^= 1;
-    for(uint x : range(256*scale)) {
+    for(uint x : range(256 * scale)) {
       output[x+offset] = x >= oneLeft && x <= oneRight ? set : clear;
     }
     return;
@@ -57,13 +58,13 @@ auto PPUfast::Line::renderWindow(PPUfast::IO::WindowColor& self, uint mask, bool
 
   if(self.twoEnable && !self.oneEnable) {
     if(self.twoInvert) set ^= 1, clear ^= 1;
-    for(uint x : range(256*scale)) {
+    for(uint x : range(256 * scale)) {
       output[x+offset] = x >= twoLeft && x <= twoRight ? set : clear;
     }
     return;
   }
 
-  for(uint x : range(256*scale)) {
+  for(uint x : range(256 * scale)) {
     bool oneMask = (x >= oneLeft && x <= oneRight) ^ self.oneInvert;
     bool twoMask = (x >= twoLeft && x <= twoRight) ^ self.twoInvert;
     switch(self.mask) {

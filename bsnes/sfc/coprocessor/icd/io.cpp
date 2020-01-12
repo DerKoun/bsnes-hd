@@ -1,10 +1,9 @@
-auto ICD::readIO(uint24 addr, uint8 data) -> uint8 {
+auto ICD::readIO(uint addr, uint8 data) -> uint8 {
   addr &= 0x40ffff;
 
   //LY counter
   if(addr == 0x6000) {
-    uint y = min((uint8)143, GameBoy::ppu.status.ly);
-    return (y & ~7) | writeBank;
+    return vcounter & ~7 | writeBank;
   }
 
   //command ready port
@@ -38,7 +37,7 @@ auto ICD::readIO(uint24 addr, uint8 data) -> uint8 {
   return 0x00;
 }
 
-auto ICD::writeIO(uint24 addr, uint8 data) -> void {
+auto ICD::writeIO(uint addr, uint8 data) -> void {
   addr &= 0xffff;
 
   //VRAM port
@@ -54,15 +53,16 @@ auto ICD::writeIO(uint24 addr, uint8 data) -> void {
   //d1,d0: 0 = frequency divider (clock rate adjust)
   if(addr == 0x6003) {
     if((r6003 & 0x80) == 0x00 && (data & 0x80) == 0x80) {
-      reset();
+      power(true);  //soft reset
     }
-    auto frequency = system.cpuFrequency();
+    auto frequency = clockFrequency();
     switch(data & 3) {
-    case 0: setFrequency(frequency / 4); break;  //fast (glitchy, even on real hardware)
-    case 1: setFrequency(frequency / 5); break;  //normal
-    case 2: setFrequency(frequency / 7); break;  //slow
-    case 3: setFrequency(frequency / 9); break;  //very slow
+    case 0: this->frequency = frequency / 4; break;  //fast (glitchy, even on real hardware)
+    case 1: this->frequency = frequency / 5; break;  //normal
+    case 2: this->frequency = frequency / 7; break;  //slow
+    case 3: this->frequency = frequency / 9; break;  //very slow
     }
+    stream->setFrequency(this->frequency / 128);
     r6003 = data;
     return;
   }

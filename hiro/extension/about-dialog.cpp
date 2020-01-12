@@ -62,7 +62,7 @@ auto AboutDialog::show() -> void {
   nameLabel.setForegroundColor({0, 0, 0});
   nameLabel.setFont(Font().setFamily("Georgia").setBold().setSize(36.0));
   nameLabel.setText(state.name ? state.name : Application::name());
-  nameLabel.setVisible(!state.logo);
+  nameLabel.setVisible((bool)state.name && !(bool)state.logo);
 
   Canvas logoCanvas{&layout, Size{~0, 0}};
   logoCanvas.setCollapsible();
@@ -130,11 +130,20 @@ auto AboutDialog::show() -> void {
   websiteLabel.setFont(Font().setBold());
   websiteLabel.setForegroundColor({0, 0, 0});
   websiteLabel.setText("Website:");
-  Label websiteValue{&websiteLayout, Size{~0, 0}};
+  //add a layout for the website value to fill 50% of the window,
+  HorizontalLayout websiteValueLayout{&websiteLayout, Size{~0, 0}};
+  //so that the label is only as long as its text content,
+  Label websiteValue{&websiteValueLayout, Size{0, 0}};
   websiteValue.setAlignment(0.0);
   websiteValue.setFont(Font().setBold());
   websiteValue.setForegroundColor({0, 0, 240});
-  websiteValue.setText(state.website);
+  auto website = state.website;
+  if(0);  //remove protocol prefix from displayed label:
+  else if(website.beginsWith("http://" )) website.trimLeft("http://" , 1L);
+  else if(website.beginsWith("https://")) website.trimLeft("https://", 1L);
+  websiteValue.setText(website);
+  //so that the hand cursor is only visible when overing over the link.
+  websiteValue.setMouseCursor(MouseCursor::Hand);
   websiteValue.onMouseRelease([&](auto button) {
     if(button == Mouse::Button::Left) invoke(state.website);
   });
@@ -148,6 +157,7 @@ auto AboutDialog::show() -> void {
   window.setDismissable();
   window.setVisible();
   window.setModal();
+  window.setVisible(false);
 }
 
 #endif

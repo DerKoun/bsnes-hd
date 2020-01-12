@@ -1,4 +1,5 @@
 #pragma once
+#define double float
 
 #include <nall/dsp/iir/dc-removal.hpp>
 #include <nall/dsp/iir/one-pole.hpp>
@@ -16,6 +17,11 @@ struct Audio {
   ~Audio();
   auto reset(Interface* interface) -> void;
 
+  inline auto channels() const -> uint { return _channels; }
+  inline auto frequency() const -> double { return _frequency; }
+  inline auto volume() const -> double { return _volume; }
+  inline auto balance() const -> double { return _balance; }
+
   auto setFrequency(double frequency) -> void;
   auto setVolume(double volume) -> void;
   auto setBalance(double balance) -> void;
@@ -25,14 +31,14 @@ struct Audio {
 private:
   auto process() -> void;
 
-  Interface* interface = nullptr;
-  vector<shared_pointer<Stream>> streams;
+  Interface* _interface = nullptr;
+  vector<shared_pointer<Stream>> _streams;
 
-  uint channels = 0;
-  double frequency = 48000.0;
+  uint _channels = 0;
+  double _frequency = 48000.0;
 
-  double volume = 1.0;
-  double balance = 0.0;
+  double _volume = 1.0;
+  double _balance = 0.0;
 
   friend class Stream;
 };
@@ -49,14 +55,16 @@ struct Filter {
 
 struct Stream {
   auto reset(uint channels, double inputFrequency, double outputFrequency) -> void;
+  auto reset() -> void;
 
+  auto frequency() const -> double;
   auto setFrequency(double inputFrequency, maybe<double> outputFrequency = nothing) -> void;
 
   auto addDCRemovalFilter() -> void;
   auto addLowPassFilter(double cutoffFrequency, Filter::Order order, uint passes = 1) -> void;
   auto addHighPassFilter(double cutoffFrequency, Filter::Order order, uint passes = 1) -> void;
 
-  auto pending() const -> bool;
+  auto pending() const -> uint;
   auto read(double samples[]) -> uint;
   auto write(const double samples[]) -> void;
 
@@ -64,6 +72,8 @@ struct Stream {
     double samples[sizeof...(P)] = {forward<P>(p)...};
     write(samples);
   }
+
+  auto serialize(serializer&) -> void;
 
 private:
   struct Channel {
@@ -81,3 +91,5 @@ private:
 extern Audio audio;
 
 }
+
+#undef double

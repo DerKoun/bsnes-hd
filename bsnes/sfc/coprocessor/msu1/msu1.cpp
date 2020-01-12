@@ -6,8 +6,16 @@ MSU1 msu1;
 
 #include "serialization.cpp"
 
+auto MSU1::synchronizeCPU() -> void {
+  if(clock >= 0) scheduler.resume(cpu.thread);
+}
+
+
 auto MSU1::Enter() -> void {
-  while(true) scheduler.synchronize(), msu1.main();
+  while(true) {
+    scheduler.synchronize();
+    msu1.main();
+  }
 }
 
 auto MSU1::main() -> void {
@@ -34,9 +42,13 @@ auto MSU1::main() -> void {
     }
   }
 
-  stream->sample(left, right);
+  if(!system.runAhead) stream->sample(float(left), float(right));
   step(1);
-  synchronize(cpu);
+  synchronizeCPU();
+}
+
+auto MSU1::step(uint clocks) -> void {
+  clock += clocks * (uint64_t)cpu.frequency;
 }
 
 auto MSU1::unload() -> void {
@@ -46,7 +58,7 @@ auto MSU1::unload() -> void {
 
 auto MSU1::power() -> void {
   create(MSU1::Enter, 44100);
-  stream = Emulator::audio.createStream(2, frequency());
+  stream = Emulator::audio.createStream(2, frequency);
 
   io.dataSeekOffset = 0;
   io.dataReadOffset = 0;
@@ -97,10 +109,10 @@ auto MSU1::audioOpen() -> void {
   io.audioError = true;
 }
 
-auto MSU1::readIO(uint24 addr, uint8) -> uint8 {
-  cpu.synchronize(*this);
+auto MSU1::readIO(uint addr, uint8) -> uint8 {
+  cpu.synchronizeCoprocessors();
 
-  switch(0x2000 | (addr & 7)) {
+  switch(0x2000 | addr & 7) {
   case 0x2000:
     return (
       Revision       << 0
@@ -127,19 +139,19 @@ auto MSU1::readIO(uint24 addr, uint8) -> uint8 {
   unreachable;
 }
 
-auto MSU1::writeIO(uint24 addr, uint8 data) -> void {
-  cpu.synchronize(*this);
+auto MSU1::writeIO(uint addr, uint8 data) -> void {
+  cpu.synchronizeCoprocessors();
 
-  switch(0x2000 | (addr & 7)) {
-  case 0x2000: io.dataSeekOffset.byte(0) = data; break;
-  case 0x2001: io.dataSeekOffset.byte(1) = data; break;
-  case 0x2002: io.dataSeekOffset.byte(2) = data; break;
-  case 0x2003: io.dataSeekOffset.byte(3) = data;
+  switch(0x2000 | addr & 7) {
+  case 0x2000: io.dataSeekOffset = io.dataSeekOffset & 0xffffff00 | data <<  0; break;
+  case 0x2001: io.dataSeekOffset = io.dataSeekOffset & 0xffff00ff | data <<  8; break;
+  case 0x2002: io.dataSeekOffset = io.dataSeekOffset & 0xff00ffff | data << 16; break;
+  case 0x2003: io.dataSeekOffset = io.dataSeekOffset & 0x00ffffff | data << 24;
     io.dataReadOffset = io.dataSeekOffset;
     if(dataFile) dataFile->seek(io.dataReadOffset);
     break;
-  case 0x2004: io.audioTrack.byte(0) = data; break;
-  case 0x2005: io.audioTrack.byte(1) = data;
+  case 0x2004: io.audioTrack = io.audioTrack & 0xff00 | data << 0; break;
+  case 0x2005: io.audioTrack = io.audioTrack & 0x00ff | data << 8;
     io.audioPlay = false;
     io.audioRepeat = false;
     io.audioPlayOffset = 8;
@@ -156,9 +168,9 @@ auto MSU1::writeIO(uint24 addr, uint8 data) -> void {
   case 0x2007:
     if(io.audioBusy) break;
     if(io.audioError) break;
-    io.audioPlay = data.bit(0);
-    io.audioRepeat = data.bit(1);
-    boolean audioResume = data.bit(2);
+    io.audioPlay = bool(data & 1);
+    io.audioRepeat = bool(data & 2);
+    boolean audioResume = bool(data & 4);
     if(!io.audioPlay && audioResume) {
       io.audioResumeTrack = io.audioTrack;
       io.audioResumeOffset = io.audioPlayOffset;

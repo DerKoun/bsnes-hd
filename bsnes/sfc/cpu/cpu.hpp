@@ -5,6 +5,9 @@ struct CPU : Processor::WDC65816, Thread, PPUcounter {
   inline auto synchronizing() const -> bool override { return scheduler.synchronizing(); }
 
   //cpu.cpp
+  auto synchronizeSMP() -> void;
+  auto synchronizePPU() -> void;
+  auto synchronizeCoprocessors() -> void;
   static auto Enter() -> void;
   auto main() -> void;
   auto load() -> bool;
@@ -22,42 +25,42 @@ struct CPU : Processor::WDC65816, Thread, PPUcounter {
 
   //memory.cpp
   auto idle() -> void override;
-  auto read(uint24 addr) -> uint8 override;
-  auto write(uint24 addr, uint8 data) -> void override;
-  alwaysinline auto wait(uint24 addr) const -> uint;
-  auto readDisassembler(uint24 addr) -> uint8 override;
+  auto read(uint addr) -> uint8 override;
+  auto write(uint addr, uint8 data) -> void override;
+  auto readDisassembler(uint addr) -> uint8 override;
 
   //io.cpp
-  auto readRAM(uint24 address, uint8 data) -> uint8;
-  auto readAPU(uint24 address, uint8 data) -> uint8;
-  auto readCPU(uint24 address, uint8 data) -> uint8;
-  auto readDMA(uint24 address, uint8 data) -> uint8;
-  auto writeRAM(uint24 address, uint8 data) -> void;
-  auto writeAPU(uint24 address, uint8 data) -> void;
-  auto writeCPU(uint24 address, uint8 data) -> void;
-  auto writeDMA(uint24 address, uint8 data) -> void;
+  auto readRAM(uint address, uint8 data) -> uint8;
+  auto readAPU(uint address, uint8 data) -> uint8;
+  auto readCPU(uint address, uint8 data) -> uint8;
+  auto readDMA(uint address, uint8 data) -> uint8;
+  auto writeRAM(uint address, uint8 data) -> void;
+  auto writeAPU(uint address, uint8 data) -> void;
+  auto writeCPU(uint address, uint8 data) -> void;
+  auto writeDMA(uint address, uint8 data) -> void;
 
   //timing.cpp
-  inline auto dmaClocks() const -> uint;
   inline auto dmaCounter() const -> uint;
   inline auto joypadCounter() const -> uint;
 
-  auto step(uint clocks) -> void;
-  inline auto stepIdle(uint clocks) -> void;
+  alwaysinline auto stepOnce() -> void;
+  alwaysinline auto step(uint clocks) -> void;
+  template<uint Clocks, bool Synchronize> auto step() -> void;
   auto scanline() -> void;
 
   alwaysinline auto aluEdge() -> void;
   alwaysinline auto dmaEdge() -> void;
-  alwaysinline auto lastCycle() -> void;
 
   //irq.cpp
-  alwaysinline auto pollInterrupts() -> void;
+  alwaysinline auto nmiPoll() -> void;
+  alwaysinline auto irqPoll() -> void;
   auto nmitimenUpdate(uint8 data) -> void;
   auto rdnmi() -> bool;
   auto timeup() -> bool;
 
   alwaysinline auto nmiTest() -> bool;
   alwaysinline auto irqTest() -> bool;
+  alwaysinline auto lastCycle() -> void;
 
   //joypad.cpp
   auto joypadEdge() -> void;
@@ -67,7 +70,11 @@ struct CPU : Processor::WDC65816, Thread, PPUcounter {
 
   uint8 wram[128 * 1024];
   vector<Thread*> coprocessors;
-  vector<Thread*> peripherals;
+
+  struct Overclocking {
+    uint counter = 0;
+    uint target = 0;
+  } overclocking;
 
 private:
   uint version = 2;  //allowed: 1, 2
@@ -79,56 +86,53 @@ private:
 
   struct Status {
     uint clockCount = 0;
-    uint lineClocks = 0;
 
-    bool irqLock = false;
+    bool irqLock = 0;
 
     uint dramRefreshPosition = 0;
     uint dramRefresh = 0;  //0 = not refreshed; 1 = refresh active; 2 = refresh inactive
 
     uint hdmaSetupPosition = 0;
-    bool hdmaSetupTriggered = false;
+    bool hdmaSetupTriggered = 0;
 
     uint hdmaPosition = 0;
-    bool hdmaTriggered = false;
+    bool hdmaTriggered = 0;
 
-    boolean nmiValid;
-    boolean nmiLine;
-    boolean nmiTransition;
-    boolean nmiPending;
-    boolean nmiHold;
+    boolean nmiValid = 0;
+    boolean nmiLine = 0;
+    boolean nmiTransition = 0;
+    boolean nmiPending = 0;
+    boolean nmiHold = 0;
 
-    boolean irqValid;
-    boolean irqLine;
-    boolean irqTransition;
-    boolean irqPending;
-    boolean irqHold;
+    boolean irqValid = 0;
+    boolean irqLine = 0;
+    boolean irqTransition = 0;
+    boolean irqPending = 0;
+    boolean irqHold = 0;
 
-    bool powerPending = false;
-    bool resetPending = false;
+    bool resetPending = 0;
+    bool interruptPending = 0;
 
-    bool interruptPending = false;
-
-    bool dmaActive = false;
-    bool dmaPending = false;
-    bool hdmaPending = false;
+    bool dmaActive = 0;
+    bool dmaPending = 0;
+    bool hdmaPending = 0;
     bool hdmaMode = 0;  //0 = init, 1 = run
 
-    bool autoJoypadActive = false;
-    bool autoJoypadLatch = false;
+    bool autoJoypadActive = 0;
+    bool autoJoypadLatch = 0;
     uint autoJoypadCounter = 0;
   } status;
 
   struct IO {
     //$2181-$2183
-    uint17 wramAddress;
+    uint17 wramAddress = 0;
 
     //$4200
-    boolean hirqEnable;
-    boolean virqEnable;
-    boolean irqEnable;
-    boolean nmiEnable;
-    boolean autoJoypadPoll;
+    boolean hirqEnable = 0;
+    boolean virqEnable = 0;
+    boolean irqEnable = 0;
+    boolean nmiEnable = 0;
+    boolean autoJoypadPoll = 0;
 
     //$4201
     uint8 pio = 0xff;
@@ -146,17 +150,17 @@ private:
     uint9  vtime = 0x1ff;
 
     //$420d
-    uint romSpeed = 8;
+    uint1 fastROM = 0;
 
     //$4214-$4217
-    uint16 rddiv;
-    uint16 rdmpy;
+    uint16 rddiv = 0;
+    uint16 rdmpy = 0;
 
     //$4218-$421f
-    uint16 joy1;
-    uint16 joy2;
-    uint16 joy3;
-    uint16 joy4;
+    uint16 joy1 = 0;
+    uint16 joy2 = 0;
+    uint16 joy3 = 0;
+    uint16 joy4 = 0;
   } io;
 
   struct ALU {
@@ -167,7 +171,7 @@ private:
 
   struct Channel {
     //dma.cpp
-    inline auto step(uint clocks) -> void;
+    template<uint Clocks, bool Synchronize> inline auto step() -> void;
     inline auto edge() -> void;
 
     inline auto validA(uint24 address) -> bool;
@@ -187,10 +191,10 @@ private:
     inline auto hdmaAdvance() -> void;
 
     //$420b
-    uint1 dmaEnable;
+    uint1 dmaEnable = 0;
 
     //$420c
-    uint1 hdmaEnable;
+    uint1 hdmaEnable = 0;
 
     //$43x0
     uint3 transferMode = 7;
@@ -228,8 +232,8 @@ private:
     uint8 unknown = 0xff;
 
     //internal state
-    uint1 hdmaCompleted;
-    uint1 hdmaDoTransfer;
+    uint1 hdmaCompleted = 0;
+    uint1 hdmaDoTransfer = 0;
 
     maybe<Channel&> next;
 

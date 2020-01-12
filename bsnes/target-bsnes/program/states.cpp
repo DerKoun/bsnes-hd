@@ -65,6 +65,7 @@ auto Program::loadState(string filename) -> bool {
     auto serializerRLE = Decode::RLE<1>({memory.data() + 3 * sizeof(uint), memory.size() - 3 * sizeof(uint)});
     serializer s{serializerRLE.data(), (uint)serializerRLE.size()};
     if(!emulator->unserialize(s)) return showMessage({"[", prefix, "] is in incompatible format"}), false;
+    rewindReset();  //do not allow rewinding past a state load event
     return showMessage({"Loaded [", prefix, "]"}), true;
   } else {
     return showMessage({"[", prefix, "] not found"}), false;
@@ -83,9 +84,9 @@ auto Program::saveState(string filename) -> bool {
   //this can be null if a state is captured before the first frame of video output after power/reset
   if(screenshot.data) {
     image preview;
+    preview.transform(0, 15, 0x8000, 0x7c00, 0x03e0, 0x001f);
     preview.copy(screenshot.data, screenshot.pitch, screenshot.width, screenshot.height);
     if(preview.width() != 256 || preview.height() != 240) preview.scale(256, 240, true);
-    preview.transform(0, 15, 0x8000, 0x7c00, 0x03e0, 0x001f);
     previewRLE = Encode::RLE<2>({preview.data(), preview.size()});
   }
 

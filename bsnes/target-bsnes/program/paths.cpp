@@ -51,7 +51,7 @@ auto Program::statePath() -> string {
   if(!emulator->loaded()) return "";
   auto location = gamePath();
   if(location.endsWith("/")) {
-    return {location, "bsnes/states/"};
+    return {location, Emulator::Name, "/states/"};
   } else {
     return path("States", location, ".bsz");
   }
@@ -61,7 +61,7 @@ auto Program::screenshotPath() -> string {
   if(!emulator->loaded()) return "";
   auto location = gamePath();
   if(location.endsWith("/")) {
-    location = {location, "bsnes/screenshots/"};
+    location = {location, Emulator::Name, "/screenshots/"};
     directory::create(location);
   } else {
     location = {path("Screenshots", location), "-"};

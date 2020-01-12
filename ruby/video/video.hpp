@@ -8,15 +8,19 @@ struct VideoDriver {
   virtual auto driver() -> string { return "None"; }
   virtual auto ready() -> bool { return true; }
 
+  virtual auto hasFullScreen() -> bool { return false; }
+  virtual auto hasMonitor() -> bool { return false; }
   virtual auto hasExclusive() -> bool { return false; }
   virtual auto hasContext() -> bool { return false; }
   virtual auto hasBlocking() -> bool { return false; }
   virtual auto hasFlush() -> bool { return false; }
-  virtual auto hasFormats() -> vector<string> { return {"RGB24"}; }
+  virtual auto hasFormats() -> vector<string> { return {"ARGB24"}; }
   virtual auto hasShader() -> bool { return false; }
 
   auto hasFormat(string format) -> bool { return (bool)hasFormats().find(format); }
 
+  virtual auto setFullScreen(bool fullScreen) -> bool { return true; }
+  virtual auto setMonitor(string monitor) -> bool { return true; }
   virtual auto setExclusive(bool exclusive) -> bool { return true; }
   virtual auto setContext(uintptr context) -> bool { return true; }
   virtual auto setBlocking(bool blocking) -> bool { return true; }
@@ -24,28 +28,25 @@ struct VideoDriver {
   virtual auto setFormat(string format) -> bool { return true; }
   virtual auto setShader(string shader) -> bool { return true; }
 
-  virtual auto configure(uint width, uint height, double inputFrequency, double outputFrequency) -> bool { return true; }
   virtual auto clear() -> void {}
+  virtual auto size(uint& width, uint& height) -> void {}
   virtual auto acquire(uint32_t*& data, uint& pitch, uint width, uint height) -> bool { return false; }
   virtual auto release() -> void {}
-  virtual auto output() -> void {}
+  virtual auto output(uint width = 0, uint height = 0) -> void {}
   virtual auto poll() -> void {}
 
 protected:
   Video& super;
   friend class Video;
 
+  bool fullScreen = false;
+  string monitor = "Primary";
   bool exclusive = false;
   uintptr context = 0;
   bool blocking = false;
   bool flush = false;
-  string format = "RGB24";
+  string format = "ARGB24";
   string shader = "Blur";
-
-  uint width = 0;
-  uint height = 0;
-  double inputFrequency = 0.0;
-  double outputFrequency = 0.0;
 };
 
 struct Video {
@@ -54,6 +55,23 @@ struct Video {
   static auto optimalDriver() -> string;
   static auto safestDriver() -> string;
 
+  struct Monitor {
+    string name;
+    bool primary = false;
+    int x = 0;
+    int y = 0;
+    int width = 0;
+    int height = 0;
+  };
+  static auto monitor(string name) -> Monitor;
+  static auto hasMonitors() -> vector<Monitor>;
+  static auto hasMonitor(string name) -> bool {
+    for(auto& monitor : hasMonitors()) {
+      if(monitor.name == name) return true;
+    }
+    return false;
+  }
+
   Video() : self(*this) { reset(); }
   explicit operator bool() { return instance->driver() != "None"; }
   auto reset() -> void { instance = new VideoDriver(*this); }
@@ -61,6 +79,8 @@ struct Video {
   auto driver() -> string { return instance->driver(); }
   auto ready() -> bool { return instance->ready(); }
 
+  auto hasFullScreen() -> bool { return instance->hasFullScreen(); }
+  auto hasMonitor() -> bool { return instance->hasMonitor(); }
   auto hasExclusive() -> bool { return instance->hasExclusive(); }
   auto hasContext() -> bool { return instance->hasContext(); }
   auto hasBlocking() -> bool { return instance->hasBlocking(); }
@@ -70,6 +90,8 @@ struct Video {
 
   auto hasFormat(string format) -> bool { return instance->hasFormat(format); }
 
+  auto fullScreen() -> bool { return instance->fullScreen; }
+  auto monitor() -> string { return instance->monitor; }
   auto exclusive() -> bool { return instance->exclusive; }
   auto context() -> uintptr { return instance->context; }
   auto blocking() -> bool { return instance->blocking; }
@@ -77,6 +99,8 @@ struct Video {
   auto format() -> string { return instance->format; }
   auto shader() -> string { return instance->shader; }
 
+  auto setMonitor(string monitor) -> bool;
+  auto setFullScreen(bool fullScreen) -> bool;
   auto setExclusive(bool exclusive) -> bool;
   auto setContext(uintptr context) -> bool;
   auto setBlocking(bool blocking) -> bool;
@@ -84,8 +108,12 @@ struct Video {
   auto setFormat(string format) -> bool;
   auto setShader(string shader) -> bool;
 
-  auto configure(uint width, uint height, double inputFrequency, double outputFrequency) -> bool;
   auto clear() -> void;
+  struct Size {
+    uint width = 0;
+    uint height = 0;
+  };
+  auto size() -> Size;
   struct Acquire {
     explicit operator bool() const { return data; }
     uint32_t* data = nullptr;
@@ -93,7 +121,7 @@ struct Video {
   };
   auto acquire(uint width, uint height) -> Acquire;
   auto release() -> void;
-  auto output() -> void;
+  auto output(uint width = 0, uint height = 0) -> void;
   auto poll() -> void;
 
   auto onUpdate(const function<void (uint, uint)>&) -> void;

@@ -9,6 +9,16 @@ struct VideoCGL;
 }
 -(id) initWith:(VideoCGL*)video pixelFormat:(NSOpenGLPixelFormat*)pixelFormat;
 -(void) reshape;
+-(BOOL) acceptsFirstResponder;
+@end
+
+@interface RubyWindowCGL : NSWindow <NSWindowDelegate> {
+@public
+  VideoCGL* video;
+}
+-(id) initWith:(VideoCGL*)video;
+-(BOOL) canBecomeKeyWindow;
+-(BOOL) canBecomeMainWindow;
 @end
 
 struct VideoCGL : VideoDriver, OpenGL {
@@ -23,10 +33,15 @@ struct VideoCGL : VideoDriver, OpenGL {
   auto driver() -> string override { return "OpenGL 3.2"; }
   auto ready() -> bool override { return _ready; }
 
+  auto hasFullScreen() -> bool override { return true; }
   auto hasContext() -> bool override { return true; }
   auto hasBlocking() -> bool override { return true; }
   auto hasFlush() -> bool override { return true; }
   auto hasShader() -> bool override { return true; }
+
+  auto setFullScreen(bool fullScreen) -> bool override {
+    return initialize();
+  }
 
   auto setContext(uintptr context) -> bool override {
     return initialize();
@@ -60,6 +75,14 @@ struct VideoCGL : VideoDriver, OpenGL {
     }
   }
 
+  auto size(uint& width, uint& height) -> void override {
+    @autoreleasepool {
+      auto area = [view convertRectToBacking:[view bounds]];
+      width = area.size.width;
+      height = area.size.height;
+    }
+  }
+
   auto acquire(uint32_t*& data, uint& pitch, uint width, uint height) -> bool override {
     OpenGL::size(width, height);
     return OpenGL::lock(data, pitch);
@@ -68,13 +91,20 @@ struct VideoCGL : VideoDriver, OpenGL {
   auto release() -> void override {
   }
 
-  auto output() -> void override {
+  auto output(uint width, uint height) -> void override {
+    uint windowWidth, windowHeight;
+    size(windowWidth, windowHeight);
+
     @autoreleasepool {
       if([view lockFocusIfCanDraw]) {
-        auto area = [view convertRectToBacking:[view bounds]];
-        OpenGL::outputWidth = area.size.width;
-        OpenGL::outputHeight = area.size.height;
+        OpenGL::absoluteWidth = width;
+        OpenGL::absoluteHeight = height;
+        OpenGL::outputX = 0;
+        OpenGL::outputY = 0;
+        OpenGL::outputWidth = windowWidth;
+        OpenGL::outputHeight = windowHeight;
         OpenGL::output();
+
         [[view openGLContext] flushBuffer];
         if(self.flush) glFinish();
         [view unlockFocus];
@@ -85,9 +115,16 @@ struct VideoCGL : VideoDriver, OpenGL {
 private:
   auto initialize() -> bool {
     terminate();
-    if(!self.context) return false;
+    if(!self.fullScreen && !self.context) return false;
 
     @autoreleasepool {
+      if(self.fullScreen) {
+        window = [[RubyWindowCGL alloc] initWith:this];
+        [window setCollectionBehavior:NSWindowCollectionBehaviorFullScreenPrimary];
+        [window toggleFullScreen:nil];
+      //[NSApp setPresentationOptions:NSApplicationPresentationFullScreen];
+      }
+
       NSOpenGLPixelFormatAttribute attributeList[] = {
         NSOpenGLPFAOpenGLProfile, NSOpenGLProfileVersion3_2Core,
         NSOpenGLPFAColorSize, 24,
@@ -96,7 +133,7 @@ private:
         0
       };
 
-      auto context = (NSView*)self.context;
+      auto context = self.fullScreen ? [window contentView] : (NSView*)self.context;
       auto size = [context frame].size;
       auto format = [[[NSOpenGLPixelFormat alloc] initWithAttributes:attributeList] autorelease];
       auto openGLContext = [[[NSOpenGLContext alloc] initWithFormat:format shareContext:nil] autorelease];
@@ -108,7 +145,8 @@ private:
       [view setWantsBestResolutionOpenGLSurface:YES];
       [context addSubview:view];
       [openGLContext setView:view];
-
+      [openGLContext makeCurrentContext];
+      [[view window] makeFirstResponder:view];
       [view lockFocus];
 
       OpenGL::initialize(self.shader);
@@ -127,15 +165,26 @@ private:
     _ready = false;
     OpenGL::terminate();
 
-    if(!view) return;
     @autoreleasepool {
-      [view removeFromSuperview];
-      [view release];
-      view = nil;
+      if(view) {
+        [view removeFromSuperview];
+        [view release];
+        view = nil;
+      }
+
+      if(window) {
+      //[NSApp setPresentationOptions:NSApplicationPresentationDefault];
+        [window toggleFullScreen:nil];
+        [window setCollectionBehavior:NSWindowCollectionBehaviorDefault];
+        [window close];
+        [window release];
+        window = nil;
+      }
     }
   }
 
   RubyVideoCGL* view = nullptr;
+  RubyWindowCGL* window = nullptr;
 
   bool _ready = false;
 };
@@ -150,7 +199,42 @@ private:
 }
 
 -(void) reshape {
-  video->output();
+  video->output(0, 0);
+}
+
+-(BOOL) acceptsFirstResponder {
+  return YES;
+}
+
+-(void) keyDown:(NSEvent*)event {
+}
+
+-(void) keyUp:(NSEvent*)event {
+}
+
+@end
+
+@implementation RubyWindowCGL : NSWindow
+
+-(id) initWith:(VideoCGL*)videoPointer {
+  auto primaryRect = [[[NSScreen screens] objectAtIndex:0] frame];
+  if(self = [super initWithContentRect:primaryRect styleMask:0 backing:NSBackingStoreBuffered defer:YES]) {
+    video = videoPointer;
+    [self setDelegate:self];
+    [self setReleasedWhenClosed:NO];
+    [self setAcceptsMouseMovedEvents:YES];
+    [self setTitle:@""];
+    [self makeKeyAndOrderFront:nil];
+  }
+  return self;
+}
+
+-(BOOL) canBecomeKeyWindow {
+  return YES;
+}
+
+-(BOOL) canBecomeMainWindow {
+  return YES;
 }
 
 @end

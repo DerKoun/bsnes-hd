@@ -1,5 +1,6 @@
 #include "../bsnes.hpp"
-Presentation presentation;
+namespace Instances { Instance<Presentation> presentation; }
+Presentation& presentation = Instances::presentation();
 
 auto Presentation::create() -> void {
   systemMenu.setText(tr("System"));
@@ -26,15 +27,15 @@ auto Presentation::create() -> void {
   outputMenu.setIcon(Icon::Emblem::Image).setText("Output");
   centerViewport.setText("Center").onActivate([&] {
     settings.video.output = "Center";
-    resizeViewport();
+    video.clear();
   });
   scaleViewport.setText("Scale").onActivate([&] {
     settings.video.output = "Scale";
-    resizeViewport();
+    video.clear();
   });
   stretchViewport.setText("Stretch").onActivate([&] {
     settings.video.output = "Stretch";
-    resizeViewport();
+    video.clear();
   });
   if(settings.video.output == "Center") centerViewport.setChecked();
   if(settings.video.output == "Scale") scaleViewport.setChecked();
@@ -47,15 +48,50 @@ auto Presentation::create() -> void {
     settings.video.overscan = showOverscanArea.checked();
     resizeWindow();
   });
-  blurEmulation.setText("Blur Emulation").setChecked(settings.video.blur).onToggle([&] {
+  blurEmulation.setText("Hires Blur Emulation").setChecked(settings.video.blur).onToggle([&] {
     settings.video.blur = blurEmulation.checked();
-    emulator->configure("Video/BlurEmulation", blurEmulation.checked());
+    emulator->configure("Video/BlurEmulation", settings.video.blur);
   }).doToggle();
+  /*filterMenu.setIcon(Icon::Emblem::Image).setText("Filter");
+  filterNone.setText("None").onActivate([&] { settings.video.filter = "None"; });
+  filterScanlinesLight.setText("Scanlines (66%)").onActivate([&] { settings.video.filter = "Scanlines (66%)"; });
+  filterScanlinesDark.setText("Scanlines (33%)").onActivate([&] { settings.video.filter = "Scanlines (33%)"; });
+  filterScanlinesBlack.setText("Scanlines (0%)").onActivate([&] { settings.video.filter = "Scanlines (0%)"; });
+  filterPixellate2x.setText("Pixellate2x").onActivate([&] { settings.video.filter = "Pixellate2x"; });
+  filterScale2x.setText("Scale2x").onActivate([&] { settings.video.filter = "Scale2x"; });
+  filter2xSaI.setText("2xSaI").onActivate([&] { settings.video.filter = "2xSaI"; });
+  filterSuper2xSaI.setText("Super 2xSaI").onActivate([&] { settings.video.filter = "Super 2xSaI"; });
+  filterSuperEagle.setText("Super Eagle").onActivate([&] { settings.video.filter = "Super Eagle"; });
+  filterLQ2x.setText("LQ2x").onActivate([&] { settings.video.filter = "LQ2x"; });
+  filterHQ2x.setText("HQ2x").onActivate([&] { settings.video.filter = "HQ2x"; });
+  filterNTSC_RF.setText("NTSC (RF)").onActivate([&] { settings.video.filter = "NTSC (RF)"; });
+  filterNTSC_Composite.setText("NTSC (Composite)").onActivate([&] { settings.video.filter = "NTSC (Composite)"; });
+  filterNTSC_SVideo.setText("NTSC (S-Video)").onActivate([&] { settings.video.filter = "NTSC (S-Video)"; });
+  filterNTSC_RGB.setText("NTSC (RGB)").onActivate([&] { settings.video.filter = "NTSC (RGB)"; });
+  if(settings.video.filter == "None") filterNone.setChecked();
+  if(settings.video.filter == "Scanlines (66%)") filterScanlinesLight.setChecked();
+  if(settings.video.filter == "Scanlines (33%)") filterScanlinesDark.setChecked();
+  if(settings.video.filter == "Scanlines (0%)") filterScanlinesBlack.setChecked();
+  if(settings.video.filter == "Pixellate2x") filterPixellate2x.setChecked();
+  if(settings.video.filter == "Scale2x") filterScale2x.setChecked();
+  if(settings.video.filter == "2xSaI") filter2xSaI.setChecked();
+  if(settings.video.filter == "Super 2xSaI") filterSuper2xSaI.setChecked();
+  if(settings.video.filter == "Super Eagle") filterSuperEagle.setChecked();
+  if(settings.video.filter == "LQ2x") filterLQ2x.setChecked();
+  if(settings.video.filter == "HQ2x") filterHQ2x.setChecked();
+  if(settings.video.filter == "NTSC (RF)") filterNTSC_RF.setChecked();
+  if(settings.video.filter == "NTSC (Composite)") filterNTSC_Composite.setChecked();
+  if(settings.video.filter == "NTSC (S-Video)") filterNTSC_SVideo.setChecked();
+  if(settings.video.filter == "NTSC (RGB)") filterNTSC_RGB.setChecked();*/
   shaderMenu.setIcon(Icon::Emblem::Image).setText("Shader");
   muteAudio.setText("Mute Audio").setChecked(settings.audio.mute).onToggle([&] {
     settings.audio.mute = muteAudio.checked();
-    program.updateAudioEffects();
-  });
+    if(settings.audio.mute) {
+      program.mute |= Program::Mute::Always;
+    } else {
+      program.mute &= ~Program::Mute::Always;
+    }
+  }).doToggle();  //set initial mute state flag
   showStatusBar.setText("Show Status Bar").setChecked(settings.general.statusBar).onToggle([&] {
     settings.general.statusBar = showStatusBar.checked();
     if(!showStatusBar.checked()) {
@@ -71,35 +107,37 @@ auto Presentation::create() -> void {
   hotkeySettings.setIcon(Icon::Device::Keyboard).setText("Hotkeys ...").onActivate([&] { settingsWindow.show(3); });
   pathSettings.setIcon(Icon::Emblem::Folder).setText("Paths ...").onActivate([&] { settingsWindow.show(4); });
   emulatorSettings.setIcon(Icon::Action::Settings).setText("Emulator ...").onActivate([&] { settingsWindow.show(5); });
-  driverSettings.setIcon(Icon::Place::Settings).setText("Drivers ...").onActivate([&] { settingsWindow.show(6); });
+  enhancementSettings.setIcon(Icon::Action::Add).setText("Enhancements ...").onActivate([&] { settingsWindow.show(6); });
+  compatibilitySettings.setIcon(Icon::Action::Remove).setText("Compatibility ...").onActivate([&] { settingsWindow.show(7); });
+  driverSettings.setIcon(Icon::Place::Settings).setText("Drivers ...").onActivate([&] { settingsWindow.show(8); });
 
   toolsMenu.setText(tr("Tools")).setVisible(false);
-  saveState.setIcon(Icon::Action::Save).setText("Save State");
+  saveState.setIcon(Icon::Media::Record).setText("Save State");
   for(uint index : range(QuickStates)) {
     MenuItem item{&saveState};
-    item.setProperty("name", {"Quick/Slot ", 1 + index});
-    item.setProperty("title", {"Slot ", 1 + index});
+    item.setAttribute("name", {"Quick/Slot ", 1 + index});
+    item.setAttribute("title", {"Slot ", 1 + index});
     item.setText({"Slot ", 1 + index});
     item.onActivate([=] { program.saveState({"Quick/Slot ", 1 + index}); });
   }
-  loadState.setIcon(Icon::Media::Play).setText("Load State");
+  loadState.setIcon(Icon::Media::Rewind).setText("Load State");
   for(uint index : range(QuickStates)) {
     MenuItem item{&loadState};
-    item.setProperty("name", {"Quick/Slot ", 1 + index});
-    item.setProperty("title", {"Slot ", 1 + index});
+    item.setAttribute("name", {"Quick/Slot ", 1 + index});
+    item.setAttribute("title", {"Slot ", 1 + index});
     item.setText({"Slot ", 1 + index});
     item.onActivate([=] { program.loadState({"Quick/Slot ", 1 + index}); });
   }
   loadState.append(MenuSeparator());
   loadState.append(MenuItem()
-  .setProperty("name", "Quick/Undo")
-  .setProperty("title", "Undo Last Save")
+  .setAttribute("name", "Quick/Undo")
+  .setAttribute("title", "Undo Last Save")
   .setIcon(Icon::Edit::Undo).setText("Undo Last Save").onActivate([&] {
     program.loadState("Quick/Undo");
   }));
   loadState.append(MenuItem()
-  .setProperty("name", "Quick/Redo")
-  .setProperty("title", "Redo Last Undo")
+  .setAttribute("name", "Quick/Redo")
+  .setAttribute("title", "Redo Last Undo")
   .setIcon(Icon::Edit::Redo).setText("Redo Last Undo").onActivate([&] {
     program.loadState("Quick/Redo");
   }));
@@ -111,54 +149,92 @@ auto Presentation::create() -> void {
     }
   }));
   speedMenu.setIcon(Icon::Device::Clock).setText("Speed").setEnabled(!settings.video.blocking && settings.audio.blocking);
-  speedSlowest.setText("50% (Slowest)").setProperty("multiplier", "2.0").onActivate([&] { program.updateAudioFrequency(); });
-  speedSlow.setText("75% (Slow)").setProperty("multiplier", "1.333").onActivate([&] { program.updateAudioFrequency(); });
-  speedNormal.setText("100% (Normal)").setProperty("multiplier", "1.0").onActivate([&] { program.updateAudioFrequency(); });
-  speedFast.setText("150% (Fast)").setProperty("multiplier", "0.667").onActivate([&] { program.updateAudioFrequency(); });
-  speedFastest.setText("200% (Fastest)").setProperty("multiplier", "0.5").onActivate([&] { program.updateAudioFrequency(); });
-  pauseEmulation.setText("Pause Emulation").onToggle([&] {
-    if(pauseEmulation.checked()) audio.clear();
+  speedSlowest.setText("50% (Slowest)").setAttribute("multiplier", "2.0").onActivate([&] { program.updateAudioFrequency(); });
+  speedSlow.setText("75% (Slow)").setAttribute("multiplier", "1.333").onActivate([&] { program.updateAudioFrequency(); });
+  speedNormal.setText("100% (Normal)").setAttribute("multiplier", "1.0").onActivate([&] { program.updateAudioFrequency(); });
+  speedFast.setText("150% (Fast)").setAttribute("multiplier", "0.667").onActivate([&] { program.updateAudioFrequency(); });
+  speedFastest.setText("200% (Fastest)").setAttribute("multiplier", "0.5").onActivate([&] { program.updateAudioFrequency(); });
+  runMenu.setIcon(Icon::Media::Play).setText("Run Mode");
+  runEmulation.setText("Normal").onActivate([&] {
   });
-  frameAdvance.setIcon(Icon::Media::Next).setText("Frame Advance").onActivate([&] {
-    pauseEmulation.setChecked(false);
-    program.frameAdvance = true;
+  pauseEmulation.setText("Pause Emulation").onActivate([&] {
+    audio.clear();
   });
+  frameAdvance.setText("Frame Advance").onActivate([&] {
+    audio.clear();
+    program.frameAdvanceLock = true;
+  });
+  movieMenu.setIcon(Icon::Emblem::Video).setText("Movie");
+  moviePlay.setIcon(Icon::Media::Play).setText("Play").onActivate([&] { program.moviePlay(); });
+  movieRecord.setIcon(Icon::Media::Record).setText("Record").onActivate([&] { program.movieRecord(false); });
+  movieRecordFromBeginning.setIcon(Icon::Media::Record).setText("Reset and Record").onActivate([&] { program.movieRecord(true); });
+  movieStop.setIcon(Icon::Media::Stop).setText("Stop").onActivate([&] { program.movieStop(); });
   captureScreenshot.setIcon(Icon::Emblem::Image).setText("Capture Screenshot").onActivate([&] {
     program.captureScreenshot();
   });
-  cheatEditor.setIcon(Icon::Edit::Replace).setText("Cheat Editor ...").onActivate([&] { toolsWindow.show(0); });
-  stateManager.setIcon(Icon::Application::FileManager).setText("State Manager ...").onActivate([&] { toolsWindow.show(1); });
-  manifestViewer.setIcon(Icon::Emblem::Text).setText("Manifest Viewer ...").onActivate([&] { toolsWindow.show(2); });
+  cheatFinder.setIcon(Icon::Action::Search).setText("Cheat Finder ...").onActivate([&] { toolsWindow.show(0); });
+  cheatEditor.setIcon(Icon::Edit::Replace).setText("Cheat Editor ...").onActivate([&] { toolsWindow.show(1); });
+  stateManager.setIcon(Icon::Application::FileManager).setText("State Manager ...").onActivate([&] { toolsWindow.show(2); });
+  manifestViewer.setIcon(Icon::Emblem::Text).setText("Manifest Viewer ...").onActivate([&] { toolsWindow.show(3); });
 
   helpMenu.setText(tr("Help"));
-  documentation.setIcon(Icon::Application::Browser).setText({tr("Documentation"), " ..."}).onActivate([&] {
-    invoke("https://doc.byuu.org/bsnes/");
+  documentation.setIcon(Icon::Application::Browser).setText({tr("bsnes documentation"), " ..."}).onActivate([&] {
+    invoke("https://byuu.org/doc/bsnes");
   });
-  about.setIcon(Icon::Prompt::Question).setText({tr("About"), " ..."}).onActivate([&] {
+  documentationHd.setIcon(Icon::Application::Browser).setText({tr("bsnes-hd documentation"), " ..."}).onActivate([&] {
+    invoke("https://github.com/DerKoun/bsnes-hd");
+  });
+  aboutSameBoy.setIcon(Icon::Prompt::Question).setText({tr("About SameBoy"), " ..."}).onActivate([&] {
     AboutDialog()
+    .setName("SameBoy")
+    .setLogo(Resource::SameBoy)
+    .setDescription("Super Game Boy emulator")
+    .setVersion("0.12.1")
+    .setAuthor("Lior Halphon")
+    .setLicense("MIT")
+    .setWebsite("https://sameboy.github.io")
+    .setAlignment(*this)
+    .show();
+  });
+  about.setIcon(Icon::Prompt::Question).setText({tr("About bsnes (upstream)"), " ..."}).onActivate([&] {
+    AboutDialog()
+    .setName("bsnes (upstream)")
     .setLogo(Resource::Logo)
-    .setVersion(Emulator::Version)
+    .setDescription("Super Nintendo emulator")
+    .setVersion("114")//bsnes/emulator/emulator.hpp:Emulator:Version
     .setAuthor("byuu")
     .setLicense("GPLv3")
-    .setWebsite("https://byuu.org/")
+    .setWebsite("https://byuu.org")
+    .setAlignment(*this)
+    .show();
+  });
+  aboutHd.setIcon(Icon::Prompt::Question).setText({tr("About bsnes-hd beta"), " ..."}).onActivate([&] {
+    AboutDialog()
+    .setName(Emulator::Name)
+    .setLogo(Resource::Logo)//TODO:Logo
+    .setDescription("HD enhancements for bsnes (beta)")
+    .setVersion(Emulator::Version)
+    .setAuthor("DerKoun")
+    .setLicense("GPLv3")
+    .setWebsite("https://github.com/DerKoun/bsnes-hd")
     .setAlignment(*this)
     .show();
   });
 
-  viewport.setDroppable().onDrop([&](vector<string> locations) {
-    if(!locations) return;
-    program.gameQueue = {};
-    program.gameQueue.append({"Auto;", locations.first()});
-    program.load();
-    setFocused();
-  }).onSize([&] {
-    configureViewport();
-  });
+  viewport.setFocusable(false);  //true would also capture Alt, which breaks keyboard menu navigation
+  viewport.setDroppable();
+  viewport.onDrop([&](auto locations) { onDrop(locations); });
 
-  iconLayout.setAlignment(0.0);
+  iconSpacer.setColor({0, 0, 0});
+  iconSpacer.setDroppable();
+  iconSpacer.onDrop([&](auto locations) { onDrop(locations); });
+
+  iconLayout.setAlignment(0.0).setCollapsible();
   image icon{Resource::Icon};
   icon.alphaBlend(0x000000);
   iconCanvas.setIcon(icon);
+  iconCanvas.setDroppable();
+  iconCanvas.onDrop([&](auto locations) { onDrop(locations); });
 
   if(!settings.general.statusBar) layout.remove(statusLayout);
 
@@ -166,6 +242,7 @@ auto Presentation::create() -> void {
   auto back = Color{ 32,  32,  32};
   auto fore = Color{255, 255, 255};
 
+  updateProgramIcon();
   updateStatusIcon();
 
   spacerIcon.setBackgroundColor(back).setForegroundColor(fore);
@@ -190,18 +267,10 @@ auto Presentation::create() -> void {
     program.quit();
   });
 
-  onSize([&] {
-    resizeViewport();
-  });
-
-  setTitle({"bsnes v", Emulator::Version});
+  setTitle({Emulator::Name, " ", Emulator::Version});
   setBackgroundColor({0, 0, 0});
   resizeWindow();
   setAlignment(Alignment::Center);
-
-  //start in fullscreen mode if requested ...
-  //perform the exclusive mode change later on inside Program::create(), after the video driver has been initialized
-  if(startFullScreen) setFullScreen();
 
   #if defined(PLATFORM_MACOS)
   Application::Cocoa::onAbout([&] { about.doActivate(); });
@@ -211,139 +280,60 @@ auto Presentation::create() -> void {
   #endif
 }
 
-auto Presentation::updateStatusIcon() -> void {
-  image icon;
-  icon.allocate(16, StatusHeight);
-  icon.fill(0xff202020);
-
-  if(emulator->loaded()) {
-    image emblem{program.verified() ? (image)Icon::Emblem::Program : (image)Icon::Emblem::Binary};
-    icon.impose(image::blend::sourceAlpha, 0, (StatusHeight - 16) / 2, emblem, 0, 0, 16, 16);
-  }
-
-  statusIcon.setIcon(icon);
+auto Presentation::onDrop(vector<string> locations) -> void {
+  if(!locations) return;
+  program.gameQueue = {};
+  program.gameQueue.append({"Auto;", locations.first()});
+  program.load();
+  setFocused();
 }
 
-auto Presentation::configureViewport() -> void {
-  uint width = viewport.geometry().width();
-  uint height = viewport.geometry().height();
-  video.configure(width, height, 60, 60);
-}
-
-auto Presentation::clearViewport() -> void {
-  if(!emulator->loaded()) viewportLayout.setPadding();
-  if(!visible() || !video) return;
-
-  uint32_t opaqueBlack = 0xff000000;
-  if(settings.video.format == "RGB30") opaqueBlack = 0xc0000000;
-
-  uint width = 16;
-  uint height = 16;
-  if(auto [output, length] = video.acquire(width, height); output) {
-    for(uint y : range(height)) {
-      auto line = output + y * (length >> 2);
-      for(uint x : range(width)) *line++ = opaqueBlack;
-    }
+auto Presentation::updateProgramIcon() -> void {
+  presentation.iconLayout.setVisible(!emulator->loaded() && !settings.video.snow);
+  presentation.layout.resize();
+  //todo: video.clear() is not working on macOS/OpenGL 3.2
+  if(auto [output, length] = video.acquire(1, 1); output) {
+    *output = 0;
     video.release();
     video.output();
   }
 }
 
-auto Presentation::resizeViewport() -> void {
-  uint layoutWidth = viewportLayout.geometry().width();
-  uint layoutHeight = viewportLayout.geometry().height();
+auto Presentation::updateStatusIcon() -> void {
+  image icon;
+  icon.allocate(16, StatusHeight);
+  icon.fill(0xff202020);
 
-  uint widescreen = (settings.emulator.hack.ppu.mode7.scale > 0
-                  && settings.emulator.hack.ppu.mode7.wsMode > 0)
-				   ? settings.emulator.hack.ppu.mode7.widescreen : 0;
-  uint unintrMode = settings.emulator.hack.ppu.mode7.unintrMode;
-  uint unintrTop = settings.emulator.hack.ppu.mode7.unintrTop;
-  uint unintrBottom = settings.emulator.hack.ppu.mode7.unintrBottom;
-  uint unintrLeft = settings.emulator.hack.ppu.mode7.unintrLeft;
-  uint unintrRight = settings.emulator.hack.ppu.mode7.unintrRight;
-  uint width = (256+2*widescreen) * (settings.video.aspectCorrection && !widescreen ? 8.0 / 7.0 : 1.0);
-  uint height = (settings.video.overscan ? 240.0 : 224.0);
-  while(((int)width) - ((int)unintrLeft) - ((int)unintrRight) <= 10) { if (unintrLeft > 0) unintrLeft--; if (unintrRight > 0) unintrRight--; }
-  while(((int)height) - ((int)unintrTop) - ((int)unintrBottom) <= 10) { if (unintrTop > 0) unintrTop--; if (unintrBottom > 0) unintrBottom--; }
-  uint viewportWidth, viewportHeight;
-
-  if(visible() && !fullScreen()) {
-    uint widthMultiplier = layoutWidth / width;
-    uint heightMultiplier = layoutHeight / height;
-    uint multiplier = max(1, min(widthMultiplier, heightMultiplier));
-    settings.video.multiplier = multiplier;
-    for(auto item : sizeGroup.objects<MenuRadioItem>()) {
-      if(auto property = item.property("multiplier")) {
-        if(property.natural() == multiplier) item.setChecked();
-      }
-    }
+  if(emulator->loaded() && program.verified()) {
+    image emblem{Icon::Emblem::Program};
+    icon.impose(image::blend::sourceAlpha, 0, (StatusHeight - 16) / 2, emblem, 0, 0, 16, 16);
+    statusIcon.setIcon(icon).setToolTip(
+      "This is a known clean game image.\n"
+      "PCB emulation is 100% accurate."
+    );
+  } else if(emulator->loaded()) {
+    image emblem{Icon::Emblem::Binary};
+    icon.impose(image::blend::sourceAlpha, 0, (StatusHeight - 16) / 2, emblem, 0, 0, 16, 16);
+    statusIcon.setIcon(icon).setToolTip(
+      "This is not a verified game image.\n"
+      "PCB emulation is relying on heuristics."
+    );
+  } else {
+    statusIcon.setIcon(icon).setToolTip();
   }
-
-  if(!emulator->loaded()) return clearViewport();
-  if(!video) return;
-
-  if(settings.video.output == "Center") {
-    uint widthMultiplier = layoutWidth / (width - (unintrMode < 1 ? 0 : (unintrLeft + unintrRight)));
-    uint heightMultiplier = layoutHeight / (height - (unintrMode < 1 ? 0 : (unintrTop + unintrBottom)));
-    uint multiplier = min(widthMultiplier, heightMultiplier);
-    viewportWidth = width * multiplier;
-    viewportHeight = height * multiplier;
-  } else if(settings.video.output == "Scale") {
-    double widthMultiplier = (double)layoutWidth / (width - (unintrMode < 2 ? 0 : (unintrLeft + unintrRight)));
-    double heightMultiplier = (double)layoutHeight / (height - (unintrMode < 2 ? 0 : (unintrTop + unintrBottom)));
-    double multiplier = min(widthMultiplier, heightMultiplier);
-    viewportWidth = width * multiplier;
-    viewportHeight = height * multiplier;
-  } else if(settings.video.output == "Stretch" || 1) {
-    viewportWidth = layoutWidth;
-    viewportHeight = layoutHeight;
-  }
-
-  //center viewport within viewportLayout by use of viewportLayout padding
-  int paddingWidth = layoutWidth - viewportWidth;
-  int paddingHeight = layoutHeight - viewportHeight;
-  int paddingLeft = paddingWidth >= 0 ? paddingWidth / 2 : (1.0 * paddingWidth / (unintrLeft + unintrRight) * unintrLeft);
-  int paddingTop = paddingHeight >= 0 ? paddingHeight / 2 : (1.0 * paddingHeight / (unintrTop + unintrBottom) * unintrTop);
-  viewportLayout.setPadding({
-    paddingLeft, paddingTop,
-    paddingWidth - paddingLeft, paddingHeight - paddingTop
-  });
 }
 
 auto Presentation::resizeWindow() -> void {
   if(fullScreen()) return;
   if(maximized()) setMaximized(false);
 
-  int widescreen = settings.emulator.hack.ppu.mode7.wsMode > 0 ? settings.emulator.hack.ppu.mode7.widescreen : 0; // 64 / 0 #widescreenextension
-  uint width = (256+2*widescreen) * (settings.video.aspectCorrection && !widescreen ? 8.0 / 7.0 : 1.0);
+  uint width = 256 * (settings.video.aspectCorrection ? 8.0 / 7.0 : 1.0);
   uint height = (settings.video.overscan ? 240.0 : 224.0);
   uint multiplier = max(1, settings.video.multiplier);
   uint statusHeight = settings.general.statusBar ? StatusHeight : 0;
 
   setMinimumSize({width, height + statusHeight});
   setSize({width * multiplier, height * multiplier + statusHeight});
-  resizeViewport();
-}
-
-auto Presentation::toggleFullscreenMode() -> void {
-  if(!fullScreen()) {
-    if(settings.general.statusBar) layout.remove(statusLayout);
-    menuBar.setVisible(false);
-    setFullScreen(true);
-    video.setExclusive(settings.video.exclusive);
-    if(video.exclusive()) setVisible(false);
-    if(!input.acquired()) input.acquire();
-    resizeViewport();
-  } else {
-    if(input.acquired()) input.release();
-    if(video.exclusive()) setVisible(true);
-    video.setExclusive(false);
-    setFullScreen(false);
-    menuBar.setVisible(true);
-    if(settings.general.statusBar) layout.append(statusLayout, Size{~0, StatusHeight});
-    resizeWindow();
-    setAlignment(Alignment::Center);
-  }
 }
 
 auto Presentation::updateDeviceMenu() -> void {
@@ -368,7 +358,7 @@ auto Presentation::updateDeviceMenu() -> void {
       if(port.name == "Expansion Port" && device.name == "21fx") continue;
 
       MenuRadioItem item{menu};
-      item.setProperty("deviceID", device.id);
+      item.setAttribute("deviceID", device.id);
       item.setText(tr(device.name));
       item.onActivate([=] {
         settings(path).setValue(device.name);
@@ -396,7 +386,7 @@ auto Presentation::updateDeviceSelections() -> void {
     auto deviceID = emulator->connected(port.id);
     for(auto& action : menu->actions()) {
       if(auto item = action.cast<MenuRadioItem>()) {
-        if(item.property("deviceID").natural() == deviceID) {
+        if(item.attribute("deviceID").natural() == deviceID) {
           item.setChecked();
           break;
         }
@@ -418,7 +408,7 @@ auto Presentation::updateSizeMenu() -> void {
   uint multipliers = max(1, height / 240);
   for(uint multiplier : range(1, multipliers + 1)) {
     MenuRadioItem item{&sizeMenu};
-    item.setProperty("multiplier", multiplier);
+    item.setAttribute("multiplier", multiplier);
     item.setText({multiplier, "x (", 240 * multiplier, "p)"});
     item.onActivate([=] {
       settings.video.multiplier = multiplier;
@@ -427,7 +417,7 @@ auto Presentation::updateSizeMenu() -> void {
     sizeGroup.append(item);
   }
   for(auto item : sizeGroup.objects<MenuRadioItem>()) {
-    if(settings.video.multiplier == item.property("multiplier").natural()) {
+    if(settings.video.multiplier == item.attribute("multiplier").natural()) {
       item.setChecked();
     }
   }
@@ -446,11 +436,11 @@ auto Presentation::updateStateMenus() -> void {
 
   for(auto& action : saveState.actions()) {
     if(auto item = action.cast<MenuItem>()) {
-      if(auto name = item.property("name")) {
+      if(auto name = item.attribute("name")) {
         if(auto offset = states.find([&](auto& state) { return state.name == name; })) {
-          item.setText({item.property("title"), " (", chrono::local::datetime(states[*offset].date), ")"});
+          item.setText({item.attribute("title"), " (", chrono::local::datetime(states[*offset].date), ")"});
         } else {
-          item.setText({item.property("title"), " (empty)"});
+          item.setText({item.attribute("title"), " (empty)"});
         }
       }
     }
@@ -458,13 +448,13 @@ auto Presentation::updateStateMenus() -> void {
 
   for(auto& action : loadState.actions()) {
     if(auto item = action.cast<MenuItem>()) {
-      if(auto name = item.property("name")) {
+      if(auto name = item.attribute("name")) {
         if(auto offset = states.find([&](auto& state) { return state.name == name; })) {
           item.setEnabled(true);
-          item.setText({item.property("title"), " (", chrono::local::datetime(states[*offset].date), ")"});
+          item.setText({item.attribute("title"), " (", chrono::local::datetime(states[*offset].date), ")"});
         } else {
           item.setEnabled(false);
-          item.setText({item.property("title"), " (empty)"});
+          item.setText({item.attribute("title"), " (empty)"});
         }
       }
     }
@@ -563,7 +553,7 @@ auto Presentation::updateShaders() -> void {
   });
   shaders.append(blur);
 
-  auto location = locate("shaders/");
+  auto location = locate("Shaders/");
 
   if(settings.video.driver == "OpenGL 3.2") {
     for(auto shader : directory::folders(location, "*.shader")) {

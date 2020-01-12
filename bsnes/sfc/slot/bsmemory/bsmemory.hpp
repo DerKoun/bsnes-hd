@@ -24,6 +24,7 @@ struct BSMemory : Thread, Memory {
 
   //bsmemory.cpp
   BSMemory();
+  auto synchronizeCPU() -> void;
   static auto Enter() -> void;
   auto main() -> void;
   auto step(uint clocks) -> void;
@@ -34,8 +35,8 @@ struct BSMemory : Thread, Memory {
 
   auto data() -> uint8* override;
   auto size() const -> uint override;
-  auto read(uint24 address, uint8 data) -> uint8 override;
-  auto write(uint24 address, uint8 data) -> void override;
+  auto read(uint address, uint8 data) -> uint8 override;
+  auto write(uint address, uint8 data) -> void override;
 
   //serialization.cpp
   auto serialize(serializer&) -> void;
@@ -66,14 +67,14 @@ private:
   struct BlockInformation {
     BSMemory* self = nullptr;
 
-    inline auto bits() const -> uint;
-    inline auto bytes() const -> uint;
+    inline auto bitCount() const -> uint;
+    inline auto byteCount() const -> uint;
     inline auto count() const -> uint;
   };
 
   struct Block : BlockInformation {
-    auto read(uint24 address) -> uint8;
-    auto write(uint24 address, uint8 data) -> void;
+    auto read(uint address) -> uint8;
+    auto write(uint address, uint8 data) -> void;
     auto erase() -> void;
     auto lock() -> void;
     auto update() -> void;

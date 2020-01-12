@@ -1,17 +1,17 @@
 //Epson RTC-4513 Real-Time Clock
 
 struct EpsonRTC : Thread {
-  using Thread::synchronize;
-
+  auto synchronizeCPU() -> void;
   static auto Enter() -> void;
   auto main() -> void;
+  auto step(uint clocks) -> void;
 
   auto initialize() -> void;
   auto power() -> void;
   auto synchronize(uint64 timestamp) -> void;
 
-  auto read(uint24 addr, uint8 data) -> uint8;
-  auto write(uint24 addr, uint8 data) -> void;
+  auto read(uint addr, uint8 data) -> uint8;
+  auto write(uint addr, uint8 data) -> void;
 
   auto serialize(serializer&) -> void;
 

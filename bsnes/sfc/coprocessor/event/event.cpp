@@ -5,8 +5,15 @@ namespace SuperFamicom {
 #include "serialization.cpp"
 Event event;
 
+auto Event::synchronizeCPU() -> void {
+  if(clock >= 0) scheduler.resume(cpu.thread);
+}
+
 auto Event::Enter() -> void {
-  while(true) scheduler.synchronize(), event.main();
+  while(true) {
+    scheduler.synchronize();
+    event.main();
+  }
 }
 
 auto Event::main() -> void {
@@ -26,7 +33,11 @@ auto Event::main() -> void {
   }
 
   step(1);
-  synchronize(cpu);
+  synchronizeCPU();
+}
+
+auto Event::step(uint clocks) -> void {
+  clock += clocks * (uint64_t)cpu.frequency;
 }
 
 auto Event::unload() -> void {
@@ -40,7 +51,7 @@ auto Event::power() -> void {
   create(Event::Enter, 1);
 
   //DIP switches 0-3 control the time: 3 minutes + 0-15 extra minutes
-  timer = (3 + dip.value.bits(0,3)) * 60;  //in seconds
+  timer = (3 + (dip.value & 15)) * 60;  //in seconds
   //DIP switches 4-5 serve an unknown purpose
   //DIP switches 6-7 are not connected
 
@@ -52,7 +63,7 @@ auto Event::power() -> void {
   scoreSecondsRemaining = 0;
 }
 
-auto Event::mcuRead(uint24 addr, uint8 data) -> uint8 {
+auto Event::mcuRead(uint addr, uint8 data) -> uint8 {
   if(board == Board::CampusChallenge92) {
     uint id = 0;
     if(select == 0x09) id = 1;
@@ -88,17 +99,17 @@ auto Event::mcuRead(uint24 addr, uint8 data) -> uint8 {
   return data;
 }
 
-auto Event::mcuWrite(uint24 addr, uint8 data) -> void {
+auto Event::mcuWrite(uint addr, uint8 data) -> void {
 }
 
-auto Event::read(uint24 addr, uint8 data) -> uint8 {
+auto Event::read(uint addr, uint8 data) -> uint8 {
   if(addr == 0x106000 || addr == 0xc00000) {
     return status;
   }
   return data;
 }
 
-auto Event::write(uint24 addr, uint8 data) -> void {
+auto Event::write(uint addr, uint8 data) -> void {
   if(addr == 0x206000 || addr == 0xe00000) {
     select = data;
     if(timer && data == 0x09) {

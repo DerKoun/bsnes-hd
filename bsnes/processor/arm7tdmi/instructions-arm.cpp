@@ -20,7 +20,7 @@ auto ARM7TDMI::armALU(uint4 mode, uint4 d, uint4 n, uint32 rm) -> void {
   case 15: r(d) = BIT(~rm); break;  //MVN
   }
 
-  if(exception() && d == 15 && opcode.bit(20)) {
+  if(exception() && d == 15 && (opcode & 1 << 20)) {
     cpsr() = spsr();
   }
 }
@@ -29,21 +29,21 @@ auto ARM7TDMI::armMoveToStatus(uint4 field, uint1 mode, uint32 data) -> void {
   if(mode && (cpsr().m == PSR::USR || cpsr().m == PSR::SYS)) return;
   PSR& psr = mode ? spsr() : cpsr();
 
-  if(field.bit(0)) {
+  if(field & 1) {
     if(mode || privileged()) {
-      psr.m = data.bits(0,4);
-      psr.t = data.bit (5);
-      psr.f = data.bit (6);
-      psr.i = data.bit (7);
+      psr.m = data >> 0 & 31;
+      psr.t = data >> 5 & 1;
+      psr.f = data >> 6 & 1;
+      psr.i = data >> 7 & 1;
       if(!mode && psr.t) r(15).data += 2;
     }
   }
 
-  if(field.bit(3)) {
-    psr.v = data.bit(28);
-    psr.c = data.bit(29);
-    psr.z = data.bit(30);
-    psr.n = data.bit(31);
+  if(field & 8) {
+    psr.v = data >> 28 & 1;
+    psr.c = data >> 29 & 1;
+    psr.z = data >> 30 & 1;
+    psr.n = data >> 31 & 1;
   }
 }
 
@@ -58,7 +58,7 @@ auto ARM7TDMI::armInstructionBranch
 auto ARM7TDMI::armInstructionBranchExchangeRegister
 (uint4 m) -> void {
   uint32 address = r(m);
-  cpsr().t = address.bit(0);
+  cpsr().t = address & 1;
   r(15) = address;
 }
 
@@ -193,13 +193,13 @@ auto ARM7TDMI::armInstructionMoveMultiple
 
   auto cpsrMode = cpsr().m;
   bool usr = false;
-  if(type && mode == 1 && !list.bit(15)) usr = true;
+  if(type && mode == 1 && !(list & 0x8000)) usr = true;
   if(type && mode == 0) usr = true;
   if(usr) cpsr().m = PSR::USR;
 
   uint sequential = Nonsequential;
   for(uint m : range(16)) {
-    if(!list.bit(m)) continue;
+    if(!(list & 1 << m)) continue;
     if(mode == 1) r(m) = read(Word | sequential, rn);
     if(mode == 0) write(Word | sequential, rn, r(m));
     rn += 4;
@@ -210,7 +210,7 @@ auto ARM7TDMI::armInstructionMoveMultiple
 
   if(mode) {
     idle();
-    if(type && list.bit(15) && cpsr().m != PSR::USR && cpsr().m != PSR::SYS) {
+    if(type && (list & 0x8000) && cpsr().m != PSR::USR && cpsr().m != PSR::SYS) {
       cpsr() = spsr();
     }
   } else {
@@ -299,7 +299,7 @@ auto ARM7TDMI::armInstructionMultiplyLong
 
   if(save) {
     cpsr().z = rd == 0;
-    cpsr().n = rd.bit(63);
+    cpsr().n = rd >> 63 & 1;
   }
 }
 

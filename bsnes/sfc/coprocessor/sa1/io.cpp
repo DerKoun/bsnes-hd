@@ -1,7 +1,7 @@
-auto SA1::readIOCPU(uint24 address, uint8 data) -> uint8 {
-  cpu.synchronize(sa1);
+auto SA1::readIOCPU(uint address, uint8 data) -> uint8 {
+  cpu.synchronizeCoprocessors();
 
-  switch(0x2200 | address.bits(0,8)) {
+  switch(0x2200 | address & 0x1ff) {
 
   //(SFR) S-CPU flag read
   case 0x2300: {
@@ -24,10 +24,10 @@ auto SA1::readIOCPU(uint24 address, uint8 data) -> uint8 {
   return data;
 }
 
-auto SA1::readIOSA1(uint24 address, uint8) -> uint8 {
-  synchronize(cpu);
+auto SA1::readIOSA1(uint address, uint8) -> uint8 {
+  synchronizeCPU();
 
-  switch(0x2200 | address.bits(0,8)) {
+  switch(0x2200 | address & 0x1ff) {
 
   //(CFR) SA-1 flag read
   case 0x2301: {
@@ -100,16 +100,16 @@ auto SA1::readIOSA1(uint24 address, uint8) -> uint8 {
   return 0xff;
 }
 
-auto SA1::writeIOCPU(uint24 address, uint8 data) -> void {
-  cpu.synchronize(sa1);
+auto SA1::writeIOCPU(uint address, uint8 data) -> void {
+  cpu.synchronizeCoprocessors();
 
-  switch(0x2200 | address.bits(0,8)) {
+  switch(0x2200 | address & 0x1ff) {
 
   //(CCNT) SA-1 control
   case 0x2200: {
-    if(mmio.sa1_resb && !(data & 0x80)) {
+    if(mmio.sa1_resb && !(data & 0x20)) {
       //reset SA-1 CPU (PC bank set to 0x00)
-      r.pc = mmio.crv;
+      r.pc.d = mmio.crv;
     }
 
     mmio.sa1_irq  = (data & 0x80);
@@ -136,14 +136,14 @@ auto SA1::writeIOCPU(uint24 address, uint8 data) -> void {
     if(!mmio.cpu_irqen && (data & 0x80)) {
       if(mmio.cpu_irqfl) {
         mmio.cpu_irqcl = 0;
-        cpu.r.irq = 1;
+        cpu.irq(1);
       }
     }
 
     if(!mmio.chdma_irqen && (data & 0x20)) {
       if(mmio.chdma_irqfl) {
         mmio.chdma_irqcl = 0;
-        cpu.r.irq = 1;
+        cpu.irq(1);
       }
     }
 
@@ -160,7 +160,7 @@ auto SA1::writeIOCPU(uint24 address, uint8 data) -> void {
     if(mmio.cpu_irqcl  ) mmio.cpu_irqfl   = false;
     if(mmio.chdma_irqcl) mmio.chdma_irqfl = false;
 
-    if(!mmio.cpu_irqfl && !mmio.chdma_irqfl) cpu.r.irq = 0;
+    if(!mmio.cpu_irqfl && !mmio.chdma_irqfl) cpu.irq(0);
     return;
   }
 
@@ -235,10 +235,10 @@ auto SA1::writeIOCPU(uint24 address, uint8 data) -> void {
   }
 }
 
-auto SA1::writeIOSA1(uint24 address, uint8 data) -> void {
-  synchronize(cpu);
+auto SA1::writeIOSA1(uint address, uint8 data) -> void {
+  synchronizeCPU();
 
-  switch(0x2200 | address.bits(0,8)) {
+  switch(0x2200 | address & 0x1ff) {
 
   //(SCNT) S-CPU control
   case 0x2209: {
@@ -251,7 +251,7 @@ auto SA1::writeIOSA1(uint24 address, uint8 data) -> void {
       mmio.cpu_irqfl = true;
       if(mmio.cpu_irqen) {
         mmio.cpu_irqcl = 0;
-        cpu.r.irq = 1;
+        cpu.irq(1);
       }
     }
 
@@ -403,19 +403,19 @@ auto SA1::writeIOSA1(uint24 address, uint8 data) -> void {
 
   //(MAL) multiplicand / dividend low
   case 0x2251: {
-    mmio.ma.byte(0) = data;
+    mmio.ma = mmio.ma & ~0x00ff | data << 0;
     return;
   }
 
   //(MAH) multiplicand / dividend high
   case 0x2252: {
-    mmio.ma.byte(1) = data;
+    mmio.ma = mmio.ma & ~0xff00 | data << 8;
     return;
   }
 
   //(MBL) multiplier / divisor low
   case 0x2253: {
-    mmio.mb.byte(0) = data;
+    mmio.mb = mmio.mb & ~0x00ff | data << 0;
     return;
   }
 
@@ -423,7 +423,7 @@ auto SA1::writeIOSA1(uint24 address, uint8 data) -> void {
   //multiplication / cumulative sum only resets MB
   //division resets both MA and MB
   case 0x2254: {
-    mmio.mb.byte(1) = data;
+    mmio.mb = mmio.mb & ~0xff00 | data << 8;
 
     if(mmio.acm == 0) {
       if(mmio.md == 0) {
@@ -477,8 +477,8 @@ auto SA1::writeIOSA1(uint24 address, uint8 data) -> void {
   }
 }
 
-auto SA1::writeIOShared(uint24 address, uint8 data) -> void {
-  switch(0x2200 | address.bits(0,8)) {
+auto SA1::writeIOShared(uint address, uint8 data) -> void {
+  switch(0x2200 | address & 0x1ff) {
 
   //(CDMA) character conversion DMA parameters
   case 0x2231: {

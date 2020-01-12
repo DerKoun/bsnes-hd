@@ -10,6 +10,9 @@ struct System {
 
   auto run() -> void;
   auto runToSave() -> void;
+  auto runToSaveFast() -> void;
+  auto runToSaveStrict() -> void;
+  auto frameEvent() -> void;
 
   auto load(Emulator::Interface*) -> bool;
   auto save() -> void;
@@ -17,11 +20,12 @@ struct System {
   auto power(bool reset) -> void;
 
   //serialization.cpp
-  auto serialize() -> serializer;
+  auto serialize(bool synchronize) -> serializer;
   auto unserialize(serializer&) -> bool;
 
   uint frameSkip = 0;
   uint frameCounter = 0;
+  bool runAhead = 0;
 
 private:
   Emulator::Interface* interface = nullptr;
@@ -31,17 +35,15 @@ private:
     Region region = Region::NTSC;
     double cpuFrequency = Emulator::Constants::Colorburst::NTSC * 6.0;
     double apuFrequency = 32040.0 * 768.0;
+    uint serializeSize[2] = {0, 0};
   } information;
 
   struct Hacks {
     bool fastPPU = false;
   } hacks;
 
-  uint serializeSize = 0;
-
-  auto serialize(serializer&) -> void;
-  auto serializeAll(serializer&) -> void;
-  auto serializeInit() -> void;
+  auto serializeAll(serializer&, bool synchronize) -> void;
+  auto serializeInit(bool synchronize) -> uint;
 
   friend class Cartridge;
 };

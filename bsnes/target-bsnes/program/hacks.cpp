@@ -1,16 +1,76 @@
 auto Program::hackCompatibility() -> void {
-  bool fastPPU = emulatorSettings.fastPPU.checked();
-  bool fastPPUNoSpriteLimit = emulatorSettings.noSpriteLimit.checked();
-  bool fastDSP = emulatorSettings.fastDSP.checked();
-  bool coprocessorsDelayedSync = emulatorSettings.coprocessorsDelayedSyncOption.checked();
+  string entropy = settings.emulator.hack.entropy;
+  bool fastJoypadPolling = false;
+  bool fastPPU = settings.emulator.hack.ppu.fast;
+  bool fastPPUNoSpriteLimit = settings.emulator.hack.ppu.noSpriteLimit;
+  bool fastDSP = settings.emulator.hack.dsp.fast;
+  bool coprocessorDelayedSync = settings.emulator.hack.coprocessor.delayedSync;
+  uint renderCycle = 512;
 
   auto title = superFamicom.title;
+  auto region = superFamicom.region;
+
+  //sometimes menu options are skipped over in the main menu with cycle-based joypad polling
+  if(title == "Arcades Greatest Hits") fastJoypadPolling = true;
+
+  //the start button doesn't work in this game with cycle-based joypad polling
+  if(title == "TAIKYOKU-IGO Goliath") fastJoypadPolling = true;
+
+  //holding up or down on the menu quickly cycles through options instead of stopping after each button press
+  if(title == "WORLD MASTERS GOLF") fastJoypadPolling = true;
+
+  //relies on mid-scanline rendering techniques
   if(title == "AIR STRIKE PATROL" || title == "DESERT FIGHTER") fastPPU = false;
+
+  //the dialogue text is blurry due to an issue in the scanline-based renderer's color math support
+  if(title == "マーヴェラス") fastPPU = false;
+
+  //stage 2 uses pseudo-hires in a way that's not compatible with the scanline-based renderer
+  if(title == "SFC クレヨンシンチャン") fastPPU = false;
+
+  //title screen game select (after choosing a game) changes OAM tiledata address mid-frame
+  //this is only supported by the cycle-based PPU renderer
+  if(title == "Winter olympics") fastPPU = false;
+
+  //title screen shows remnants of the flag after choosing a language with the scanline-based renderer
+  if(title == "WORLD CUP STRIKER") fastPPU = false;
+
+  //relies on cycle-accurate writes to the echo buffer
   if(title == "KOUSHIEN_2") fastDSP = false;
+
+  //will hang immediately
   if(title == "RENDERING RANGER R2") fastDSP = false;
 
+  //will hang sometimes in the "Bach in Time" stage
+  if(title == "BUBSY II" && region == "PAL") fastDSP = false;
+
+  //fixes an errant scanline on the title screen due to writing to PPU registers too late
+  if(title == "ADVENTURES OF FRANKEN" && region == "PAL") renderCycle = 32;
+
+  //fixes an errant scanline on the title screen due to writing to PPU registers too late
+  if(title == "FIREPOWER 2000" || title == "SUPER SWIV") renderCycle = 32;
+
+  //fixes an errant scanline on the title screen due to writing to PPU registers too late
+  if(title == "NHL '94" || title == "NHL PROHOCKEY'94") renderCycle = 32;
+
+  //fixes an errant scanline on the title screen due to writing to PPU registers too late
+  if(title == "Sugoro Quest++") renderCycle = 128;
+
+  if(settings.emulator.hack.hotfixes) {
+    //this game transfers uninitialized memory into video RAM: this can cause a row of invalid tiles
+    //to appear in the background of stage 12. this one is a bug in the original game, so only enable
+    //it if the hotfixes option has been enabled.
+    if(title == "The Hurricanes") entropy = "None";
+
+    //Frisky Tom attract sequence sometimes hangs when WRAM is initialized to pseudo-random patterns
+    if(title == "ニチブツ・アーケード・クラシックス") entropy = "None";
+  }
+
+  emulator->configure("Hacks/Entropy", entropy);
+  emulator->configure("Hacks/CPU/FastJoypadPolling", fastJoypadPolling);
   emulator->configure("Hacks/PPU/Fast", fastPPU);
   emulator->configure("Hacks/PPU/NoSpriteLimit", fastPPUNoSpriteLimit);
+  emulator->configure("Hacks/PPU/RenderCycle", renderCycle);
   emulator->configure("Hacks/PPU/Mode7/Scale", settings.emulator.hack.ppu.mode7.scale);
   emulator->configure("Hacks/PPU/Mode7/Perspective", settings.emulator.hack.ppu.mode7.perspective);
   emulator->configure("Hacks/PPU/Mode7/Widescreen", settings.emulator.hack.ppu.mode7.widescreen);
@@ -25,18 +85,13 @@ auto Program::hackCompatibility() -> void {
   emulator->configure("Hacks/PPU/Mode7/WindRad", settings.emulator.hack.ppu.mode7.windRad);
   emulator->configure("Hacks/PPU/Mode7/WsMode", settings.emulator.hack.ppu.mode7.wsMode);
   emulator->configure("Hacks/PPU/Mode7/WsBgCol", settings.emulator.hack.ppu.mode7.wsBgCol);
-  emulator->configure("Hacks/PPU/Mode7/UnintrMode", settings.emulator.hack.ppu.mode7.unintrMode);
-  emulator->configure("Hacks/PPU/Mode7/UnintrTop", settings.emulator.hack.ppu.mode7.unintrTop);
-  emulator->configure("Hacks/PPU/Mode7/UnintrBottom", settings.emulator.hack.ppu.mode7.unintrBottom);
-  emulator->configure("Hacks/PPU/Mode7/UnintrLeft", settings.emulator.hack.ppu.mode7.unintrLeft);
-  emulator->configure("Hacks/PPU/Mode7/UnintrRight", settings.emulator.hack.ppu.mode7.unintrRight);
   emulator->configure("Hacks/PPU/Mode7/WsMarker", settings.emulator.hack.ppu.mode7.wsMarker);
   emulator->configure("Hacks/PPU/Mode7/WsMarkerAlpha", settings.emulator.hack.ppu.mode7.wsMarkerAlpha);
   emulator->configure("Hacks/PPU/Mode7/Supersample", settings.emulator.hack.ppu.mode7.supersample);
   emulator->configure("Hacks/PPU/Mode7/Mosaic", settings.emulator.hack.ppu.mode7.mosaic);
   emulator->configure("Hacks/DSP/Fast", fastDSP);
   emulator->configure("Hacks/DSP/Cubic", settings.emulator.hack.dsp.cubic);
-  emulator->configure("Hacks/Coprocessors/DelayedSync", coprocessorsDelayedSync);
+  emulator->configure("Hacks/Coprocessor/DelayedSync", coprocessorDelayedSync);
 }
 
 auto Program::hackPatchMemory(vector<uint8_t>& data) -> void {
@@ -51,34 +106,5 @@ auto Program::hackPatchMemory(vector<uint8_t>& data) -> void {
     if(data[0x4d6d] == 0x10) data[0x4d6d] = 0x80;
     if(data[0x4ded] == 0x10) data[0x4ded] = 0x80;
     if(data[0x4e9a] == 0x10) data[0x4e9a] = 0x80;
-  }
-}
-
-auto Program::hackOverclockSuperFX() -> void {
-  //todo: implement a better way of detecting SuperFX games
-  //todo: apply multiplier changes on reset, not just on game load?
-  double multiplier = emulatorSettings.superFXValue.text().natural() / 100.0;
-  if(multiplier == 1.0) return;
-
-  auto title = superFamicom.title;
-  if(title == "NIDAN MORITASHOGI2") return;  //ST018 uses same clock speed as SuperFX
-
-  auto document = BML::unserialize(superFamicom.manifest);
-
-  //GSU-1, GSU-2 have a 21440000hz oscillator
-  if(auto oscillator = document["game/board/oscillator"]) {
-    if(oscillator["frequency"].text() == "21440000") {
-      oscillator["frequency"].setValue(uint(21440000 * multiplier));
-      superFamicom.manifest = BML::serialize(document);
-    }
-    return;
-  }
-
-  //MARIO CHIP 1 uses CPU oscillator; force it to use its own crystal to overclock it
-  bool marioChip1 = false;
-  if(title == "STAR FOX" || title == "STAR WING") marioChip1 = true;
-  if(marioChip1) {
-    document("game/board/oscillator/frequency").setValue(uint(21440000 * multiplier));
-    superFamicom.manifest = BML::serialize(document);
   }
 }

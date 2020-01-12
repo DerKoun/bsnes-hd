@@ -15,6 +15,12 @@
   return self;
 }
 
+-(void) resetCursorRects {
+  if(auto mouseCursor = NSMakeCursor(canvas->mouseCursor())) {
+    [self addCursorRect:self.bounds cursor:mouseCursor];
+  }
+}
+
 -(NSDragOperation) draggingEntered:(id<NSDraggingInfo>)sender {
   return DropPathsOperation(sender);
 }
@@ -40,6 +46,10 @@
     case 2: return canvas->doMouseRelease(hiro::Mouse::Button::Middle);
     }
   }
+}
+
+-(void) mouseEntered:(NSEvent*)event {
+  canvas->doMouseEnter();
 }
 
 -(void) mouseExited:(NSEvent*)event {
@@ -96,8 +106,6 @@ auto pCanvas::construct() -> void {
   @autoreleasepool {
     cocoaView = cocoaCanvas = [[CocoaCanvas alloc] initWith:self()];
     pWidget::construct();
-
-    setDroppable(state().droppable);
   }
 }
 
@@ -129,6 +137,10 @@ auto pCanvas::setDroppable(bool droppable) -> void {
       [cocoaCanvas unregisterDraggedTypes];
     }
   }
+}
+
+auto pCanvas::setFocusable(bool focusable) -> void {
+  //TODO
 }
 
 auto pCanvas::setGeometry(Geometry geometry) -> void {
@@ -168,7 +180,6 @@ auto pCanvas::_rasterize() -> void {
 
     if(width != surfaceWidth || height != surfaceHeight) {
       [cocoaView setImage:nil];
-      [surface release];
       surface = nullptr;
       bitmap = nullptr;
     }
@@ -182,7 +193,7 @@ auto pCanvas::_rasterize() -> void {
         initWithBitmapDataPlanes:nil
         pixelsWide:width pixelsHigh:height
         bitsPerSample:8 samplesPerPixel:4 hasAlpha:YES
-        isPlanar:NO colorSpaceName:NSCalibratedRGBColorSpace
+        isPlanar:NO colorSpaceName:NSDeviceRGBColorSpace
         bitmapFormat:NSAlphaNonpremultipliedBitmapFormat
         bytesPerRow:(width * 4) bitsPerPixel:32
       ] autorelease];

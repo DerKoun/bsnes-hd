@@ -5,6 +5,7 @@
   hiro::mViewport* viewport;
 }
 -(id) initWith:(hiro::mViewport&)viewport;
+-(void) resetCursorRects;
 -(void) drawRect:(NSRect)rect;
 -(BOOL) acceptsFirstResponder;
 -(NSDragOperation) draggingEntered:(id<NSDraggingInfo>)sender;
@@ -19,7 +20,8 @@ struct pViewport : pWidget {
   Declare(Viewport, Widget)
 
   auto handle() const -> uintptr_t;
-  auto setDroppable(bool droppable) -> void;
+  auto setDroppable(bool droppable) -> void override;
+  auto setFocusable(bool focusable) -> void override;
 
   CocoaViewport* cocoaViewport = nullptr;
 };

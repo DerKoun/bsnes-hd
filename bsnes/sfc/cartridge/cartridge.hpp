@@ -1,10 +1,12 @@
 struct Cartridge {
   auto pathID() const -> uint { return information.pathID; }
   auto region() const -> string { return information.region; }
+  auto headerTitle() const -> string { return game.title; }
 
   auto hashes() const -> vector<string>;
   auto manifests() const -> vector<string>;
   auto titles() const -> vector<string>;
+  auto title() const -> string;
 
   auto load() -> bool;
   auto save() -> void;
@@ -59,7 +61,6 @@ private:
   Markup::Node board;
 
   //cartridge.cpp
-  auto loadGameBoy() -> bool;
   auto loadBSMemory() -> bool;
   auto loadSufamiTurboA() -> bool;
   auto loadSufamiTurboB() -> bool;
@@ -67,14 +68,13 @@ private:
   //load.cpp
   auto loadBoard(string) -> Markup::Node;
   auto loadCartridge(Markup::Node) -> void;
-  auto loadCartridgeGameBoy(Markup::Node) -> void;
   auto loadCartridgeBSMemory(Markup::Node) -> void;
   auto loadCartridgeSufamiTurboA(Markup::Node) -> void;
   auto loadCartridgeSufamiTurboB(Markup::Node) -> void;
 
   auto loadMemory(Memory&, Markup::Node, bool required) -> void;
   template<typename T> auto loadMap(Markup::Node, T&) -> uint;
-  auto loadMap(Markup::Node, const function<uint8 (uint24, uint8)>&, const function<void (uint24, uint8)>&) -> uint;
+  auto loadMap(Markup::Node, const function<uint8 (uint, uint8)>&, const function<void (uint, uint8)>&) -> uint;
 
   auto loadROM(Markup::Node) -> void;
   auto loadRAM(Markup::Node) -> void;
@@ -100,7 +100,6 @@ private:
 
   //save.cpp
   auto saveCartridge(Markup::Node) -> void;
-  auto saveCartridgeGameBoy(Markup::Node) -> void;
   auto saveCartridgeBSMemory(Markup::Node) -> void;
   auto saveCartridgeSufamiTurboA(Markup::Node) -> void;
   auto saveCartridgeSufamiTurboB(Markup::Node) -> void;

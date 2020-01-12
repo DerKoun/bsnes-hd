@@ -1,6 +1,6 @@
-auto SuperFX::readIO(uint24 addr, uint8) -> uint8 {
-  cpu.synchronize(*this);
-  addr = 0x3000 | addr.bits(0,9);
+auto SuperFX::readIO(uint addr, uint8) -> uint8 {
+  cpu.synchronizeCoprocessors();
+  addr = 0x3000 | addr & 0x3ff;
 
   if(addr >= 0x3100 && addr <= 0x32ff) {
     return readCache(addr - 0x3100);
@@ -18,7 +18,7 @@ auto SuperFX::readIO(uint24 addr, uint8) -> uint8 {
   case 0x3031: {
     uint8 r = regs.sfr >> 8;
     regs.sfr.irq = 0;
-    cpu.r.irq = 0;
+    cpu.irq(0);
     return r;
   }
 
@@ -50,9 +50,9 @@ auto SuperFX::readIO(uint24 addr, uint8) -> uint8 {
   return 0x00;
 }
 
-auto SuperFX::writeIO(uint24 addr, uint8 data) -> void {
-  cpu.synchronize(*this);
-  addr = 0x3000 | addr.bits(0,9);
+auto SuperFX::writeIO(uint addr, uint8 data) -> void {
+  cpu.synchronizeCoprocessors();
+  addr = 0x3000 | addr & 0x3ff;
 
   if(addr >= 0x3100 && addr <= 0x32ff) {
     return writeCache(addr - 0x3100, data);

@@ -5,9 +5,11 @@
   hiro::mCanvas* canvas;
 }
 -(id) initWith:(hiro::mCanvas&)canvas;
+-(void) resetCursorRects;
 -(NSDragOperation) draggingEntered:(id<NSDraggingInfo>)sender;
 -(BOOL) performDragOperation:(id<NSDraggingInfo>)sender;
 -(void) mouseButton:(NSEvent*)event down:(BOOL)isDown;
+-(void) mouseEntered:(NSEvent*)event;
 -(void) mouseExited:(NSEvent*)event;
 -(void) mouseMove:(NSEvent*)event;
 -(void) mouseDown:(NSEvent*)event;
@@ -29,7 +31,8 @@ struct pCanvas : pWidget {
   auto minimumSize() const -> Size;
   auto setAlignment(Alignment) -> void;
   auto setColor(Color color) -> void;
-  auto setDroppable(bool droppable) -> void;
+  auto setDroppable(bool droppable) -> void override;
+  auto setFocusable(bool focusable) -> void override;
   auto setGeometry(Geometry geometry) -> void override;
   auto setGradient(Gradient gradient) -> void;
   auto setIcon(const image& icon) -> void;

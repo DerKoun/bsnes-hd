@@ -4,11 +4,11 @@ struct Justifier : Controller {
   };
 
   Justifier(uint port, bool chained);
-  ~Justifier();
 
-  auto main() -> void;
   auto data() -> uint2;
   auto latch(bool data) -> void;
+  auto latch() -> void override;
+  auto draw(uint32_t* data, uint pitch, uint width, uint height) -> void override;
 
 //private:
   const bool chained;  //true if the second justifier is attached to the first
@@ -19,7 +19,6 @@ struct Justifier : Controller {
 
   bool active;
   struct Player {
-    shared_pointer<Emulator::Sprite> sprite;
     int x;
     int y;
     bool trigger;

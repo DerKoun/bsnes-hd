@@ -37,13 +37,14 @@ auto OpenGLSurface::release() -> void {
   width = 0, height = 0;
 }
 
-auto OpenGLSurface::render(uint sourceWidth, uint sourceHeight, uint targetWidth, uint targetHeight) -> void {
-  glViewport(0, 0, targetWidth, targetHeight);
+auto OpenGLSurface::render(uint sourceWidth, uint sourceHeight, uint targetX, uint targetY, uint targetWidth, uint targetHeight) -> void {
+  glViewport(targetX, targetY, targetWidth, targetHeight);
 
   float w = (float)sourceWidth / (float)glrSize(sourceWidth);
   float h = (float)sourceHeight / (float)glrSize(sourceHeight);
-  float u = (float)targetWidth, v = (float)targetHeight;
-  GLint location;
+
+  float u = (float)targetWidth;
+  float v = (float)targetHeight;
 
   GLfloat modelView[] = {
     1, 0, 0, 0,
@@ -60,7 +61,7 @@ auto OpenGLSurface::render(uint sourceWidth, uint sourceHeight, uint targetWidth
   };
 
   GLfloat modelViewProjection[4 * 4];
-  Matrix::Multiply(modelViewProjection, modelView, 4, 4, projection, 4, 4);
+  MatrixMultiply(modelViewProjection, modelView, 4, 4, projection, 4, 4);
 
   GLfloat vertices[] = {
     0, 0, 0, 1,
@@ -71,7 +72,7 @@ auto OpenGLSurface::render(uint sourceWidth, uint sourceHeight, uint targetWidth
 
   GLfloat positions[4 * 4];
   for(uint n = 0; n < 16; n += 4) {
-    Matrix::Multiply(&positions[n], &vertices[n], 1, 4, modelViewProjection, 4, 4);
+    MatrixMultiply(&positions[n], &vertices[n], 1, 4, modelViewProjection, 4, 4);
   }
 
   GLfloat texCoords[] = {

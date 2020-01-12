@@ -28,6 +28,7 @@
     } \
     return T(); \
   } \
+  template<typename T = string> auto attribute(const string& name) const { return self().attribute<T>(name); } \
   auto enabled(bool recursive = false) const { return self().enabled(recursive); } \
   auto focused() const { return self().focused(); } \
   auto font(bool recursive = false) const { return self().font(recursive); } \
@@ -38,12 +39,11 @@
     } \
     return Object(); \
   } \
-  template<typename T = string> auto property(const string& name) const { return self().property<T>(name); } \
   auto remove() { return self().remove(), *this; } \
+  template<typename T = string, typename U = string> auto setAttribute(const string& name, const U& value = {}) { return self().setAttribute<T, U>(name, value), *this; } \
   auto setEnabled(bool enabled = true) { return self().setEnabled(enabled), *this; } \
   auto setFocused() { return self().setFocused(), *this; } \
   auto setFont(const Font& font = {}) { return self().setFont(font), *this; } \
-  template<typename T = string, typename U = string> auto setProperty(const string& name, const U& value = {}) { return self().setProperty<T, U>(name, value), *this; } \
   auto setVisible(bool visible = true) { return self().setVisible(visible), *this; } \
   auto visible(bool recursive = false) const { return self().visible(recursive); } \
 
@@ -62,6 +62,24 @@
 
 #define DeclareSharedWidget(Name) \
   DeclareSharedSizable(Name) \
+  auto droppable() const { return self().droppable(); } \
+  auto doDrop(vector<string> names) { return self().doDrop(names); } \
+  auto doMouseEnter() const { return self().doMouseEnter(); } \
+  auto doMouseLeave() const { return self().doMouseLeave(); } \
+  auto doMouseMove(Position position) const { return self().doMouseMove(position); } \
+  auto doMousePress(Mouse::Button button) const { return self().doMousePress(button); } \
+  auto doMouseRelease(Mouse::Button button) const { return self().doMouseRelease(button); } \
+  auto focusable() const { return self().focusable(); } \
+  auto mouseCursor() const { return self().mouseCursor(); } \
+  auto onDrop(const function<void (vector<string>)>& callback = {}) { return self().onDrop(callback), *this; } \
+  auto onMouseEnter(const function<void ()>& callback = {}) { return self().onMouseEnter(callback), *this; } \
+  auto onMouseLeave(const function<void ()>& callback = {}) { return self().onMouseLeave(callback), *this; } \
+  auto onMouseMove(const function<void (Position)>& callback = {}) { return self().onMouseMove(callback), *this; } \
+  auto onMousePress(const function<void (Mouse::Button)>& callback = {}) { return self().onMousePress(callback), *this; } \
+  auto onMouseRelease(const function<void (Mouse::Button)>& callback = {}) { return self().onMouseRelease(callback), *this; } \
+  auto setDroppable(bool droppable = true) { return self().setDroppable(droppable), *this; } \
+  auto setFocusable(bool focusable = true) { return self().setFocusable(focusable), *this; } \
+  auto setMouseCursor(const MouseCursor& mouseCursor = {}) { return self().setMouseCursor(mouseCursor), *this; } \
   auto setToolTip(const string& toolTip = "") { return self().setToolTip(toolTip), *this; } \
   auto toolTip() const { return self().toolTip(); } \
 
@@ -213,22 +231,10 @@ struct Canvas : sCanvas {
   auto alignment() const { return self().alignment(); }
   auto color() const { return self().color(); }
   auto data() { return self().data(); }
-  auto droppable() const { return self().droppable(); }
-  auto doDrop(vector<string> names) { return self().doDrop(names); }
-  auto doMouseLeave() const { return self().doMouseLeave(); }
-  auto doMouseMove(Position position) const { return self().doMouseMove(position); }
-  auto doMousePress(Mouse::Button button) const { return self().doMousePress(button); }
-  auto doMouseRelease(Mouse::Button button) const { return self().doMouseRelease(button); }
   auto gradient() const { return self().gradient(); }
   auto icon() const { return self().icon(); }
-  auto onDrop(const function<void (vector<string>)>& callback = {}) { return self().onDrop(callback), *this; }
-  auto onMouseLeave(const function<void ()>& callback = {}) { return self().onMouseLeave(callback), *this; }
-  auto onMouseMove(const function<void (Position)>& callback = {}) { return self().onMouseMove(callback), *this; }
-  auto onMousePress(const function<void (Mouse::Button)>& callback = {}) { return self().onMousePress(callback), *this; }
-  auto onMouseRelease(const function<void (Mouse::Button)>& callback = {}) { return self().onMouseRelease(callback), *this; }
   auto setAlignment(Alignment alignment = {}) { return self().setAlignment(alignment), *this; }
   auto setColor(Color color) { return self().setColor(color), *this; }
-  auto setDroppable(bool droppable = true) { return self().setDroppable(droppable), *this; }
   auto setGradient(Gradient gradient = {}) { return self().setGradient(gradient), *this; }
   auto setIcon(const image& icon = {}) { return self().setIcon(icon), *this; }
   auto setSize(Size size = {}) { return self().setSize(size), *this; }
@@ -465,11 +471,7 @@ struct Label : sLabel {
 
   auto alignment() const { return self().alignment(); }
   auto backgroundColor() const { return self().backgroundColor(); }
-  auto doMousePress(Mouse::Button button) const { return self().doMousePress(button); }
-  auto doMouseRelease(Mouse::Button button) const { return self().doMouseRelease(button); }
   auto foregroundColor() const { return self().foregroundColor(); }
-  auto onMousePress(const function<void (Mouse::Button)>& callback = {}) { return self().onMousePress(callback), *this; }
-  auto onMouseRelease(const function<void (Mouse::Button)>& callback = {}) { return self().onMouseRelease(callback), *this; }
   auto setAlignment(Alignment alignment = {}) { return self().setAlignment(alignment), *this; }
   auto setBackgroundColor(Color color = {}) { return self().setBackgroundColor(color), *this; }
   auto setForegroundColor(Color color = {}) { return self().setForegroundColor(color), *this; }
@@ -544,7 +546,6 @@ struct RadioLabel : sRadioLabel {
 struct SourceEdit : sSourceEdit {
   DeclareSharedWidget(SourceEdit)
 
-  auto cursor() const { return self().cursor(); }
   auto doChange() const { return self().doChange(); }
   auto doMove() const { return self().doMove(); }
   auto editable() const { return self().editable(); }
@@ -553,14 +554,15 @@ struct SourceEdit : sSourceEdit {
   auto onChange(const function<void ()>& callback = {}) { return self().onChange(callback), *this; }
   auto onMove(const function<void ()>& callback = {}) { return self().onMove(callback), *this; }
   auto scheme() const { return self().scheme(); }
-  auto setCursor(Cursor cursor = {}) { return self().setCursor(cursor), *this; }
   auto setEditable(bool editable = true) { return self().setEditable(editable), *this; }
   auto setLanguage(const string& language = "") { return self().setLanguage(language), *this; }
   auto setNumbered(bool numbered = true) { return self().setNumbered(numbered), *this; }
   auto setScheme(const string& scheme = "") { return self().setScheme(scheme), *this; }
   auto setText(const string& text = "") { return self().setText(text), *this; }
+  auto setTextCursor(TextCursor textCursor = {}) { return self().setTextCursor(textCursor), *this; }
   auto setWordWrap(bool wordWrap = true) { return self().setWordWrap(wordWrap), *this; }
   auto text() const { return self().text(); }
+  auto textCursor() const { return self().textCursor(); }
   auto wordWrap() const { return self().wordWrap(); }
 };
 #endif
@@ -698,7 +700,7 @@ struct TableView : sTableView {
   auto column(uint position) const { return self().column(position); }
   auto columnCount() const { return self().columnCount(); }
   auto columns() const { return self().columns(); }
-  auto doActivate() const { return self().doActivate(); }
+  auto doActivate(sTableViewCell cell) const { return self().doActivate(cell); }
   auto doChange() const { return self().doChange(); }
   auto doContext() const { return self().doContext(); }
   auto doEdit(sTableViewCell cell) const { return self().doEdit(cell); }
@@ -709,7 +711,7 @@ struct TableView : sTableView {
   auto item(unsigned position) const { return self().item(position); }
   auto itemCount() const { return self().itemCount(); }
   auto items() const { return self().items(); }
-  auto onActivate(const function<void ()>& callback = {}) { return self().onActivate(callback), *this; }
+  auto onActivate(const function<void (TableViewCell)>& callback = {}) { return self().onActivate(callback), *this; }
   auto onChange(const function<void ()>& callback = {}) { return self().onChange(callback), *this; }
   auto onContext(const function<void ()>& callback = {}) { return self().onContext(callback), *this; }
   auto onEdit(const function<void (TableViewCell)>& callback = {}) { return self().onEdit(callback), *this; }
@@ -719,6 +721,8 @@ struct TableView : sTableView {
   auto remove(sTableViewItem item) { return self().remove(item), *this; }
   auto reset() { return self().reset(), *this; }
   auto resizeColumns() { return self().resizeColumns(), *this; }
+  auto selectAll() { return self().selectAll(), *this; }
+  auto selectNone() { return self().selectNone(), *this; }
   auto selected() const { return self().selected(); }
   auto setAlignment(Alignment alignment = {}) { return self().setAlignment(alignment), *this; }
   auto setBackgroundColor(Color color = {}) { return self().setBackgroundColor(color), *this; }
@@ -737,7 +741,6 @@ struct TextEdit : sTextEdit {
   DeclareSharedWidget(TextEdit)
 
   auto backgroundColor() const { return self().backgroundColor(); }
-  auto cursor() const { return self().cursor(); }
   auto doChange() const { return self().doChange(); }
   auto doMove() const { return self().doMove(); }
   auto editable() const { return self().editable(); }
@@ -745,12 +748,13 @@ struct TextEdit : sTextEdit {
   auto onChange(const function<void ()>& callback = {}) { return self().onChange(callback), *this; }
   auto onMove(const function<void ()>& callback = {}) { return self().onMove(callback), *this; }
   auto setBackgroundColor(Color color = {}) { return self().setBackgroundColor(color), *this; }
-  auto setCursor(Cursor cursor = {}) { return self().setCursor(cursor), *this; }
   auto setEditable(bool editable = true) { return self().setEditable(editable), *this; }
   auto setForegroundColor(Color color = {}) { return self().setForegroundColor(color), *this; }
   auto setText(const string& text = "") { return self().setText(text), *this; }
+  auto setTextCursor(TextCursor textCursor = {}) { return self().setTextCursor(textCursor), *this; }
   auto setWordWrap(bool wordWrap = true) { return self().setWordWrap(wordWrap), *this; }
   auto text() const { return self().text(); }
+  auto textCursor() const { return self().textCursor(); }
   auto wordWrap() const { return self().wordWrap(); }
 };
 #endif
@@ -790,6 +794,7 @@ struct TreeViewItem : sTreeViewItem {
 struct TreeView : sTreeView {
   DeclareSharedWidget(TreeView)
 
+  auto activation() const { return self().activation(); }
   auto append(sTreeViewItem item) { return self().append(item), *this; }
   auto backgroundColor() const { return self().backgroundColor(); }
   auto collapse(bool recursive = true) { return self().collapse(recursive), *this; }
@@ -808,7 +813,9 @@ struct TreeView : sTreeView {
   auto onToggle(const function<void (sTreeViewItem)>& callback = {}) { return self().onToggle(callback), *this; }
   auto remove(sTreeViewItem item) { return self().remove(item), *this; }
   auto reset() { return self().reset(), *this; }
+  auto selectNone() { return self().selectNone(), *this; }
   auto selected() const { return self().selected(); }
+  auto setActivation(Mouse::Click activation = Mouse::Click::Double) { return self().setActivation(activation), *this; }
   auto setBackgroundColor(Color color = {}) { return self().setBackgroundColor(color), *this; }
   auto setForegroundColor(Color color = {}) { return self().setForegroundColor(color), *this; }
 };
@@ -844,19 +851,7 @@ struct VerticalSlider : sVerticalSlider {
 struct Viewport : sViewport {
   DeclareSharedWidget(Viewport)
 
-  auto doDrop(vector<string> names) const { return self().doDrop(names); }
-  auto doMouseLeave() const { return self().doMouseLeave(); }
-  auto doMouseMove(Position position) const { return self().doMouseMove(position); }
-  auto doMousePress(Mouse::Button button) const { return self().doMousePress(button); }
-  auto doMouseRelease(Mouse::Button button) const { return self().doMouseRelease(button); }
-  auto droppable() const { return self().droppable(); }
   auto handle() const { return self().handle(); }
-  auto onDrop(const function<void (vector<string>)>& callback = {}) { return self().onDrop(callback), *this; }
-  auto onMouseLeave(const function<void ()>& callback = {}) { return self().onMouseLeave(callback), *this; }
-  auto onMouseMove(const function<void (Position)>& callback = {}) { return self().onMouseMove(callback), *this; }
-  auto onMousePress(const function<void (Mouse::Button)>& callback = {}) { return self().onMousePress(callback), *this; }
-  auto onMouseRelease(const function<void (Mouse::Button)>& callback = {}) { return self().onMouseRelease(callback), *this; }
-  auto setDroppable(bool droppable = true) { return self().setDroppable(droppable), *this; }
 };
 #endif
 
@@ -943,6 +938,7 @@ struct Window : sWindow {
   auto setFrameSize(Size size) { return self().setFrameSize(size), *this; }
   auto setFullScreen(bool fullScreen = true) { return self().setFullScreen(fullScreen), *this; }
   auto setGeometry(Geometry geometry) { return self().setGeometry(geometry), *this; }
+  auto setGeometry(Alignment alignment, Size size) { return self().setGeometry(alignment, size), *this; }
   auto setMaximized(bool maximized) { return self().setMaximized(maximized), *this; }
   auto setMaximumSize(Size size = {}) { return self().setMaximumSize(size), *this; }
   auto setMinimized(bool minimized) { return self().setMinimized(minimized), *this; }

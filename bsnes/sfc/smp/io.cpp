@@ -31,19 +31,19 @@ auto SMP::readIO(uint16 address) -> uint8 {
     return dsp.read(io.dspAddr & 0x7f);
 
   case 0xf4:  //CPUIO0
-    synchronize(cpu);
+    synchronizeCPU();
     return io.apu0;
 
   case 0xf5:  //CPUIO1
-    synchronize(cpu);
+    synchronizeCPU();
     return io.apu1;
 
   case 0xf6:  //CPUIO2
-    synchronize(cpu);
+    synchronizeCPU();
     return io.apu2;
 
   case 0xf7:  //CPUIO3
-    synchronize(cpu);
+    synchronizeCPU();
     return io.apu3;
 
   case 0xf8:  //AUXIO4
@@ -81,12 +81,12 @@ auto SMP::writeIO(uint16 address, uint8 data) -> void {
   case 0xf0:  //TEST
     if(r.p.p) break;  //writes only valid when P flag is clear
 
-    io.timersDisable      = data.bit (0);
-    io.ramWritable        = data.bit (1);
-    io.ramDisable         = data.bit (2);
-    io.timersEnable       = data.bit (3);
-    io.externalWaitStates = data.bits(4,5);
-    io.internalWaitStates = data.bits(6,7);
+    io.timersDisable      = data >> 0 & 1;
+    io.ramWritable        = data >> 1 & 1;
+    io.ramDisable         = data >> 2 & 1;
+    io.timersEnable       = data >> 3 & 1;
+    io.externalWaitStates = data >> 4 & 3;
+    io.internalWaitStates = data >> 6 & 3;
 
     timer0.synchronizeStage1();
     timer1.synchronizeStage1();
@@ -95,34 +95,34 @@ auto SMP::writeIO(uint16 address, uint8 data) -> void {
 
   case 0xf1:  //CONTROL
     //0->1 transistion resets timers
-    if(timer0.enable.raise(data.bit(0))) {
+    if(timer0.enable.raise(data & 0x01)) {
       timer0.stage2 = 0;
       timer0.stage3 = 0;
     }
 
-    if(timer1.enable.raise(data.bit(1))) {
+    if(timer1.enable.raise(data & 0x02)) {
       timer1.stage2 = 0;
       timer1.stage3 = 0;
     }
 
-    if(!timer2.enable.raise(data.bit(2))) {
+    if(!timer2.enable.raise(data & 0x04)) {
       timer2.stage2 = 0;
       timer2.stage3 = 0;
     }
 
-    if(data.bit(4)) {
-      synchronize(cpu);
+    if(data & 0x10) {
+      synchronizeCPU();
       io.apu0 = 0x00;
       io.apu1 = 0x00;
     }
 
-    if(data.bit(5)) {
-      synchronize(cpu);
+    if(data & 0x20) {
+      synchronizeCPU();
       io.apu2 = 0x00;
       io.apu3 = 0x00;
     }
 
-    io.iplromEnable = data.bit(7);
+    io.iplromEnable = bool(data & 0x80);
     break;
 
   case 0xf2:  //DSPADDR
@@ -135,22 +135,22 @@ auto SMP::writeIO(uint16 address, uint8 data) -> void {
     break;
 
   case 0xf4:  //CPUIO0
-    synchronize(cpu);
+    synchronizeCPU();
     io.cpu0 = data;
     break;
 
   case 0xf5:  //CPUIO1
-    synchronize(cpu);
+    synchronizeCPU();
     io.cpu1 = data;
     break;
 
   case 0xf6:  //CPUIO2
-    synchronize(cpu);
+    synchronizeCPU();
     io.cpu2 = data;
     break;
 
   case 0xf7:  //CPUIO3
-    synchronize(cpu);
+    synchronizeCPU();
     io.cpu3 = data;
     break;
 

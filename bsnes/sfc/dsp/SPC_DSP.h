@@ -15,7 +15,7 @@ public:
 // Setup
 
 	// Initializes DSP and has it use the 64K RAM provided
-	void init( void* ram_64k );
+	void init( void* ram_64k, void* echo_64k );
 
 	// Sets destination for output samples. If out is NULL or out_size is 0,
 	// doesn't generate any.
@@ -178,7 +178,8 @@ private:
 		voice_t voices [voice_count];
 		
 		// non-emulation state
-		uint8_t* ram; // 64K shared RAM between DSP and SMP
+		uint8_t* ram;   // 64K shared RAM between DSP and SMP
+		uint8_t* echo;  // should point at the same memory as ram; used for older hack compatibility
 		int mute_mask;
 		sample_t* out;
 		sample_t* out_end;
@@ -231,6 +232,9 @@ private:
 	void echo_30();
 	
 	void soft_reset_common();
+
+public:
+    bool mute() { return m.regs[r_flg] & 0x40; }
 };
 
 #include <assert.h>

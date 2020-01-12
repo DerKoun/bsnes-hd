@@ -3,7 +3,7 @@ auto PPU::Background::clip(int n) -> int {
   return n & 0x2000 ? (n | ~1023) : (n & 1023);
 }
 
-//H = 28
+//H = 0
 auto PPU::Background::beginMode7() -> void {
   latch.hoffset = ppu.io.hoffsetMode7;
   latch.voffset = ppu.io.voffsetMode7;
@@ -15,16 +15,17 @@ auto PPU::Background::runMode7() -> void {
   int c = (int16)ppu.io.m7c;
   int d = (int16)ppu.io.m7d;
 
-  int cx = (int13)ppu.io.m7x;
-  int cy = (int13)ppu.io.m7y;
+  int hcenter = (int13)ppu.io.m7x;
+  int vcenter = (int13)ppu.io.m7y;
   int hoffset = (int13)latch.hoffset;
   int voffset = (int13)latch.voffset;
 
-  if(Background::x++ & ~255) return;
   uint x = mosaic.hoffset;
-  uint y = ppu.bg1.mosaic.voffset;  //BG2 vertical mosaic uses BG1 mosaic size
+  uint y = !mosaic.enable ? ppu.vcounter() : ppu.bg1.mosaic.voffset;  //BG2 vertical mosaic uses BG1 mosaic size
 
-  if(--mosaic.hcounter == 0) {
+  if(!mosaic.enable) {
+    mosaic.hoffset += 1;
+  } else if(--mosaic.hcounter == 0) {
     mosaic.hcounter = mosaic.size + 1;
     mosaic.hoffset += mosaic.size + 1;
   }
@@ -32,72 +33,41 @@ auto PPU::Background::runMode7() -> void {
   if(ppu.io.hflipMode7) x = 255 - x;
   if(ppu.io.vflipMode7) y = 255 - y;
 
-  int psx = ((a * clip(hoffset - cx)) & ~63) + ((b * clip(voffset - cy)) & ~63) + ((b * y) & ~63) + (cx << 8);
-  int psy = ((c * clip(hoffset - cx)) & ~63) + ((d * clip(voffset - cy)) & ~63) + ((d * y) & ~63) + (cy << 8);
+  int originX = (a * clip(hoffset - hcenter) & ~63) + (b * clip(voffset - vcenter) & ~63) + (b * y & ~63) + (hcenter << 8);
+  int originY = (c * clip(hoffset - hcenter) & ~63) + (d * clip(voffset - vcenter) & ~63) + (d * y & ~63) + (vcenter << 8);
 
-  int px = psx + (a * x);
-  int py = psy + (c * x);
+  int pixelX = originX + a * x >> 8;
+  int pixelY = originY + c * x >> 8;
+  uint16 paletteAddress = (uint3)pixelY << 3 | (uint3)pixelX;
 
-  //mask pseudo-FP bits
-  px >>= 8;
-  py >>= 8;
+  uint7 tileX = pixelX >> 3;
+  uint7 tileY = pixelY >> 3;
+  uint16 tileAddress = tileY << 7 | tileX;
 
-  uint tile;
-  uint palette;
-  switch(ppu.io.repeatMode7) {
-  //screen repetition outside of screen area
-  case 0:
-  case 1:
-    px &= 1023;
-    py &= 1023;
-    tile = ppu.vram[(py >> 3) * 128 + (px >> 3)].byte(0);
-    palette = ppu.vram[(tile << 6) + ((py & 7) << 3) + (px & 7)].byte(1);
-    break;
+  bool outOfBounds = (pixelX | pixelY) & ~1023;
 
-  //palette color 0 outside of screen area
-  case 2:
-    if((px | py) & ~1023) {
-      palette = 0;
-    } else {
-      px &= 1023;
-      py &= 1023;
-      tile = ppu.vram[(py >> 3) * 128 + (px >> 3)].byte(0);
-      palette = ppu.vram[(tile << 6) + ((py & 7) << 3) + (px & 7)].byte(1);
-    }
-    break;
-
-  //character 0 repetition outside of screen area
-  case 3:
-    if((px | py) & ~1023) {
-      tile = 0;
-    } else {
-      px &= 1023;
-      py &= 1023;
-      tile = ppu.vram[(py >> 3) * 128 + (px >> 3)].byte(0);
-    }
-    palette = ppu.vram[(tile << 6) + ((py & 7) << 3) + (px & 7)].byte(1);
-    break;
-  }
+  uint8 tile = ppu.io.repeatMode7 == 3 && outOfBounds ? 0 : ppu.vram[tileAddress] >> 0;
+  uint8 palette = ppu.io.repeatMode7 == 2 && outOfBounds ? 0 : ppu.vram[tile << 6 | paletteAddress] >> 8;
 
   uint priority;
   if(id == ID::BG1) {
     priority = io.priority[0];
   } else if(id == ID::BG2) {
-    priority = io.priority[bool(palette & 0x80)];
+    priority = io.priority[palette >> 7];
     palette &= 0x7f;
   }
 
   if(palette == 0) return;
 
   if(io.aboveEnable) {
-    output.above.palette = palette;
     output.above.priority = priority;
-    output.above.tile = 0;
+    output.above.palette = palette;
+    output.above.paletteGroup = 0;
   }
 
   if(io.belowEnable) {
-    output.below.palette = palette;
     output.below.priority = priority;
-    output.below.tile = 0;
+    output.below.palette = palette;
+    output.below.paletteGroup = 0;
   }
 }

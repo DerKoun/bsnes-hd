@@ -1,19 +1,19 @@
 ifeq ($(ruby),)
   ifeq ($(platform),windows)
     ruby += video.wgl video.direct3d video.directdraw video.gdi
-    ruby += audio.asio audio.wasapi audio.xaudio2 audio.directsound audio.waveout
+    ruby += audio.wasapi audio.xaudio2 audio.directsound audio.waveout #audio.asio
     ruby += input.windows
   else ifeq ($(platform),macos)
     ruby += video.cgl
     ruby += audio.openal
-    ruby += input.quartz input.carbon
+    ruby += input.quartz #input.carbon
   else ifeq ($(platform),linux)
-    ruby += video.glx video.xvideo video.xshm
+    ruby += video.glx video.glx2 video.xvideo video.xshm
     ruby += audio.oss audio.alsa audio.openal audio.pulseaudio audio.pulseaudiosimple audio.ao
     ruby += input.sdl input.xlib input.udev
   else ifeq ($(platform),bsd)
     ruby += video.glx video.glx2 video.xvideo video.xshm
-    ruby += audio.oss audio.openal
+    ruby += audio.oss #audio.pulseaudio
     ruby += input.sdl input.xlib
   endif
 endif
@@ -54,16 +54,17 @@ ifeq ($(platform),windows)
 endif
 
 ifeq ($(platform),macos)
+  ruby.options += -framework IOKit
   ruby.options += $(if $(findstring audio.openal,$(ruby)),-framework OpenAL)
 endif
 
 ifeq ($(platform),linux)
-  ruby.options += -lX11 -lXext
+  ruby.options += -lX11 -lXext -lXrandr
   ruby.options += $(if $(findstring audio.openal,$(ruby)),-lopenal)
 endif
 
 ifeq ($(platform),bsd)
-  ruby.options += -lX11 -lXext
+  ruby.options += -lX11 -lXext -lXrandr
   ruby.options += $(if $(findstring audio.openal,$(ruby)),-lopenal)
 endif
 

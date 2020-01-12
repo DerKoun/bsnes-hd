@@ -1,8 +1,6 @@
 auto VideoSettings::create() -> void {
-  setIcon(Icon::Device::Display);
-  setText("Video");
-
-  layout.setPadding(5_sx);
+  setCollapsible();
+  setVisible(false);
 
   colorAdjustmentLabel.setFont(Font().setBold()).setText("Color Adjustment");
   colorLayout.setSize({3, 3});
@@ -31,4 +29,15 @@ auto VideoSettings::create() -> void {
     gammaValue.setText(value);
     program.updateVideoPalette();
   }).doChange();
+
+  dimmingOption.setText("Dim video when idle").setToolTip(
+    "Darkens the video to indicate that the emulation is not running."
+  ).setChecked(settings.video.dimming).onToggle([&] {
+    settings.video.dimming = dimmingOption.checked();
+  });
+
+  snowOption.setText("Draw snow effect when idle").setChecked(settings.video.snow).onToggle([&] {
+    settings.video.snow = snowOption.checked();
+    presentation.updateProgramIcon();
+  });
 }

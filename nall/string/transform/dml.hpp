@@ -1,7 +1,7 @@
 #pragma once
 
 /* Document Markup Language (DML) v1.0 parser
- * revision 0.04
+ * revision 0.05
  */
 
 #include <nall/location.hpp>
@@ -9,6 +9,11 @@
 namespace nall {
 
 struct DML {
+  inline auto title() const -> string { return state.title; }
+  inline auto subtitle() const -> string { return state.subtitle; }
+  inline auto description() const -> string { return state.description; }
+  inline auto content() const -> string { return state.output; }
+
   auto& setAllowHTML(bool allowHTML) { settings.allowHTML = allowHTML; return *this; }
   auto& setHost(const string& hostname) { settings.host = {hostname, "/"}; return *this; }
   auto& setPath(const string& pathname) { settings.path = pathname; return *this; }
@@ -17,6 +22,8 @@ struct DML {
 
   auto parse(const string& filedata, const string& pathname) -> string;
   auto parse(const string& filename) -> string;
+
+  auto attribute(const string& name) const -> string;
 
 private:
   struct Settings {
@@ -28,9 +35,18 @@ private:
   } settings;
 
   struct State {
+    string title;
+    string subtitle;
+    string description;
     string output;
     uint sections = 0;
   } state;
+
+  struct Attribute {
+    string name;
+    string value;
+  };
+  vector<Attribute> attributes;
 
   auto parseDocument(const string& filedata, const string& pathname, uint depth) -> bool;
   auto parseBlock(string& block, const string& pathname, uint depth) -> bool;
@@ -40,13 +56,22 @@ private:
   auto markup(const string& text) -> string;
 };
 
+inline auto DML::attribute(const string& name) const -> string {
+  for(auto& attribute : attributes) {
+    if(attribute.name == name) return attribute.value;
+  }
+  return {};
+}
+
 inline auto DML::parse(const string& filedata, const string& pathname) -> string {
+  state = {};
   settings.path = pathname;
   parseDocument(filedata, settings.path, 0);
   return state.output;
 }
 
 inline auto DML::parse(const string& filename) -> string {
+  state = {};
   if(!settings.path) settings.path = Location::path(filename);
   string document = settings.reader ? settings.reader(filename) : string::read(filename);
   parseDocument(document, settings.path, 0);
@@ -81,6 +106,22 @@ inline auto DML::parseBlock(string& block, const string& pathname, uint depth) -
     }
   }
 
+  //attribute
+  else if(block.beginsWith("! ")) {
+    for(auto& line : lines) {
+      auto parts = line.trimLeft("! ", 1L).split(":", 1L);
+      if(parts.size() == 2) attributes.append({parts[0].strip(), parts[1].strip()});
+    }
+  }
+
+  //description
+  else if(block.beginsWith("? ")) {
+    while(lines) {
+      state.description.append(lines.takeLeft().trimLeft("? ", 1L), " ");
+    }
+    state.description.strip();
+  }
+
   //section
   else if(block.beginsWith("# ")) {
     if(settings.sectioned) {
@@ -90,12 +131,13 @@ inline auto DML::parseBlock(string& block, const string& pathname, uint depth) -
     auto content = lines.takeLeft().trimLeft("# ", 1L).split("::", 1L).strip();
     auto data = markup(content[0]);
     auto name = escape(content(1, data.hash()));
-    state.output.append("<header id=\"", name, "\">", data);
+    state.subtitle = content[0];
+    state.output.append("<h2 id=\"", name, "\">", data);
     for(auto& line : lines) {
       if(!line.beginsWith("# ")) continue;
       state.output.append("<span>", line.trimLeft("# ", 1L), "</span>");
     }
-    state.output.append("</header>\n");
+    state.output.append("</h2>\n");
   }
 
   //header
@@ -103,13 +145,13 @@ inline auto DML::parseBlock(string& block, const string& pathname, uint depth) -
     auto content = slice(lines.takeLeft(), depth + 1).split("::", 1L).strip();
     auto data = markup(content[0]);
     auto name = escape(content(1, data.hash()));
-    if(depth <= 6) {
-      state.output.append("<h", depth, " id=\"", name, "\">", data);
+    if(depth <= 4) {
+      state.output.append("<h", depth + 2, " id=\"", name, "\">", data);
       for(auto& line : lines) {
         if(count(line, '=') != depth) continue;
         state.output.append("<span>", slice(line, depth + 1), "</span>");
       }
-      state.output.append("</h", depth, ">\n");
+      state.output.append("</h", depth + 2, ">\n");
     }
   }
 
@@ -176,7 +218,12 @@ inline auto DML::parseBlock(string& block, const string& pathname, uint depth) -
 
   //paragraph
   else {
-    state.output.append("<p>", markup(block), "</p>\n");
+    auto content = markup(block);
+    if(content.beginsWith("<figure") && content.endsWith("</figure>")) {
+      state.output.append(content, "\n");
+    } else {
+      state.output.append("<p>", content, "</p>\n");
+    }
   }
 
   return true;
@@ -213,45 +260,87 @@ inline auto DML::markup(const string& s) -> string {
   boolean deletion;
   boolean code;
 
-  natural link, linkBase;
-  natural embed, embedBase;
+  maybe<uint> link;
+  maybe<uint> image;
 
   for(uint n = 0; n < s.size();) {
     char a = s[n];
     char b = s[n + 1];
 
-    if(!link && !embed) {
+    if(!link && !image) {
       if(a == '*' && b == '*') { t.append(strong.flip() ? "<strong>" : "</strong>"); n += 2; continue; }
       if(a == '/' && b == '/') { t.append(emphasis.flip() ? "<em>" : "</em>"); n += 2; continue; }
       if(a == '_' && b == '_') { t.append(insertion.flip() ? "<ins>" : "</ins>"); n += 2; continue; }
       if(a == '~' && b == '~') { t.append(deletion.flip() ? "<del>" : "</del>"); n += 2; continue; }
       if(a == '|' && b == '|') { t.append(code.flip() ? "<code>" : "</code>"); n += 2; continue; }
       if(a =='\\' && b =='\\') { t.append("<br>"); n += 2; continue; }
+
+      if(a == '[' && b == '[') { n += 2; link = n; continue; }
+      if(a == '{' && b == '{') { n += 2; image = n; continue; }
     }
 
-    if(!embed) {
-      if(link == 0 && a == '[' && b == '[') { t.append("<a href=\""); link = 1; linkBase = n += 2; continue; }
-      if(link == 1 && a == ':' && b == ':') { t.append("\">"); link = 2; n += 2; continue; }
-      if(link == 1 && a == ']' && b == ']') { t.append("\">", slice(s, linkBase, n - linkBase), "</a>"); n += 2; link = 0; continue; }
-      if(link == 2 && a == ']' && b == ']') { t.append("</a>"); n += 2; link = 0; continue; }
-      if(link == 1 && a == '@' && b == '/') { t.append(settings.host); n += 2; continue; }
+    if(link && !image && a == ']' && b == ']') {
+      auto list = slice(s, link(), n - link()).split("::", 1L);
+      string uri = list.last();
+      string name = list.size() == 2 ? list.first() : list.last().split("//", 1L).last();
+
+      t.append("<a href=\"", escape(uri), "\">", escape(name), "</a>");
+
+      n += 2;
+      link = nothing;
+      continue;
     }
 
-    if(!link) {
-      if(embed == 0 && a == '{' && b == '{') { t.append("<img src=\""); embed = 1; embedBase = n += 2; continue; }
-      if(embed == 1 && a == ':' && b == ':') { t.append("\" alt=\""); embed = 2; n += 2; continue; }
-      if(embed != 0 && a == '}' && b == '}') { t.append("\">"); embed = 0; n += 2; continue; }
-      if(embed == 1 && a == '@' && b == '/') { t.append(settings.host); n += 2; continue; }
+    if(image && !link && a == '}' && b == '}') {
+      auto side = slice(s, image(), n - image()).split("}{", 1L);
+      auto list = side(0).split("::", 1L);
+      string uri = list.last();
+      string name = list.size() == 2 ? list.first() : list.last().split("//", 1L).last();
+      list = side(1).split("; ");
+      boolean link, title, caption;
+      string width, height;
+      for(auto p : list) {
+        if(p == "link") { link = true; continue; }
+        if(p == "title") { title = true; continue; }
+        if(p == "caption") { caption = true; continue; }
+        if(p.beginsWith("width:")) { p.trimLeft("width:", 1L); width = p.strip(); continue; }
+        if(p.beginsWith("height:")) { p.trimLeft("height:", 1L); height = p.strip(); continue; }
+      }
+
+      if(caption) {
+        t.append("<figure class='image'>\n");
+        if(link) t.append("<a href=\"", escape(uri), "\">");
+        t.append("<img loading=\"lazy\" src=\"", escape(uri), "\" alt=\"", escape(name ? name : uri.hash()), "\"");
+        if(title) t.append(" title=\"", escape(name), "\"");
+        if(width) t.append(" width=\"", escape(width), "\"");
+        if(height) t.append(" height=\"", escape(height), "\"");
+        t.append(">\n");
+        if(link) t.append("</a>\n");
+        t.append("<figcaption>", escape(name), "</figcaption>\n");
+        t.append("</figure>");
+      } else {
+        if(link) t.append("<a href=\"", escape(uri), "\">");
+        t.append("<img loading=\"lazy\" src=\"", escape(uri), "\" alt=\"", escape(name ? name : uri.hash()), "\"");
+        if(title) t.append(" title=\"", escape(name), "\"");
+        if(width && height) t.append(" style=\"width: ", escape(width), "px; max-height: ", escape(height), "px;\"");
+        if(width) t.append(" width=\"", escape(width), "\"");
+        if(height) t.append(" height=\"", escape(height), "\"");
+        t.append(">");
+        if(link) t.append("</a>");
+      }
+
+      n += 2;
+      image = nothing;
+      continue;
     }
 
+    if(link || image) { n++; continue; }
     if(a =='\\') { t.append(b); n += 2; continue; }
     if(a == '&') { t.append("&amp;"); n++; continue; }
     if(a == '<') { t.append("&lt;"); n++; continue; }
     if(a == '>') { t.append("&gt;"); n++; continue; }
     if(a == '"') { t.append("&quot;"); n++; continue; }
-
-    t.append(a);
-    n++;
+    t.append(a); n++; continue;
   }
 
   if(strong) t.append("</strong>");
@@ -259,9 +348,6 @@ inline auto DML::markup(const string& s) -> string {
   if(insertion) t.append("</ins>");
   if(deletion) t.append("</del>");
   if(code) t.append("</code>");
-  if(link == 1) t.append("\">", slice(s, linkBase, s.size() - linkBase), "</a>");
-  if(link == 2) t.append("</a>");
-  if(embed != 0) t.append("\">");
 
   return t;
 }

@@ -1,15 +1,13 @@
-# bsnes-hd
+# bsnes-hd *beta 10*
 
-- [github project](https://github.com/DerKoun/bsnes-hd)
 - [downloads](https://github.com/DerKoun/bsnes-hd/releases) for the latest betas
-- [posts](https://www.reddit.com/r/emulation/search/?q=hd%20mode%207&restrict_sr=1&sort=new) and discussions for every beta on Reddit *r/emulation*
-- [bsneshd-dev](https://discord.gg/3bVaNcK) at *Emulator Nexus* Discord (not just for developers, feel free to post suggestions, issues, game specific settings, recommended games, broken games, videos, screenshots, ...)
-
-
+- [GitHub project](https://github.com/DerKoun/bsnes-hd) for source code, issues, feature requests, ...
+- [Reddit](https://www.reddit.com/r/emulation/search/?q=bsnes-hd&restrict_sr=1&sort=new) for announcements and discussions on *r/emulation*
+- [Discord](https://discord.gg/7ahAzCV) if you prefer chatting (Thanks to everyone who set it up and keeps it running)
 
 ## What is it?
 
-bsnes-hd (called "*HD Mode 7 mod, for bsnes*" in early betas) is a fork of bsnes (great SNES emulator by *byuu*, currently based on version 107r3) that adds HD video features, such as:
+bsnes-hd (called "*HD Mode 7 mod, for bsnes*" in early betas) is a fork of bsnes (great SNES emulator by *byuu*) that adds HD video features, such as:
 
 ### HD Mode 7
 
@@ -23,9 +21,11 @@ Extending the scenes to the left and right, without distorting them. Works for m
 - **Demo video**: *Chrono Trigger* ending credits: [Beyond Time](https://www.youtube.com/watch?v=YE1gp6BWilg) by *retroprez* (youtube)
 - **Demo video**: *Chrono Trigger* ending credits: [Float Away](https://www.youtube.com/watch?v=Ss49vVbULOQ) by *retroprez* (youtube)
 
+Objects/Sprites will not be visible correctly in the widescreen areas. Fixing this will require ROM-hacks. Some technical information is available below.
+
 ### True color
 
-Color calculation are done at true color instead of the SNES color depth (3*8 instead of 3*5 bit). With the optional line color smoothing color "steps" turn into actual gradients (without influencing the sharpness of the artwork).
+Color calculation are done at true color instead of the SNES color depth (3x8 instead of 3x5 bit). With the optional line color smoothing color "steps" turn into actual gradients (without influencing the sharpness of the artwork).
 
 ### Other high resolution features
 
@@ -33,7 +33,7 @@ Smother color gradients and window effect, not limited by the original resolutio
 
 ### plus some non-HD related features
 
-like the ability to disable background layers, sprites and window effects for screenshots for wallpapers or soft crop to zoom in, leaving maps or static art off the sides of the screen.
+like the ability to disable background layers, sprites and window effects for screenshots for wallpapers.
 
 ### more to come
 
@@ -42,15 +42,24 @@ Feel free to suggest features. Please remember that this fork focuses on HD and 
 
 ## Help Wanted
 
-### Converting C++ Rendering Code to Shaders for Optimization
+### Performance on devices
 
-Currently all the HD rendering is running on the CPU cores. This will have to be moved to the GPU to achieve usable performance. I'd really appreciate any help with that, even if it's just to get started. Please open an issue if you want to contribute, or contact me on Reddit.
+It would be helpful to know how the framerates of different scale levels is on various devices, especially handhelds and consoles, Android and others.
 
 
+### Vulkan/OpenGL
+
+If someone could set me up a very basic libretro core, that can just display 3 textures, than can have their image data and 3D position changed each frame, I could try out some experiments to improve both performance and quality for most games.
+
+### Logo
+
+I have a view ideas for a banner and an icon, but not the skills to design and render them. I hope someone can help me out with that.
 
 ## Settings
 
-all in Settings / Emulator
+all in *Settings* / *Enhancements* / "*HD Mode 7 / bsnes-hd*"
+
+names in parentheses are for the options of the libretro core
 
 ### Scale
 
@@ -64,7 +73,7 @@ Whether and how pseudo 3D perspective are optimized, avoiding limitations of SNE
 - **auto**(default): enable correction, but try to detect when it breaks the image and automatically disable it.
 - **wide**(default)/**medium**/**narrow**: the distance between the lines used for the interpolation (and also for the detection, if enabled). Use "*wide*" unless it causes issues. Only currently known game that requires this is "*Tales of Phantasia*", requiring "*narrow*".
 
-### Mosaic
+### Mosaic (HD->SD Mosaic)
 
 How to handle Mosaic effects on Mode 7 backgrounds.
 - **non-HD**: use 'classic' Mode 7 with Mosaic applied. Looks as intended, but disables HD and widescreen.
@@ -75,7 +84,7 @@ How to handle Mosaic effects on Mode 7 backgrounds.
 
 Allows basing every resulting pixel on the average of multiple pixels. At 1x scale it allows using the higher precision at the original resolution, e.g. for use with CRT-shaders. At higher resolutions it is basically expensive anti-aliasing. (defaults to "*none*") *Keep in mind that to estimate the performance impact you have to multiply(!) this value with the "*scale*" value.*
 
-### Widescreen
+### Widescreen (WideScreen Mode)
 
 Enables experimental widescreen functionality
 - **none**: do not enable widescreen
@@ -84,27 +93,27 @@ Enables experimental widescreen functionality
 
 ### Aspect ratio
 
-Specifies the widescreen aspect ratio. The actual AR are slightly wider than the selection, use some "*soft crop*" "*left*" and "*right*" for the ideal fullscreen experience. "*HD*" at 5x scale results in a width of 1920, which (combined with "*soft crop*" "*top*" and "*bottom*" at 10, output/center and shader/none) results in perfect 1080p fullscreen. (defaults to 16:9)
+Specifies the widescreen aspect ratio. 16:9 at 5x scale results in a width of 1920, which (with the default *overscan* setting *off*, see below) results in exactly *1080 HD*. (defaults to 16:9)
 
-### WS bg
+### WS bg (WideScreen Area Background Color)
 
 Sets how the backgrounds of the widescreen areas are filled
 - **color**: always fill the widescreen areas with the scanline background colors.
 - **auto**(default): fill the widescreen areas with the scanline background colors, except when the "*Widescreen:Mode 7*" setting disables widescreen for the scene, then use black. 
 - **black**: the widescreen areas always have a black background, ignoring the background color, even when the scene is widescreen. (do not use unless a a game specifically requires it, none known for now)
 
-### WS marker
+### WS marker (WideScreen Marker)
 
 Allows highlighting the edges of the widescreen areas in some ways.
 - **none**(default): no highlighting
 - **lines**: shows a dashed lined at the edges of each widescreen area
 - **darken**: darkens the widescreen areas
 
-### WSM alpha
+### WSM alpha (WideScreen Marker Alpha)
 
 Specifies how translucent the widescreen markers are. (defaults to 1/1)
 
-### BG1/BG2/BG2/BG4
+### BG1/BG2/BG2/BG4 (WideScreen Background 1/.../WideScreen Background 4)
 
 Settings for the background layers.
 - **off**: no widescreen (e.g. for HUDs)
@@ -124,36 +133,41 @@ Settings for sprites/objects.
 - **unsafe**: Sprites are rendered, even if they are entirely in a widescreen area. Works fine for a view games, like "*Super Mario World*", causes artifacts in many.
 - **disable**: Disable sprites entirely, e.g. to remove characters or HUD elements for screenshots for wallpapers.
 
-### Ignore window
+### Ignore window (WideScreen Ignore Window)
 
 - **none**: Apply window effects normally. Widescreen pixels are treated like the nearest non-widescreen pixel.
 - **outside**(default): "*outside*" window effects are ignored, i.e. all pixels are treated like they are at the "*fallback x-coordinate*" for this purpose. This allows Mode 7 widescreen in "*Final Fantasy III*"
 - **outside&always**: Same as outside, but also for "*always*" window effects.
 - **all**: Same as outside, but for all window effects. Can for example be used to remove the shadow and meter from "*F-Zero*" for screenshots for wallpapers (requires changing "*fallback x-coordinate*" from 128 to something like 40).
 
-### Fallback x-coordinate
+### Fallback x-coordinate (WideScreen Ig Win Coordinate)
 
 The x-coordinate used as fallback for "*ignore window*". (defaults to 128 (the center))
 
-### Line color HD
+### Line color HD (HD Background Color Radius)
 
 The amount of neighboring lines used to smooth color gradients that are applied to the frame, e.g. to improve perspective Mode 7 effects, by fading to dark for the "far away" top. "*0*" disables this smoothing. The default is "*4*".
 
-### Window HD
+### Window HD (HD Windowing (experimental))
 
-The amount of neighboring lines used to smooth Window effects, like iris transitions, shadows or spell effects. "*0*" disables smoothing and is the default. (*This feature is considered a preview, as the lines at the top and bottom of effects are currently not entirely HD and it, in general, is not that well tested. Please let me know about any games/scenes/effects that work noticeable badly or well*)
+The amount of neighboring lines used to smooth Window effects, like iris transitions, shadows or spell effects. "*0*" disables smoothing and is the default. (*This feature is considered a preview, as the lines at the top and bottom of effects are currently not entirely HD and it still has noticeable issues. Please let me know about any games/scenes/effects that work noticeable badly or well*)
 
-### Soft crop
+## Differences in setting/options from bsnes
 
-Allows widths at the four edges of the image to be declared uninteresting. So when sizing and placing the image, especially in fullscreen, they can overflow the screen, allowing the significant parts of the image to be larger. So to focus on the top part of "*Super Mario Kart*" set "*bottom*" to 130 and "*top*" to 0. Further tweaking based on your monitor AR and liking may be required.
-- **none**: disable soft crop
-- **center**(default): enable soft crop for output/center
-- **scale**: enable soft crop for output/center and output/scale
+### Settings / Output / Show Overscan Area (Show Overscan)
 
-### SC Top/Bottom/Left/Right
+In *bsnes* the overscan setting allows switching between cropping 8 and 0 lines form top and bottom, which are unused due to the way TVs in the time of the SNES worked. In *bsnes-hd* it switches between 12 and 8 lines, defaulting to 12 (*off*). This cuts of 4 lines on both sides that technically contain content, but should not cut important information as these lines are still in an area that wasn't safe to use (12 lines is 5%). The reason to do is that the resulting height of 216 is exactly a 5th of 1080, so you can integer scale to HD and 4K resolutions, e.g. *5x* at *16:9* is exactly *1080 HD* with every Mode 7 pixel rendered specifically.
 
-The soft crop widths for all four edges. (defaults to 10, 10, 20, 20)
+## Widescreen technical
 
+### Dimensions
 
+The amount of pixel columns added to both sides for the various aspect ratios are: (4:3, 16), (16:10, 40), (16:9, 64), (2:1, 88), (21:9, 120). Those currently are for overscan *off* (see above) and don't change when you change that setting. 
 
-## More documentation to come...
+### Maximum width for objects/sprites
+
+The maximum width for widescreen areas that still can have places objects in them is *96* (exactly 2:1 AR with overscan *on*). 
+
+### Object/sprite wrap-around
+
+At that maximum width *352* is the only coordinate that places a large object (width 64) entirely off screen. Smaller value make it reach into the screen from the right, larger ones from the left.

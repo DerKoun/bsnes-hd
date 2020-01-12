@@ -1,8 +1,6 @@
 auto AudioSettings::create() -> void {
-  setIcon(Icon::Device::Speaker);
-  setText("Audio");
-
-  layout.setPadding(5_sx);
+  setCollapsible();
+  setVisible(false);
 
   effectsLabel.setFont(Font().setBold()).setText("Effects");
   effectsLayout.setSize({3, 3});
@@ -22,7 +20,7 @@ auto AudioSettings::create() -> void {
     string value = {skewSlider.position() > 5000 ? "+" : "", (int)skewSlider.position() - 5000};
     settings.audio.skew = value.integer();
     skewValue.setText(value);
-    program.updateAudioFrequency();
+    if(audio.driver() != "None") program.updateAudioFrequency();
   }).doChange();
   volumeLabel.setText("Volume:").setToolTip(
     "Adjusts the audio output volume.\n\n"
@@ -47,4 +45,8 @@ auto AudioSettings::create() -> void {
     balanceValue.setText(value);
     program.updateAudioEffects();
   }).doChange();
+
+  muteUnfocused.setText("Mute when unfocused").setChecked(settings.audio.muteUnfocused).onToggle([&] {
+    settings.audio.muteUnfocused = muteUnfocused.checked();
+  });
 }
