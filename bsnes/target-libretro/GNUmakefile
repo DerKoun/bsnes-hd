@@ -1,4 +1,4 @@
-name := bsnes_libretro
+name := bsnes_hd_beta_libretro
 local := false
 openmp := true
 flags += -Wno-narrowing -Wno-multichar -g -fPIC
