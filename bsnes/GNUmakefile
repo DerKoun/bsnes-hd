@@ -59,6 +59,9 @@ ui := target-$(target)
 include $(ui)/GNUmakefile
 -include obj/*.d
 
+
+delete = $(info Deleting $1 ...) @rm -f $1
+
 clean:
 	$(call delete,obj/*)
 	$(call delete,out/*)
