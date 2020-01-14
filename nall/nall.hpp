@@ -24,7 +24,6 @@
 #include <nall/bit.hpp>
 #include <nall/chrono.hpp>
 #include <nall/directory.hpp>
-#include <nall/dl.hpp>
 #include <nall/endian.hpp>
 #include <nall/file.hpp>
 #include <nall/file-buffer.hpp>
