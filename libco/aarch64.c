@@ -21,6 +21,7 @@ static void (*co_swap)(cothread_t, cothread_t) = 0;
 #ifdef LIBCO_MPROTECT
   alignas(4096)
 #else
+  alignas(4096)
   section(text)
 #endif
 static const uint32_t co_swap_function[1024] = {

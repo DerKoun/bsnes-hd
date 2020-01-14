@@ -6,7 +6,6 @@
 #include <nall/adaptive-array.hpp>
 #include <nall/any.hpp>
 #include <nall/chrono.hpp>
-#include <nall/dl.hpp>
 #include <nall/endian.hpp>
 #include <nall/image.hpp>
 #include <nall/literals.hpp>

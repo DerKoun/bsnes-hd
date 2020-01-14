@@ -9,6 +9,10 @@ ifeq ($(platform), ios-arm64)
 else ifeq ($(platform), tvos-arm64)
 	flags += -fPIC -mtvos-version-min=11.0 -Wno-error=implicit-function-declaration -DHAVE_POSIX_MEMALIGN
 	options += -dynamiclib
+else ifeq ($(platform), libnx)
+	flags += -march=armv8-a+crc -mtune=cortex-a57 -mtp=soft -mcpu=cortex-a57+crc+fp+simd -DHAVE_POSIX_MEMALIGN
+	flags += -O3 -ffast-math -funsafe-math-optimizations -fPIE -I$(PORTLIBS)/include/ -I$(LIBNX)/include/ -ffunction-sections -fdata-sections -ftls-model=local-exec
+	flags += -D__SWITCH__=1 -D__aarch64__=1 -DSWITCH -DHAVE_LIBNX
 endif
 
 objects := libretro $(objects)
@@ -21,6 +25,8 @@ ifeq ($(platform),linux)
 	$(strip $(compiler) -o out/$(name).so -shared $(objects) -Wl,--no-undefined -Wl,--version-script=target-libretro/link.T -lgomp -Wl,-Bdynamic $(options))
 else ifeq ($(platform),windows)
 	$(strip $(compiler) -o out/$(name).dll -shared $(objects) -Wl,--no-undefined -Wl,--version-script=target-libretro/link.T -lgomp -Wl,-Bdynamic $(options))
+else ifeq ($(platform),libnx)
+	$(strip $(AR) rcs out/$(name).a $(objects))
 else ifeq ($(platform),macos)
 	$(strip $(compiler) -o out/$(name).dylib -shared $(objects) $(options))
 else ifeq ($(platform), ios-arm64)
