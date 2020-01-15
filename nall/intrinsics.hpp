@@ -4,7 +4,7 @@ namespace nall {
   using uint = unsigned;
 
   enum class Compiler : uint { Clang, GCC, Microsoft, Unknown };
-  enum class Platform : uint { Windows, MacOS, Linux, BSD, Android, Unknown };
+  enum class Platform : uint { Windows, MacOS, Linux, BSD, Android, Horizon, Unknown };
   enum class API : uint { Windows, Posix, Unknown };
   enum class DisplayServer : uint { Windows, Quartz, Xorg, Unknown };
   enum class Architecture : uint { x86, amd64, ARM32, ARM64, PPC32, PPC64, Unknown };
@@ -89,6 +89,13 @@ namespace nall {
   constexpr auto platform() -> Platform { return Platform::Android; }
   constexpr auto api() -> API { return API::Posix; }
   constexpr auto display() -> DisplayServer { return DisplayServer::Unknown; }
+#elif defined(__SWITCH__)
+  #define PLATFORM_HORIZON
+  #define API_POSIX
+  #define DISPLAY_UNKNOWN
+  constexpr auto platform() -> Platform { return Platform::Horizon; }
+  constexpr auto api() -> API { return API::Posix; }
+  constexpr auto display() -> DisplayServer { return DisplayServer::Unknown; }
 #elif defined(linux) || defined(__linux__)
   #define PLATFORM_LINUX
   #define API_POSIX
@@ -157,7 +164,7 @@ namespace nall {
 
 namespace nall {
 
-#if (defined(__BYTE_ORDER) && defined(__LITTLE_ENDIAN) && __BYTE_ORDER == __LITTLE_ENDIAN) || defined(__LITTLE_ENDIAN__) || defined(__i386__) || defined(__amd64__) || defined(_M_IX86) || defined(_M_AMD64)
+#if (defined(__BYTE_ORDER) && defined(__LITTLE_ENDIAN) && __BYTE_ORDER == __LITTLE_ENDIAN) || defined(__LITTLE_ENDIAN__) || defined(__i386__) || defined(__amd64__) || defined(_M_IX86) || defined(_M_AMD64) || defined(__aarch64__)
   #define ENDIAN_LSB
   constexpr auto endian() -> Endian { return Endian::LSB; }
 #elif (defined(__BYTE_ORDER) && defined(__BIG_ENDIAN) && __BYTE_ORDER == __BIG_ENDIAN) || defined(__BIG_ENDIAN__) || defined(__powerpc__) || defined(_M_PPC)

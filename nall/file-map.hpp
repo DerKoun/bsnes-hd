@@ -10,7 +10,29 @@
 #else
   #include <fcntl.h>
   #include <unistd.h>
+#ifndef PLATFORM_HORIZON
   #include <sys/mman.h>
+#else
+  // This isn't functional since we don't support it on Horizon, to make it work, the file needs to be read when the file_map is opened
+  #define PROT_READ 0b001
+  #define PROT_WRITE 0b010
+  #define PROT_EXEC 0b100
+  #define MAP_PRIVATE 2
+  #define MAP_FIXED 0x10
+  #define MAP_ANONYMOUS 0x20
+  #define MAP_FAILED ((void *)-1)
+  #define MAP_SHARED 0
+  static inline void *mmap(void *addr, size_t len, int prot, int flags, int fd, off_t offset) {
+      return malloc(len);
+  }
+  static inline int mprotect(void *addr, size_t len, int prot) {
+      return 0;
+  }
+  static inline int munmap(void *addr, size_t len)  {
+    free(addr);
+    return 0;
+  }
+#endif
   #include <sys/stat.h>
   #include <sys/types.h>
 #endif
@@ -186,6 +208,10 @@ public:
       mmapFlags = PROT_READ | PROT_WRITE;
       break;
     }
+
+#ifdef PLATFORM_HORIZON
+    printf("Opening %s...\n", filename);
+#endif // PLATFORM_HORIZON
 
     _fd = ::open(filename, openFlags, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
     if(_fd < 0) return false;

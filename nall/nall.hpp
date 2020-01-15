@@ -24,7 +24,9 @@
 #include <nall/bit.hpp>
 #include <nall/chrono.hpp>
 #include <nall/directory.hpp>
+#ifndef PLATFORM_HORIZON
 #include <nall/dl.hpp>
+#endif // PLATFORM_HORIZON
 #include <nall/endian.hpp>
 #include <nall/file.hpp>
 #include <nall/file-buffer.hpp>

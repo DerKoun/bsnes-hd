@@ -6,7 +6,9 @@
 #include <nall/adaptive-array.hpp>
 #include <nall/any.hpp>
 #include <nall/chrono.hpp>
+#ifndef PLATFORM_HORIZON
 #include <nall/dl.hpp>
+#endif // PLATFORM_HORIZON
 #include <nall/endian.hpp>
 #include <nall/image.hpp>
 #include <nall/literals.hpp>

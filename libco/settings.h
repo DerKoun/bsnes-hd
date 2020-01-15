@@ -31,7 +31,7 @@
 #elif defined(__APPLE__)
   #define section(name) __attribute__((section("__TEXT,__" #name)))
 #else
-  #define section(name) __attribute__((section("." #name "#")))
+  #define section(name) __attribute__((section("." #name)))
 #endif
 
 /* if defined(LIBCO_C) */
