@@ -30,6 +30,15 @@
   #define section(name) __declspec(allocate("." #name))
 #elif defined(__APPLE__)
   #define section(name) __attribute__((section("__TEXT,__" #name)))
+#elif defined(__SWITCH__)
+  /*
+    This is basically the same as the last case, however the "#" suffix will create a secondary .text section.
+    Because of that, the toolchain will treat the section as non-executable. This might be related to the linker scripts
+    used for libnx homebrew. The reason that this is a seperate ifdef, is purely to silence a cosmetic warn
+    about ignoring the +w attribute on .text which would happen on other platforms under some conditions (said warning is by design 
+    when data is being merged like this into .text).
+  */
+  #define section(name) __attribute__((section("." #name)))
 #else
   #define section(name) __attribute__((section("." #name "#")))
 #endif

@@ -45,7 +45,9 @@ namespace Math {
 #include <sys/stat.h>
 
 #if !defined(PLATFORM_WINDOWS)
+#if !defined(PLATFORM_HORIZON)
   #include <dlfcn.h>
+#endif // PLATFORM_HORIZON
   #include <unistd.h>
   #include <pwd.h>
   #include <grp.h>

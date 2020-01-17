@@ -34,15 +34,17 @@ ifeq ($(platform),)
   else
     $(error unknown platform, please specify manually.)
   endif
+endif
 
-  # common commands
-  ifeq ($(uname),)
-    delete  = $(info Deleting $1 ...) @del /q $(subst /,\,$1)
-    rdelete = $(info Deleting $1 ...) @del /s /q $(subst /,\,$1) && if exist $(subst /,\,$1) (rmdir /s /q $(subst /,\,$1))
-  else
-    delete  = $(info Deleting $1 ...) @rm -f $1
-    rdelete = $(info Deleting $1 ...) @rm -rf $1
-  endif
+# common commands
+ifeq ($(shell echo ^^),^)
+  # cmd
+  delete  = $(info Deleting $1 ...) @del /q $(subst /,\,$1)
+  rdelete = $(info Deleting $1 ...) @del /s /q $(subst /,\,$1) && if exist $(subst /,\,$1) (rmdir /s /q $(subst /,\,$1))
+else
+  # sh
+  delete  = $(info Deleting $1 ...) @rm -f $1
+  rdelete = $(info Deleting $1 ...) @rm -rf $1
 endif
 
 compiler.c      = $(compiler) -x c -std=c11
@@ -66,6 +68,14 @@ ifeq ($(compiler),)
     compiler := clang++
   else ifeq ($(platform),linux)
     compiler := g++
+  else ifeq ($(platform),libnx)
+    include $(DEVKITPRO)/libnx/switch_rules
+    PORTLIBS := $(PORTLIBS_PATH)/switch
+    PATH := $(PORTLIBS)/bin:$(PATH)
+    LIBNX ?= $(DEVKITPRO)/libnx
+    compiler = $(CC) -std=gnu11
+    compiler.cpp = $(CXX) -std=gnu++17
+    openmp = false
   else ifeq ($(platform),bsd)
     compiler := g++8
   else
@@ -126,6 +136,11 @@ endif
 # linux settings
 ifeq ($(platform),linux)
   options += -ldl
+endif
+
+# libnx settings
+ifeq ($(platform),libnx)
+  flags += -D__SWITCH__=1 -DSWITCH -DHAVE_LIBNX
 endif
 
 # bsd settings

@@ -1,5 +1,4 @@
 flags += -DGB_INTERNAL -DDISABLE_DEBUGGER -D_GNU_SOURCE -Wno-multichar
-options += -I../sameboy
 
 objects += gb-apu gb-camera gb-display gb-gb gb-joypad gb-mbc
 objects += gb-memory gb-printer gb-random gb-rewind gb-save_state gb-sgb

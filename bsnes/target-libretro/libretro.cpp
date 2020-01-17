@@ -32,6 +32,7 @@ static void audio_queue(int16_t left, int16_t right)
 #include "program.cpp"
 
 static string sgb_bios;
+static vector<string> cheatList;
 
 #define RETRO_DEVICE_JOYPAD_MULTITAP       RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_JOYPAD, 0)
 #define RETRO_DEVICE_LIGHTGUN_SUPER_SCOPE  RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_LIGHTGUN, 0)
@@ -853,10 +854,29 @@ RETRO_API bool retro_unserialize(const void *data, size_t size)
 
 RETRO_API void retro_cheat_reset()
 {
+	cheatList.reset();
+	emulator->cheats(cheatList);
 }
 
 RETRO_API void retro_cheat_set(unsigned index, bool enabled, const char *code)
 {
+	string cheat = string(code);
+	bool decoded = false;
+
+	if (program->gameBoy.program)
+	{
+		decoded = decodeGB(cheat);
+	}
+	else
+	{
+		decoded = decodeSNES(cheat);
+	}
+
+	if (enabled && decoded)
+	{
+		cheatList.append(cheat);
+		emulator->cheats(cheatList);
+	}
 }
 
 RETRO_API bool retro_load_game(const retro_game_info *game)

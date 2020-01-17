@@ -10,7 +10,11 @@
 #else
   #include <fcntl.h>
   #include <unistd.h>
+#if defined(PLATFORM_HORIZON)
+  #include <nall/horizon/mman.hpp>
+#else
   #include <sys/mman.h>
+#endif // PLATFORM_HORIZON
   #include <sys/stat.h>
   #include <sys/types.h>
 #endif

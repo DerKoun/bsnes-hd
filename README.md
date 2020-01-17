@@ -1,4 +1,4 @@
-# bsnes-hd *beta 10*
+# bsnes-hd *beta 10.1*
 
 - [downloads](https://github.com/DerKoun/bsnes-hd/releases) for the latest betas
 - [GitHub project](https://github.com/DerKoun/bsnes-hd) for source code, issues, feature requests, ...
@@ -118,7 +118,7 @@ Specifies how translucent the widescreen markers are. (defaults to 1/1)
 Settings for the background layers.
 - **off**: no widescreen (e.g. for HUDs)
 - **on**: widescreen enabled
-- **< xy**/**> xy**: widescreen enabled above/below a certain scanline (for backgrounds that contain HUDs and backgrounds).
+- **< xy**/**> xy**: widescreen enabled above/below a certain scanline (for backgrounds that contain HUDs and backgrounds), e.g. for "*HyperZone*" at "*BG2: >80*".
 - **autoHor**: Disables widescreen for this background when it is as wide as the screen and has a horizontal position of 0.
 - **autoHor&Ver**(default): Disables widescreen for this background when it is as wide as the screen and has a horizontal and vertical position of 0.
 - **crop**: do not draw the left- and right-most 8 pixels (next to the widescreen areas) of the background (for backgrounds blanking some edge pixels, leaving black lines in widescreen, e.g. "*Top Gear 2*").
