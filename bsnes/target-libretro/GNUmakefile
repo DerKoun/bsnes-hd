@@ -13,7 +13,7 @@ else ifeq ($(platform), libnx)
 	flags += -march=armv8-a+crc -mtune=cortex-a57 -mtp=soft -mcpu=cortex-a57+crc+fp+simd -DHAVE_POSIX_MEMALIGN
 	flags += -O2 -ftree-vectorize -ffast-math -funsafe-math-optimizations -fPIE -I$(PORTLIBS)/include/ -I$(LIBNX)/include/ -ffunction-sections -fdata-sections -ftls-model=local-exec
 	flags += -D__SWITCH__=1 -D__aarch64__=1 -DSWITCH -DHAVE_LIBNX
-	name = $(name)_libnx
+	name := bsnes_hd_beta_libretro_libnx
 endif
 
 objects := libretro $(objects)
