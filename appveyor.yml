@@ -1,22 +1,46 @@
 version: '{build}'
 
+skip_commits:
+  files:
+    - .github/*
+    - .github/*/*
+    - README.md
+
 image:
-- Visual Studio 2017
-- Ubuntu1804
+  - Visual Studio 2017
+  - Ubuntu1804
 
-install:
-- cmd: set PATH=%PATH%;C:\mingw-w64\x86_64-8.1.0-posix-seh-rt_v6-rev0\mingw64\bin
-- sh: sudo apt-get update && sudo apt-get -y install build-essential libgtk2.0-dev libpulse-dev mesa-common-dev libgtksourceview2.0-dev libcairo2-dev libsdl2-dev libxv-dev libao-dev libopenal-dev libudev-dev zip
+for:
+-
+  matrix:
+    only:
+      - image: Visual Studio 2017
 
-build_script:
-- cmd: mingw32-make -C bsnes
-- sh: make -C bsnes
+  install:
+    - set PATH=%PATH%;C:\mingw-w64\x86_64-8.1.0-posix-seh-rt_v6-rev0\mingw64\bin
 
-after_build:
-- cmd: cd bsnes/out && 7z a ../../bsnes_hd_build.zip bsnes.exe
-- sh: cd bsnes/out && 7z a ../../bsnes_hd_build.zip bsnes
+  build_script:
+    - mingw32-make -j%NUMBER_OF_PROCESSORS% -C bsnes
+
+  after_build:
+    - 7z a -xr!*.gitignore bsnes_hd_build.zip .\bsnes\Database .\bsnes\Locale .\bsnes\out\* shaders LICENSE
+-
+  matrix:
+    only:
+      - image: Ubuntu1804
+
+  install:
+    - |-
+      sudo apt-get update
+      sudo apt-get -y install build-essential libgtk2.0-dev libpulse-dev mesa-common-dev libgtksourceview2.0-dev libcairo2-dev libsdl2-dev libxv-dev libao-dev libopenal-dev libudev-dev zip
+
+  build_script:
+    - make -j$(nproc) -C bsnes
+
+  after_build:
+    - 7z a bsnes_hd_build.zip ./bsnes/out/* LICENSE
 
 test: off
 
 artifacts:
-- path: bsnes_hd_build.zip
+  - path: bsnes_hd_build.zip
