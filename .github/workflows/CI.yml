@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    paths-ignore:
+      - '.github/CONTRIBUTING.md'
+      - '.github/FUNDING.md'
+      - '.github/ISSUE_TEMPLATE.md'
+      - '.appveyor.yml'
+      - 'README.md'
+  pull_request:
+    paths-ignore:
+      - '.github/CONTRIBUTING.md'
+      - '.github/FUNDING.md'
+      - '.github/ISSUE_TEMPLATE.md'
+      - '.appveyor.yml'
+      - 'README.md'
+
+jobs:
+  Windows:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Build
+      run: mingw32-make -j $env:NUMBER_OF_PROCESSORS -C bsnes
+    - name: Prepare artifacts
+      run: |
+        rm bsnes/out/.gitignore
+        cp -r bsnes/Database bsnes/Locale shaders LICENSE bsnes/out
+      shell: bash
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v1.0.0
+      with:
+        name: bsnes_hd_build-${{ runner.os }}
+        path: bsnes\out
+
+  Linux:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Setup
+      run: |
+        sudo apt-get update
+        sudo apt-get -y install build-essential libgtk2.0-dev libpulse-dev mesa-common-dev libgtksourceview2.0-dev libcairo2-dev libsdl2-dev libxv-dev libao-dev libopenal-dev libudev-dev zip
+    - name: Build
+      run: make -j $(nproc) -C bsnes
+    - name: Prepare artifacts
+      run: |
+        rm bsnes/out/.gitignore
+        cp LICENSE bsnes/out
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v1.0.0
+      with:
+        name: bsnes_hd_build-${{ runner.os }}
+        path: bsnes/out
+
+  macOS:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Build
+      run: make -j $(sysctl -n hw.ncpu) -C bsnes
+    - name: Prepare artifacts
+      run: |
+        rm bsnes/out/.gitignore
+        cp LICENSE bsnes/out
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v1.0.0
+      with:
+        name: bsnes_hd_build-${{ runner.os }}
+        path: bsnes/out
