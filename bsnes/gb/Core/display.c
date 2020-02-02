@@ -142,9 +142,17 @@ static void display_vblank(GB_gameboy_t *gb)
             }
         }
         else {
-            uint32_t color = (gb->io_registers[GB_IO_LCDC] & 0x80) && gb->stopped && GB_is_cgb(gb) ?
-                                gb->rgb_encode_callback(gb, 0, 0, 0) :
-                                gb->rgb_encode_callback(gb, 0xFF, 0xFF, 0xFF);
+            uint32_t color = 0;
+            if (GB_is_cgb(gb)) {
+                color = (gb->io_registers[GB_IO_LCDC] & 0x80) && gb->stopped ?
+                            gb->rgb_encode_callback(gb, 0, 0, 0) :
+                            gb->rgb_encode_callback(gb, 0xFF, 0xFF, 0xFF);
+            }
+            else {
+                color = (gb->io_registers[GB_IO_LCDC] & 0x80) && gb->stopped ?
+                            gb->background_palettes_rgb[3] :
+                            gb->background_palettes_rgb[4];
+            }
             for (unsigned i = 0; i < WIDTH * LINES; i++) {
                 gb ->screen[i] = color;
             }
@@ -966,10 +974,16 @@ void GB_display_run(GB_gameboy_t *gb, uint8_t cycles)
                 GB_STAT_update(gb);
                 
                 if (gb->frame_skip_state == GB_FRAMESKIP_LCD_TURNED_ON) {
-                    if (!GB_is_sgb(gb) || gb->current_lcd_line < LINES) {
-                        display_vblank(gb);
+                    if (GB_is_cgb(gb)) {
+                        GB_timing_sync(gb);
+                        gb->frame_skip_state = GB_FRAMESKIP_FIRST_FRAME_SKIPPED;
                     }
-                    gb->frame_skip_state = GB_FRAMESKIP_SECOND_FRAME_RENDERED;
+                    else {
+                        if (!GB_is_sgb(gb) || gb->current_lcd_line < LINES) {
+                            display_vblank(gb);
+                        }
+                        gb->frame_skip_state = GB_FRAMESKIP_SECOND_FRAME_RENDERED;
+                    }
                 }
                 else {
                     gb->frame_skip_state = GB_FRAMESKIP_SECOND_FRAME_RENDERED;

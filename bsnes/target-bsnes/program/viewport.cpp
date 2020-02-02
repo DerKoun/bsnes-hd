@@ -55,25 +55,26 @@ auto Program::viewportRefresh() -> void {
     scale  = screenshot.scale;
   }
 
-  if(!settings.video.overscan) {
-    uint multiplier = height / 240;
-    data += 8 * multiplier * (pitch >> 1);
-    height -= 16 * multiplier;
-  }
-
-  if(settings.emulator.hack.ppu.mode7.widescreen > 0) {
-    width += 2*settings.emulator.hack.ppu.mode7.widescreen;
-  }
+  uint offset = settings.video.overscan ? 8 : 12;
+  uint multiplier = height / 215;
+  data   += offset * multiplier * (pitch >> 2);
+  height -= offset * multiplier * 2;
   
   uint outputWidth = width, outputHeight = height;
   viewportSize(outputWidth, outputHeight, scale);
 
   uint filterWidth = width, filterHeight = height;
-  auto filterRender = filterSelect(filterWidth, filterHeight, scale);
 
   if(auto [output, length] = video.acquire(filterWidth, filterHeight); output) {
-    bool dimmed = settings.video.dimming && !presentation.frameAdvance.checked();
-    filterRender(dimmed ? paletteDimmed : palette, output, length, (const uint16_t*)data, pitch, width, height);
+    //HD-TODO: add back 'dimmed' (rgb each >>=1)
+    if (length == pitch) {
+      memory::copy<uint32>(output, data, width * height);
+    } else {
+      for(uint y = 0; y < height; y++) {
+        memory::copy<uint32>(output + y * (length >> 2), data + y * (pitch >> 2), width);
+      }
+    }
+
     length >>= 2;
 
     if(settings.video.snow) {

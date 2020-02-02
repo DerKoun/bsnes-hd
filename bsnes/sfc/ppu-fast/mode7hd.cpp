@@ -97,7 +97,7 @@ auto PPU::Line::cacheMode7HD() -> void {
 
 auto PPU::Line::renderMode7HD(PPU::IO::Background& self, uint8 source) -> void {
   const bool extbg = source == Source::BG2;
-  bool mosSing = self.mosaicEnable && io.mosaicSize && ppu.hdMosaic() == 1;
+  bool mosSing = self.mosaicEnable && io.mosaic.size != 1 && ppu.hdMosaic() == 1;
   const uint sampScale = mosSing ? 1 : ppu.hdSupersample();
   const uint scale = mosSing ? 1 : ppu.hdScale() * sampScale;
 

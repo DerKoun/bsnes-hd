@@ -1,5 +1,6 @@
 #include <cassert>
 #include "libretro.h"
+#include <emulator/hdtoolkit.hpp>
 
 static retro_environment_t environ_cb;
 static retro_video_refresh_t video_cb;
@@ -43,7 +44,7 @@ static vector<string> cheatList;
 #define RETRO_MEMORY_SGB_SRAM ((1 << 8) | RETRO_MEMORY_SAVE_RAM)
 #define RETRO_MEMORY_GB_SRAM ((2 << 8) | RETRO_MEMORY_SAVE_RAM)
 
-static bool flush_variables() // returns whether video dimensions have changed (scale or widescreen AR)
+static bool flush_variables() // returns whether video dimensions have changed (overscan, aspectcorrection scale or widescreen AR)
 {
 	retro_variable variable = { "bsnes_blur_emulation", nullptr };
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &variable) && variable.value)
@@ -140,14 +141,16 @@ static bool flush_variables() // returns whether video dimensions have changed (
 			emulator->configure("Hacks/PPU/NoVRAMBlocking", false);
 	}
 
+	bool overscan = program->overscan;
 	variable = { "bsnes_ppu_show_overscan", nullptr };
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &variable) && variable.value)
 	{
 		if (strcmp(variable.value, "ON") == 0)
-			program->overscan = true;
+			overscan = true;
 		else if (strcmp(variable.value, "OFF") == 0)
-			program->overscan = false;
+			overscan = false;
 	}
+	emulator->configure("Video/Overscan", overscan);
 
 	variable = { "bsnes_dsp_fast", nullptr };
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &variable) && variable.value)
@@ -231,12 +234,12 @@ static bool flush_variables() // returns whether video dimensions have changed (
 	int ws = 0;
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &variable) && variable.value)
 	{
-		if (strcmp(variable.value,       "none") == 0) ws =   0;
-		else if (strcmp(variable.value,   "4:3") == 0) ws =  16;
-		else if (strcmp(variable.value, "16:10") == 0) ws =  40;
-		else if (strcmp(variable.value,  "16:9") == 0) ws =  64;
-		else if (strcmp(variable.value,   "2:1") == 0) ws =  88;
-		else if (strcmp(variable.value,  "21:9") == 0) ws = 120;
+		if (strcmp(variable.value,       "none") == 0) ws =    0;
+		else if (strcmp(variable.value,   "4:3") == 0) ws =  403;
+		else if (strcmp(variable.value, "16:10") == 0) ws = 1610;
+		else if (strcmp(variable.value,  "16:9") == 0) ws = 1609;
+		else if (strcmp(variable.value,   "2:1") == 0) ws =  201;
+		else if (strcmp(variable.value,  "21:9") == 0) ws = 2109;
 	}
 	if (scale == 0) ws = 0;
 	emulator->configure("Hacks/PPU/Mode7/Widescreen", ws);
@@ -499,19 +502,55 @@ static bool flush_variables() // returns whether video dimensions have changed (
 		emulator->configure("Hacks/PPU/Mode7/'WindRad", val);
 	}
 
-	bool vc = false;
-	vc = program->scale != scale; // scale changed
+	bool aspectcorrection = program->aspectcorrection;
+	variable = { "bsnes_video_aspectcorrection", nullptr };
+	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &variable) && variable.value)
+	{
+		if (strcmp(variable.value, "ON") == 0)
+			aspectcorrection = true;
+		else if (strcmp(variable.value, "OFF") == 0)
+			aspectcorrection = false;
+	}
+	emulator->configure("Video/AspectCorrection", aspectcorrection);
+
+	variable = { "bsnes_video_luminance", nullptr };
+	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &variable) && variable.value)
+	{
+		int val = atoi(variable.value);
+		emulator->configure("Video/Luminance", val);
+	}
+
+	variable = { "bsnes_video_saturation", nullptr };
+	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &variable) && variable.value)
+	{
+		int val = atoi(variable.value);
+		emulator->configure("Video/Saturation", val);
+	}
+
+	variable = { "bsnes_video_gamma", nullptr };
+	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &variable) && variable.value)
+	{
+		int val = atoi(variable.value);
+		emulator->configure("Video/Gamma", val);
+	}
+
+	bool vc = program->overscan != overscan; // overscan changed
+	program->overscan = overscan;	
+	vc = vc | program->aspectcorrection != aspectcorrection; // aspectcorrection changed
+	program->aspectcorrection = aspectcorrection;
+	vc = vc | program->scale != scale; // scale changed
 	program->scale = scale;
+	ws = HdToolkit::determineWsExt(ws, overscan, aspectcorrection);
 	vc = vc | program->ws != ws; // widescreen AR changed
 	program->ws = ws;
-	return vc; // returns whether video dimensions have changed (scale or widescreen AR)
+	return vc; // returns whether video dimensions have changed (overscan, aspectcorrection scale or widescreen AR)
 }
 
 static void check_variables()
 {
 	bool updated = false;
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated) {
-		if (flush_variables()) { // returns whether video dimensions have changed (scale or widescreen AR)
+		if (flush_variables()) { // returns whether video dimensions have changed (overscan, aspectcorrection scale or widescreen AR)
 			struct retro_system_av_info info;
 			retro_get_system_av_info(&info);
 			environ_cb(RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO, &info);
@@ -684,18 +723,19 @@ static void set_environment_info(retro_environment_t cb)
 		{ "bsnes_mode7_wsMarkerAlpha", "WideScreen Marker Alpha; 1/1|1/2|1/3|1/4|1/5|1/6|1/7|1/8|1/9|1/10" },
 		{ "bsnes_mode7_bgGrad",        "HD Background Color Radius; 4|5|6|7|8|0|1|2|3" },
 		{ "bsnes_mode7_windRad",       "HD Windowing (experimental); 0|1|2|3|4|5|6|7|8" },	
+		{ "bsnes_ppu_show_overscan", "Show Overscan; OFF|ON" },
+		{ "bsnes_video_aspectcorrection", "Aspect Correction; OFF|ON" },
 		{ "bsnes_blur_emulation", "Blur emulation; OFF|ON" },
 		{ "bsnes_entropy", "Entropy (randomization); Low|High|None" },
 		{ "bsnes_hotfixes", "Hotfixes; OFF|ON" },
-		{ "bsnes_cpu_overclock", "CPU Overclocking; 100|110|120|130|140|150|160|170|180|190|200|210|220|230|240|250|260|270|280|290|300|310|320|330|340|350|360|370|380|390|400|10|20|30|40|50|60|70|80|90" },
 		{ "bsnes_cpu_fastmath", "CPU Fast Math; OFF|ON" },
-		{ "bsnes_sa1_overclock", "SA1 Coprocessor Overclocking; 100|110|120|130|140|150|160|170|180|190|200|210|220|230|240|250|260|270|280|290|300|310|320|330|340|350|360|370|380|390|400|10|20|30|40|50|60|70|80|90" },
-		{ "bsnes_sfx_overclock", "SuperFX Coprocessor Overclocking; 100|110|120|130|140|150|160|170|180|190|200|210|220|230|240|250|260|270|280|290|300|310|320|330|340|350|360|370|380|390|400|410|420|430|440|450|460|470|480|490|500|510|520|530|540|550|560|570|580|590|600|610|620|630|640|650|660|670|680|690|700|710|720|730|740|750|760|770|780|790|800|10|20|30|40|50|60|70|80|90" },
+		{ "bsnes_cpu_overclock", "CPU Overclocking; 100|110|120|130|140|150|160|170|180|190|200|210|220|230|240|250|260|270|280|290|300|310|320|330|340|350|360|370|380|390|400" },
+		{ "bsnes_sa1_overclock", "SA1 Coprocessor Overclocking; 100|110|120|130|140|150|160|170|180|190|200|210|220|230|240|250|260|270|280|290|300|310|320|330|340|350|360|370|380|390|400" },
+		{ "bsnes_sfx_overclock", "SuperFX Coprocessor Overclocking; 100|110|120|130|140|150|160|170|180|190|200|210|220|230|240|250|260|270|280|290|300|310|320|330|340|350|360|370|380|390|400|410|420|430|440|450|460|470|480|490|500|510|520|530|540|550|560|570|580|590|600|610|620|630|640|650|660|670|680|690|700|710|720|730|740|750|760|770|780|790|800" },
 		{ "bsnes_ppu_fast", "PPU Fast mode; ON|OFF" },
 		{ "bsnes_ppu_deinterlace", "PPU Deinterlace; ON|OFF" },
 		{ "bsnes_ppu_no_sprite_limit", "PPU No sprite limit; ON|OFF" },
 		{ "bsnes_ppu_no_vram_blocking", "PPU No VRAM blocking; OFF|ON" },
-		{ "bsnes_ppu_show_overscan", "Show Overscan; OFF|ON" },
 		{ "bsnes_dsp_fast", "DSP Fast mode; ON|OFF" },
 		{ "bsnes_dsp_cubic", "DSP Cubic interpolation; OFF|ON" },
 		{ "bsnes_dsp_echo_shadow", "DSP Echo shadow RAM; OFF|ON" },
@@ -703,6 +743,9 @@ static void set_environment_info(retro_environment_t cb)
 		{ "bsnes_coprocessor_prefer_hle", "Coprocessor Prefer HLE; ON|OFF" },
 		{ "bsnes_sgb_bios", "Preferred Super GameBoy BIOS (restart); SGB1.sfc|SGB2.sfc" },
 		{ "bsnes_run_ahead_frames", "Amount of frames for run-ahead; OFF|1|2|3|4" },
+		{ "bsnes_video_luminance", "Luminance; 100|90|80|70|60|50|40|30|20|10|0" },
+		{ "bsnes_video_saturation", "Saturation; 100|90|80|70|60|50|40|30|20|10|0|200|190|180|170|160|150|140|130|120|110" },
+		{ "bsnes_video_gamma", "Gamma; 150|140|130|120|110|100|200|190|180|170|160" },
 		{ nullptr },
 	};
 	cb(RETRO_ENVIRONMENT_SET_VARIABLES, const_cast<retro_variable *>(vars));
@@ -784,7 +827,8 @@ RETRO_API void retro_get_system_av_info(struct retro_system_av_info *info)
 		info->geometry.max_width = w;
 		info->geometry.max_height = h;
 	}
-	info->geometry.aspect_ratio = -1.0;
+	info->geometry.aspect_ratio = !program->aspectcorrection ?  -1.0
+			: 8.0 / 7.0 * info->geometry.base_width / info->geometry.base_height;
 	info->timing.sample_rate   = SAMPLERATE;
 	if (retro_get_region() == RETRO_REGION_NTSC) {
 		info->timing.fps = 21477272.0 / 357366.0;
@@ -917,6 +961,10 @@ RETRO_API bool retro_load_game(const retro_game_info *game)
 RETRO_API bool retro_load_game_special(unsigned game_type,
 		const struct retro_game_info *info, size_t num_info)
 {
+	retro_pixel_format fmt = RETRO_PIXEL_FORMAT_XRGB8888;
+	if (!environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &fmt))
+		return false;
+
 	emulator->configure("Audio/Frequency", SAMPLERATE);
 
 	flush_variables();

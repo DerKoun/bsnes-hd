@@ -42,10 +42,12 @@ auto Presentation::create() -> void {
   if(settings.video.output == "Stretch") stretchViewport.setChecked();
   aspectCorrection.setText("Aspect Correction").setChecked(settings.video.aspectCorrection).onToggle([&] {
     settings.video.aspectCorrection = aspectCorrection.checked();
+    emulator->configure("Video/AspectCorrection", settings.video.aspectCorrection);
     resizeWindow();
   });
   showOverscanArea.setText("Show Overscan Area").setChecked(settings.video.overscan).onToggle([&] {
     settings.video.overscan = showOverscanArea.checked();
+    emulator->configure("Video/Overscan", settings.video.overscan);
     resizeWindow();
   });
   blurEmulation.setText("Hires Blur Emulation").setChecked(settings.video.blur).onToggle([&] {
@@ -201,7 +203,7 @@ auto Presentation::create() -> void {
     .setName("bsnes (upstream)")
     .setLogo(Resource::Logo)
     .setDescription("Super Nintendo emulator")
-    .setVersion("114")//bsnes/emulator/emulator.hpp:Emulator:Version
+    .setVersion("114.3")//bsnes/emulator/emulator.hpp:Emulator:Version
     .setAuthor("byuu")
     .setLicense("GPLv3")
     .setWebsite("https://byuu.org")

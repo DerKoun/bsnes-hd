@@ -1,15 +1,3 @@
-//single-threaded
-auto PPU::Line::cacheBackground(PPU::IO::Background& bg) -> void {
-  if(y == 1) {
-    bg.mosaicCounter = ppu.io.mosaicSize + 1;
-    bg.mosaicOffset = 1;
-  } else if(--bg.mosaicCounter == 0) {
-    bg.mosaicCounter = ppu.io.mosaicSize + 1;
-    bg.mosaicOffset += ppu.io.mosaicSize + 1;
-  }
-}
-
-//parallelized
 auto PPU::Line::renderBackground(PPU::IO::Background& self, uint8 source) -> void {
   if(!self.aboveEnable && !self.belowEnable) return;
   if(self.tileMode == TileMode::Mode7) return renderMode7(self, source);
@@ -62,10 +50,14 @@ auto PPU::Line::renderBackground(PPU::IO::Background& self, uint8 source) -> voi
   uint hmask = (width << self.tileSize << !!(self.screenSize & 1)) - 1;
   uint vmask = (width << self.tileSize << !!(self.screenSize & 2)) - 1;
 
-  uint y = self.mosaicEnable ? self.mosaicOffset : this->y;
+  uint y = this->y;
+  if(self.mosaicEnable) y -= io.mosaic.size - io.mosaic.counter;
   if(hires) {
     hscroll <<= 1;
-    if(io.interlace) y = y << 1 | field();
+    if(io.interlace) {
+      y = y << 1 | field();
+      if(self.mosaicEnable) y -= io.mosaic.size - io.mosaic.counter + field();
+    }
   }
 
   uint mosaicCounter = 1;
@@ -128,7 +120,7 @@ auto PPU::Line::renderBackground(PPU::IO::Background& self, uint8 source) -> voi
 
     for(uint tileX = 0; tileX < 8; tileX++, x++) {
       if(x < -ws || x >= width + ws) continue;   //if(x & width) continue;  //x < 0 || x >= width
-      if(!self.mosaicEnable || --mosaicCounter == 0) {
+      if(--mosaicCounter == 0) {
         uint color, shift = mirrorX ? tileX : 7 - tileX;
       /*if(self.tileMode >= TileMode::BPP2)*/ {
           color  = data >> shift +  0 &   1;
@@ -145,7 +137,7 @@ auto PPU::Line::renderBackground(PPU::IO::Background& self, uint8 source) -> voi
           color += data >> shift + 49 & 128;
         }
 
-        mosaicCounter = 1 + io.mosaicSize;
+        mosaicCounter = self.mosaicEnable ? io.mosaic.size : 1;
         mosaicPalette = color;
         mosaicPriority = tilePriority;
         if(directColorMode) {
@@ -160,8 +152,14 @@ auto PPU::Line::renderBackground(PPU::IO::Background& self, uint8 source) -> voi
       uint32 mctc = luma[mosaicColor];
 
       if(!hires) {
-        if(self.aboveEnable && !windowAbove[ppufast.winXad(x, false)]) plotAbove(x, source, mosaicPriority, mctc);
-        if(self.belowEnable && !windowBelow[ppufast.winXad(x, true)]) plotBelow(x, source, mosaicPriority, mctc);
+        if(ppufast.hires() && ppufast.hd()) {
+          // In hires mode non-hires backgrounds seem to be rendered on every second pixel (see water in Kirby)
+          if(self.aboveEnable && !windowAbove[ppufast.winXad(x, false)]) plotHD(above, x, source, mosaicPriority, mctc, true, true);
+          if(self.aboveEnable && !windowAbove[ppufast.winXad(x, false)]) plotHD(below, x, source, mosaicPriority, mctc, true, true);
+        } else {
+          if(self.aboveEnable && !windowAbove[ppufast.winXad(x, false)]) plotAbove(x, source, mosaicPriority, mctc);
+          if(self.belowEnable && !windowBelow[ppufast.winXad(x, true)]) plotBelow(x, source, mosaicPriority, mctc);
+        }
       } else {
         int X = x / 2;
         if(!ppufast.hd()) {

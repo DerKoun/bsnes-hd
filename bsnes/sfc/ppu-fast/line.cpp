@@ -1,7 +1,75 @@
+#include <emulator/hdtoolkit.hpp>
 uint PPU::Line::start = 0;
 uint PPU::Line::count = 0;
 
 auto PPU::Line::flush() -> void {
+
+  ppu.wsExt = HdToolkit::determineWsExt(ppu.widescreenRaw(),
+        configuration.video.overscan, configuration.video.aspectCorrection);
+
+  if (ppu.luminance != configuration.video.luminance ||
+        ppu.saturation != configuration.video.saturation ||
+        ppu.gamma != configuration.video.gamma) {
+    uint luminance = configuration.video.luminance;
+    uint saturation = configuration.video.saturation;
+    uint gamma = configuration.video.gamma;
+    ppu.luminance = luminance;
+    ppu.saturation = saturation;
+    ppu.gamma = gamma;
+    for(uint l : range(16)) {
+      ppu.lightTable[l] = new uint32_t[32768];
+      for(uint r : range(32)) {
+        for(uint g : range(32)) {
+          for(uint b : range(32)) {
+            double dr = r << 3;
+            double dg = g << 3;
+            double db = b << 3;
+  
+            if(saturation != 100) {
+              double satVal = saturation / 100.0;
+              double grayInv = (dr + dg + db) / 3 * max(0.0, 1.0 - saturation / 100.0);
+              dr = dr * satVal + grayInv;
+              dg = dg * satVal + grayInv;
+              db = db * satVal + grayInv;
+            }
+  
+            if(gamma != 100) {
+              double reciprocal = 1.0 / 255.0;
+              double gamVal = gamma / 100.0;
+              dr = 255.0 * pow(dr * reciprocal, gamVal);
+              dg = 255.0 * pow(dg * reciprocal, gamVal);
+              db = 255.0 * pow(db * reciprocal, gamVal);
+            }
+
+            if(luminance != 100) {
+              double lumVal = luminance / 100.0;
+              dr *= lumVal;
+              dg *= lumVal;
+              db *= lumVal;
+            }
+
+            double lVal = l / 15.0;
+            dr *= lVal;
+            dg *= lVal;
+            db *= lVal;
+
+            int ar = dr + 0.5;
+            int ag = dg + 0.5;
+            int ab = db + 0.5;
+            if (ar > 255) ar = 255;
+            if (ag > 255) ag = 255;
+            if (ab > 255) ab = 255;
+            if (ar < 0) ar = 0;
+            if (ag < 0) ag = 0;
+            if (ab < 0) ab = 0;
+
+            ppu.lightTable[l][r << 10 | g << 5 | b << 0] = ab << 16 | ag << 8 | ar << 0;
+          }
+        }
+      }
+    }
+  }
+
   if(Line::count) {
     if(ppu.hdScale() > 1) cacheMode7HD();
     #pragma omp parallel for if(Line::count >= 8)
@@ -26,11 +94,6 @@ auto PPU::Line::flush() -> void {
 }
 
 auto PPU::Line::cache() -> void {
-  cacheBackground(ppu.io.bg1);
-  cacheBackground(ppu.io.bg2);
-  cacheBackground(ppu.io.bg3);
-  cacheBackground(ppu.io.bg4);
-
   uint y = ppu.vcounter();
   if(ppu.io.displayDisable || y >= ppu.vdisp()) {
     io.displayDisable = true;
@@ -151,6 +214,8 @@ auto PPU::Line::render(bool fieldID) -> void {
   if(io.extbg == 1) renderBackground(io.bg2, Source::BG2);
 
   //TODO: move to own method
+  int THRESHOLD = 4;
+  y = this->y;
   uint windRad = ppufast.windRad();
   for (int offset = 0; offset < scale; offset++) {
     uint oneLeft  = io.window.oneLeft;
@@ -188,6 +253,22 @@ auto PPU::Line::render(bool fieldID) -> void {
           io.col.window.aboveMask != uL.io.col.window.aboveMask ||
           io.col.window.belowMask != dL.io.col.window.belowMask ||
           io.col.window.belowMask != uL.io.col.window.belowMask
+          || dL.io.window.oneLeft - io.window.oneLeft > THRESHOLD
+          || io.window.oneLeft - dL.io.window.oneLeft > THRESHOLD
+          || uL.io.window.oneLeft - io.window.oneLeft > THRESHOLD
+          || io.window.oneLeft - uL.io.window.oneLeft > THRESHOLD
+          || dL.io.window.oneRight - io.window.oneRight > THRESHOLD
+          || io.window.oneRight - dL.io.window.oneRight > THRESHOLD
+          || uL.io.window.oneRight - io.window.oneRight > THRESHOLD
+          || io.window.oneRight - uL.io.window.oneRight > THRESHOLD
+          || dL.io.window.twoLeft - io.window.twoLeft > THRESHOLD
+          || io.window.twoLeft - dL.io.window.twoLeft > THRESHOLD
+          || uL.io.window.twoLeft - io.window.twoLeft > THRESHOLD
+          || io.window.twoLeft - uL.io.window.twoLeft > THRESHOLD
+          || dL.io.window.twoRight - io.window.twoRight > THRESHOLD
+          || io.window.twoRight - dL.io.window.twoRight > THRESHOLD
+          || uL.io.window.twoRight - io.window.twoRight > THRESHOLD
+          || io.window.twoRight - uL.io.window.twoRight > THRESHOLD
           ) break; 
 
       oneLeft  += dL.io.window.oneLeft  + uL.io.window.oneLeft;
@@ -254,8 +335,8 @@ auto PPU::Line::render(bool fieldID) -> void {
 
 auto PPU::Line::pixel(uint x, Pixel above, Pixel below, uint wsm, uint wsma, uint32 bgFixedColor) const -> uint32 { 
   uint32 r = 0;
-  if(!windowAbove[x]) above.color = 0x0000;
-  if(!windowBelow[x]) r = above.color;
+  if(!windowAbove[ppufast.winXadHd(x, false)]) above.color = 0x0000;
+  if(!windowBelow[ppufast.winXadHd(x, true)]) r = above.color;
   else if(!io.col.enable[above.source]) r = above.color;
   else if(!io.col.blendMode) r = blend(above.color, bgFixedColor, io.col.halve && windowAbove[x]);
   else r = blend(above.color, below.color, io.col.halve && windowAbove[x] && below.source != Source::COL);
@@ -315,11 +396,11 @@ auto PPU::Line::plotBelow(int x, uint8 source, uint8 priority, uint32 color) -> 
 auto PPU::Line::plotHD(Pixel* pixel, int x, uint8 source, uint8 priority, uint32 color, bool hires, bool subpixel) -> void {
   int scale = ppu.hdScale();
   int wss = ppu.widescreen() * scale;
-  int xss = hires && subpixel ? scale / 2 : 0;
+  int xss = hires && subpixel ? (scale / 2 + ((scale & 1 == 1) && (x & 1 == 1))) : 0;
   int ys = ppu.interlace() && ppu.field() ? scale / 2 : 0;
   if(priority > pixel[x * scale + xss + ys * 256 * scale + wss].priority) {
     Pixel p = {source, priority, color};
-    int xsm = hires && !subpixel ? scale / 2 : scale;
+    int xsm = hires && !subpixel ? (scale / 2 + ((scale & 1 == 1) && (x & 1 == 1))) : scale;
     int ysm = ppu.interlace() && !ppu.field() ? scale / 2 : scale;
     for(int xs = xss; xs < xsm; xs++) {
       pixel[x * scale + xs + ys * 256 * scale + wss] = p;

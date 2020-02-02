@@ -1,5 +1,4 @@
 #include "mode7.cpp"
-uint4 PPU::Background::Mosaic::size;
 
 auto PPU::Background::hires() const -> bool {
   return ppu.io.bgMode == 5 || ppu.io.bgMode == 6;
@@ -11,54 +10,41 @@ auto PPU::Background::frame() -> void {
 
 //H = 0
 auto PPU::Background::scanline() -> void {
-  if(ppu.vcounter() == 1) {
-    mosaic.vcounter = mosaic.size + 1;
-    mosaic.voffset = 1;
-    latch.hoffset = io.hoffset;
-    latch.voffset = io.voffset;
-  } else if(--mosaic.vcounter == 0) {
-    mosaic.vcounter = mosaic.size + 1;
-    mosaic.voffset += mosaic.size + 1;
-    latch.hoffset = io.hoffset;
-    latch.voffset = io.voffset;
-  }
-
-  mosaic.hcounter = mosaic.size + 1;
+  mosaic.hcounter = ppu.mosaic.size;
   mosaic.hoffset = 0;
 
-  if(io.mode == Mode::Mode7) return beginMode7();
-  if(mosaic.size == 0) {
-    latch.hoffset = io.hoffset;
-    latch.voffset = io.voffset;
-  }
-
-  nameTableIndex = 0;
-  characterIndex = 0;
   renderingIndex = 0;
 
   opt.hoffset = 0;
   opt.voffset = 0;
+
+  pixelCounter = io.hoffset & 7;
 }
 
 //H = 56
 auto PPU::Background::begin() -> void {
   //remove partial tile columns that have been scrolled offscreen
-  pixelCounter = io.hoffset & 7;
   for(auto& data : tiles[0].data) data >>= pixelCounter << 1;
 }
 
 auto PPU::Background::fetchNameTable() -> void {
   if(ppu.vcounter() == 0) return;
 
+  uint nameTableIndex = ppu.hcounter() >> 5 << hires();
   int x = (ppu.hcounter() & ~31) >> 2;
-  uint hpixel = x << hires();
-  uint vpixel = mosaic.enable ? (uint)mosaic.voffset : ppu.vcounter();
 
-  uint hscroll = mosaic.enable ? latch.hoffset : io.hoffset;
-  uint vscroll = mosaic.enable ? latch.voffset : io.voffset;
+  uint hpixel = x << hires();
+  uint vpixel = ppu.vcounter();
+  uint hscroll = io.hoffset;
+  uint vscroll = io.voffset;
+
+  if(mosaic.enable) vpixel -= ppu.mosaic.voffset();
   if(hires()) {
     hscroll <<= 1;
-    if(ppu.io.interlace) vpixel = vpixel << 1 | (ppu.field() && !mosaic.enable);
+    if(ppu.io.interlace) {
+      vpixel = vpixel << 1 | ppu.field();
+      if(mosaic.enable) vpixel -= ppu.mosaic.voffset() + ppu.field();
+    }
   }
 
   bool repeated = false;
@@ -141,6 +127,7 @@ auto PPU::Background::fetchNameTable() -> void {
 auto PPU::Background::fetchOffset(uint y) -> void {
   if(ppu.vcounter() == 0) return;
 
+  uint characterIndex = ppu.hcounter() >> 5 << hires();
   uint x = characterIndex << 3;
 
   uint hoffset = x + (io.hoffset & ~7);
@@ -162,12 +149,12 @@ auto PPU::Background::fetchOffset(uint y) -> void {
   uint16 address = io.screenAddress + offset;
   if(y == 0) opt.hoffset = ppu.vram[address];
   if(y == 8) opt.voffset = ppu.vram[address];
-
-  if(y == 0) characterIndex++;
 }
 
-auto PPU::Background::fetchCharacter(uint index) -> void {
+auto PPU::Background::fetchCharacter(uint index, bool half) -> void {
   if(ppu.vcounter() == 0) return;
+
+  uint characterIndex = (ppu.hcounter() >> 5 << hires()) + half;
 
   auto& tile = tiles[characterIndex];
   uint16 data = ppu.vram[tile.address + (index << 3)];
@@ -184,8 +171,6 @@ auto PPU::Background::fetchCharacter(uint index) -> void {
     ((uint8(data >> 0) * 0x0101010101010101ull & 0x8040201008040201ull) * 0x0102040810204081ull >> 49) & 0x5555
   | ((uint8(data >> 8) * 0x0101010101010101ull & 0x8040201008040201ull) * 0x0102040810204081ull >> 48) & 0xaaaa
   );
-
-  if(index == 0) characterIndex++;
 }
 
 auto PPU::Background::run(bool screen) -> void {
@@ -214,10 +199,10 @@ auto PPU::Background::run(bool screen) -> void {
 
   uint x = ppu.hcounter() - 56 >> 2;
   if(x == 0) {
-    mosaic.hcounter = mosaic.size + 1;
+    mosaic.hcounter = ppu.mosaic.size;
     mosaic.pixel = pixel;
   } else if((!hires() || screen == Screen::Below) && --mosaic.hcounter == 0) {
-    mosaic.hcounter = mosaic.size + 1;
+    mosaic.hcounter = ppu.mosaic.size;
     mosaic.pixel = pixel;
   } else if(mosaic.enable) {
     pixel = mosaic.pixel;
@@ -240,12 +225,9 @@ auto PPU::Background::power() -> void {
   io.hoffset = random();
   io.voffset = random();
 
-  latch = {};
-
   output.above = {};
   output.below = {};
 
   mosaic = {};
-  mosaic.size = random();
   mosaic.enable = random();
 }

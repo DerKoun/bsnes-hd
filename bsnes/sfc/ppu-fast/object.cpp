@@ -135,8 +135,16 @@ auto PPU::Line::renderObject(PPU::IO::Object& self) -> void {
 
     uint32 mctc = luma[cgram[palette[x]]];
     
-    if(self.aboveEnable && !windowAbove[ppufast.winXad(x, false)]) plotAbove(xc, source, priority[x], mctc);
-    if(self.belowEnable && !windowBelow[ppufast.winXad(x, true)]) plotBelow(xc, source, priority[x], mctc);
+    if(ppufast.hires() && ppufast.hd()) {
+      // Match non-hires backgrounds in hires mode (see background)
+      if(self.aboveEnable && !windowAbove[ppufast.winXad(x, false)]) plotHD(above, xc, source, priority[x], mctc, true, false);
+      if(self.aboveEnable && !windowAbove[ppufast.winXad(x, false)]) plotHD(above, xc, source, priority[x], mctc, true, true);
+      if(self.aboveEnable && !windowAbove[ppufast.winXad(x, false)]) plotHD(below, xc, source, priority[x], mctc, true, false);
+      if(self.aboveEnable && !windowAbove[ppufast.winXad(x, false)]) plotHD(below, xc, source, priority[x], mctc, true, true);
+    } else {
+      if(self.aboveEnable && !windowAbove[ppufast.winXad(x, false)]) plotAbove(xc, source, priority[x], mctc);
+      if(self.belowEnable && !windowBelow[ppufast.winXad(x, true)]) plotBelow(xc, source, priority[x], mctc);
+    }
   }
 }
 

@@ -47,6 +47,7 @@ struct Program : Emulator::Platform
 	string base_name;
 
 	bool overscan = false;
+	bool aspectcorrection = false;
 	uint ws = 0;
 	uint scale = 1;
 
@@ -226,7 +227,7 @@ auto Program::load(uint id, string name, string type, vector<string> options) ->
 auto Program::videoFrame(const uint32* data, uint pitch, uint width, uint height, uint scale) -> void {
 
 	uint offset = overscan ? 8 : 12;
-	uint multiplier = height / 240;
+	uint multiplier = height / 215;
 	data   += offset * (pitch >> 2) * multiplier;
 	height -= offset * 2 * multiplier;
 

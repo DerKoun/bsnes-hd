@@ -152,18 +152,18 @@ auto EnhancementSettings::create() -> void {
   mode7Widescreen.append(ComboButtonItem().setText( "2:1"));
   mode7Widescreen.append(ComboButtonItem().setText("21:9"));
   if (8 > settings.emulator.hack.ppu.mode7.widescreen)        mode7Widescreen.item(0).setSelected();
-  else if ( 28 > settings.emulator.hack.ppu.mode7.widescreen) mode7Widescreen.item(1).setSelected();
-  else if ( 52 > settings.emulator.hack.ppu.mode7.widescreen) mode7Widescreen.item(2).setSelected();
-  else if ( 76 > settings.emulator.hack.ppu.mode7.widescreen) mode7Widescreen.item(3).setSelected();
-  else if (104 > settings.emulator.hack.ppu.mode7.widescreen) mode7Widescreen.item(4).setSelected();
-  else if (160 > settings.emulator.hack.ppu.mode7.widescreen) mode7Widescreen.item(5).setSelected();
+  else if ( 28 > settings.emulator.hack.ppu.mode7.widescreen ||  403 == settings.emulator.hack.ppu.mode7.widescreen) mode7Widescreen.item(1).setSelected();
+  else if ( 52 > settings.emulator.hack.ppu.mode7.widescreen || 1610 == settings.emulator.hack.ppu.mode7.widescreen) mode7Widescreen.item(2).setSelected();
+  else if ( 76 > settings.emulator.hack.ppu.mode7.widescreen || 1609 == settings.emulator.hack.ppu.mode7.widescreen) mode7Widescreen.item(3).setSelected();
+  else if (104 > settings.emulator.hack.ppu.mode7.widescreen ||  201 == settings.emulator.hack.ppu.mode7.widescreen) mode7Widescreen.item(4).setSelected();
+  else if (160 > settings.emulator.hack.ppu.mode7.widescreen || 2109 == settings.emulator.hack.ppu.mode7.widescreen) mode7Widescreen.item(5).setSelected();
   mode7Widescreen.onChange([&] {
-    if (0 == mode7Widescreen.selected().offset())      settings.emulator.hack.ppu.mode7.widescreen =   0;
-    else if (1 == mode7Widescreen.selected().offset()) settings.emulator.hack.ppu.mode7.widescreen =  16;
-    else if (2 == mode7Widescreen.selected().offset()) settings.emulator.hack.ppu.mode7.widescreen =  40;
-    else if (3 == mode7Widescreen.selected().offset()) settings.emulator.hack.ppu.mode7.widescreen =  64;
-    else if (4 == mode7Widescreen.selected().offset()) settings.emulator.hack.ppu.mode7.widescreen =  88;
-    else if (5 == mode7Widescreen.selected().offset()) settings.emulator.hack.ppu.mode7.widescreen = 120;
+    if (0 == mode7Widescreen.selected().offset())      settings.emulator.hack.ppu.mode7.widescreen =     0;
+    else if (1 == mode7Widescreen.selected().offset()) settings.emulator.hack.ppu.mode7.widescreen =   403;
+    else if (2 == mode7Widescreen.selected().offset()) settings.emulator.hack.ppu.mode7.widescreen =  1610;
+    else if (3 == mode7Widescreen.selected().offset()) settings.emulator.hack.ppu.mode7.widescreen =  1609;
+    else if (4 == mode7Widescreen.selected().offset()) settings.emulator.hack.ppu.mode7.widescreen =   201;
+    else if (5 == mode7Widescreen.selected().offset()) settings.emulator.hack.ppu.mode7.widescreen =  2109;
     emulator->configure("Hacks/PPU/Mode7/Widescreen",  settings.emulator.hack.ppu.mode7.widescreen);
   });
   
@@ -322,13 +322,13 @@ auto EnhancementSettings::create() -> void {
     //settings.emulator.hack.ppu.mode7.igwinx = igwinx.selected().offset();
     if (0 == mode7Widescreen.selected().offset()) {
       settings.emulator.hack.ppu.mode7.igwinx = 40;
-    } else if (1 == mode7Widescreen.selected().offset()) {
+    } else if (1 == igwinx.selected().offset()) {
       settings.emulator.hack.ppu.mode7.igwinx = 88;
-    } else if (2 == mode7Widescreen.selected().offset()) {
+    } else if (2 == igwinx.selected().offset()) {
       settings.emulator.hack.ppu.mode7.igwinx = 128;
-    } else if (3 == mode7Widescreen.selected().offset()) {
+    } else if (3 == igwinx.selected().offset()) {
       settings.emulator.hack.ppu.mode7.igwinx = 168;
-    } else if (4 == mode7Widescreen.selected().offset()) {
+    } else if (4 == igwinx.selected().offset()) {
       settings.emulator.hack.ppu.mode7.igwinx = 216;
     }
     emulator->configure("Hacks/PPU/Mode7/Igwinx", settings.emulator.hack.ppu.mode7.igwinx);

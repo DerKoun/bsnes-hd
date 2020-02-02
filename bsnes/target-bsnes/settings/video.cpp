@@ -10,24 +10,24 @@ auto VideoSettings::create() -> void {
   luminanceSlider.setLength(101).setPosition(settings.video.luminance).onChange([&] {
     string value = {luminanceSlider.position(), "%"};
     settings.video.luminance = value.natural();
+    emulator->configure("Video/Luminance", settings.video.luminance);
     luminanceValue.setText(value);
-    program.updateVideoPalette();
   }).doChange();
   saturationLabel.setText("Saturation:");
   saturationValue.setAlignment(0.5);
   saturationSlider.setLength(201).setPosition(settings.video.saturation).onChange([&] {
     string value = {saturationSlider.position(), "%"};
     settings.video.saturation = value.natural();
+    emulator->configure("Video/Saturation", settings.video.saturation);
     saturationValue.setText(value);
-    program.updateVideoPalette();
   }).doChange();
   gammaLabel.setText("Gamma:");
   gammaValue.setAlignment(0.5);
   gammaSlider.setLength(101).setPosition(settings.video.gamma - 100).onChange([&] {
     string value = {100 + gammaSlider.position(), "%"};
     settings.video.gamma = value.natural();
+    emulator->configure("Video/Gamma", settings.video.gamma);
     gammaValue.setText(value);
-    program.updateVideoPalette();
   }).doChange();
 
   dimmingOption.setText("Dim video when idle").setToolTip(

@@ -1,11 +1,12 @@
 auto PPU::Line::renderMode7(PPU::IO::Background& self, uint8 source) -> void {
   //HD mode 7 support
   if(ppufast.hdScale() > 0 && (ppufast.hdMosaic() != 0
-      || !self.mosaicEnable || !io.mosaicSize)) {
+      || !self.mosaicEnable || io.mosaic.size == 1)) {
     return renderMode7HD(self, source);
   }
 
-  int Y = self.mosaicEnable ? self.mosaicOffset : this->y;
+  int Y = this->y;
+  if(self.mosaicEnable) Y -= io.mosaic.size - io.mosaic.counter;
   int y = !io.mode7.vflip ? Y : 255 - Y;
 
   int a = (int16)io.mode7.a;
@@ -52,8 +53,8 @@ auto PPU::Line::renderMode7(PPU::IO::Background& self, uint8 source) -> void {
       palette &= 0x7f;
     }
 
-    if(!self.mosaicEnable || --mosaicCounter == 0) {
-      mosaicCounter = 1 + io.mosaicSize;
+    if(--mosaicCounter == 0) {
+      mosaicCounter = self.mosaicEnable ? io.mosaic.size : 1;
       mosaicPalette = palette;
       mosaicPriority = priority;
       if(io.col.directColor && source == Source::BG1) {

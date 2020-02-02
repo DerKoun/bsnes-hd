@@ -28,7 +28,8 @@ auto PPU::hdScale() const -> uint { return configuration.hacks.ppu.mode7.scale; 
 auto PPU::hdPerspective() const -> uint { return configuration.hacks.ppu.mode7.perspective; }
 auto PPU::hdSupersample() const -> uint { return configuration.hacks.ppu.mode7.supersample; }
 auto PPU::hdMosaic() const -> uint { return configuration.hacks.ppu.mode7.mosaic; }
-auto PPU::widescreen() const -> uint { return !hd() || configuration.hacks.ppu.mode7.wsMode == 0 ? 0 : configuration.hacks.ppu.mode7.widescreen; }
+auto PPU::widescreen() const -> uint { return wsExt; }
+auto PPU::widescreenRaw() const -> uint { return !hd() || configuration.hacks.ppu.mode7.wsMode == 0 ? 0 : configuration.hacks.ppu.mode7.widescreen; }
 auto PPU::wsbg(uint bg) const -> uint {
   if (bg == Source::BG1) return configuration.hacks.ppu.mode7.wsbg1;
   if (bg == Source::BG2) return configuration.hacks.ppu.mode7.wsbg2;
@@ -41,6 +42,11 @@ auto PPU::winXad(uint x, bool bel) const -> uint {
        || configuration.hacks.ppu.mode7.igwin >= 2 && ((bel ? io.col.window.belowMask : io.col.window.aboveMask) == 0)
        || configuration.hacks.ppu.mode7.igwin >= 1 && ((bel ? io.col.window.belowMask : io.col.window.aboveMask) == 2)))
     ? configuration.hacks.ppu.mode7.igwinx : (x < 0 ? 0 : (x > 255 ? 255 : x)); }
+auto PPU::winXadHd(uint x, bool bel) const -> uint {
+  return (configuration.hacks.ppu.mode7.igwin != 0 && (configuration.hacks.ppu.mode7.igwin >= 3
+       || configuration.hacks.ppu.mode7.igwin >= 2 && ((bel ? io.col.window.belowMask : io.col.window.aboveMask) == 0)
+       || configuration.hacks.ppu.mode7.igwin >= 1 && ((bel ? io.col.window.belowMask : io.col.window.aboveMask) == 2)))
+    ? configuration.hacks.ppu.mode7.igwinx * PPU::hdScale() : x; }
 auto PPU::bgGrad() const -> uint { return !hd() ? 0 : configuration.hacks.ppu.mode7.bgGrad; }
 auto PPU::windRad() const -> uint { return !hd() ? 0 : configuration.hacks.ppu.mode7.windRad; }
 auto PPU::wsOverrideCandidate() const -> bool { return configuration.hacks.ppu.mode7.wsMode == 1; }
@@ -56,22 +62,6 @@ auto PPU::noVRAMBlocking() const -> bool { return configuration.hacks.ppu.noVRAM
 
 PPU::PPU() {
   output = new uint32_t[256 * 61440]();
-
-  for(uint l : range(16)) {
-    lightTable[l] = new uint32_t[32768];
-    for(uint r : range(32)) {
-      for(uint g : range(32)) {
-        for(uint b : range(32)) {
-          double luma = (double)l * 8.0 / 15.0;
-          uint ar = (luma * r + 0.5);
-          uint ag = (luma * g + 0.5);
-          uint ab = (luma * b + 0.5);
-          lightTable[l][r << 10 | g << 5 | b << 0] = ab << 16 | ag << 8 | ar << 0;
-        }
-      }
-    }
-  }
-
   for(uint y : range(240)) {
     lines[y].y = y;
   }
@@ -106,6 +96,13 @@ auto PPU::main() -> void {
     uint y = vcounter();
     if(y >= 1 && y <= 239) {
       step(renderCycle());
+      bool mosaicEnable = io.bg1.mosaicEnable || io.bg2.mosaicEnable || io.bg3.mosaicEnable || io.bg4.mosaicEnable;
+      if(y == 1) {
+        io.mosaic.counter = mosaicEnable ? io.mosaic.size + 1 : 0;
+      }
+      if(io.mosaic.counter && !--io.mosaic.counter) {
+        io.mosaic.counter = mosaicEnable ? io.mosaic.size + 0 : 0;
+      }
       lines[y].cache();
     }
   }

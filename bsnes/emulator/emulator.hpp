@@ -31,13 +31,13 @@ using namespace nall;
 
 namespace Emulator {
   static const string Name      = "bsnes-hd beta";
-  static const string Version   = "10.1";//bsnes/target-bsnes/presentation/presentation.cpp:create:about:setVersion
+  static const string Version   = "10.2";//bsnes/target-bsnes/presentation/presentation.cpp:create:about:setVersion
   static const string Author    = "DerKoun(byuu)";
   static const string License   = "GPLv3";
   static const string Website   = "https://github.com/DerKoun/bsnes-hd";
 
   //incremented only when serialization format changes
-  static const string SerializerVersion = "112";
+  static const string SerializerVersion = "114.2";
 
   namespace Constants {
     namespace Colorburst {

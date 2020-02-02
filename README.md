@@ -1,9 +1,17 @@
-# bsnes-hd *beta 10.1*
+# bsnes-hd *beta 10.2*
 
 - [downloads](https://github.com/DerKoun/bsnes-hd/releases) for the latest betas
 - [GitHub project](https://github.com/DerKoun/bsnes-hd) for source code, issues, feature requests, ...
 - [Reddit](https://www.reddit.com/r/emulation/search/?q=bsnes-hd&restrict_sr=1&sort=new) for announcements and discussions on *r/emulation*
 - [Discord](https://discord.gg/7ahAzCV) if you prefer chatting (Thanks to everyone who set it up and keeps it running)
+- [Forum](https://www.retrowide.com/forums) for widescreen discussions, both ROM-hacking and technical
+
+1. [What is it?](#what-is-it)
+2. [Help wanted](#help-wanted)
+3. [Settings](#settings)
+4. [Differences in setting/options from bsnes](#differences-in-settingoptions-from-bsnes)
+5. [Widescreen technical](#widescreen-technical)
+
 
 ## What is it?
 
@@ -152,21 +160,24 @@ The amount of neighboring lines used to smooth color gradients that are applied 
 
 The amount of neighboring lines used to smooth Window effects, like iris transitions, shadows or spell effects. "*0*" disables smoothing and is the default. (*This feature is considered a preview, as the lines at the top and bottom of effects are currently not entirely HD and it still has noticeable issues. Please let me know about any games/scenes/effects that work noticeable badly or well*)
 
-## Differences in setting/options from bsnes
+## Differences in Setting/Options from bsnes
 
 ### Settings / Output / Show Overscan Area (Show Overscan)
 
 In *bsnes* the overscan setting allows switching between cropping 8 and 0 lines form top and bottom, which are unused due to the way TVs in the time of the SNES worked. In *bsnes-hd* it switches between 12 and 8 lines, defaulting to 12 (*off*). This cuts of 4 lines on both sides that technically contain content, but should not cut important information as these lines are still in an area that wasn't safe to use (12 lines is 5%). The reason to do is that the resulting height of 216 is exactly a 5th of 1080, so you can integer scale to HD and 4K resolutions, e.g. *5x* at *16:9* is exactly *1080 HD* with every Mode 7 pixel rendered specifically.
 
-## Widescreen technical
+## Widescreen Technical
 
 ### Dimensions
 
-The amount of pixel columns added to both sides for the various aspect ratios are: (4:3, 16), (16:10, 40), (16:9, 64), (2:1, 88), (21:9, 120). Those currently are for overscan *off* (see above) and don't change when you change that setting. 
+The amount of pixel columns added to both sides for the various aspect ratios are, depending on some settings:
+- overscan *off*, aspect correction *off*: (4:3, 16), (16:10, 44), (16:9, 64), (2:1, 88), (21:9, 124).
+- overscan *on*, aspect correction *off*: (4:3, 20), (16:10, 52), (16:9, 72), (2:1, 96), (21:9, 132).
+- overscan *on*, aspect correction *on*: (4:3, 0), (16:10, 24), (16:9, 44), (2:1, 64), (21:9, 96).
 
 ### Maximum width for objects/sprites
 
-The maximum width for widescreen areas that still can have places objects in them is *96* (exactly 2:1 AR with overscan *on*). 
+The maximum width for widescreen areas that still can have places objects in them is *96* (exactly 2:1 AR with overscan *on* and aspect correction *off* or 21:9 with overscan *on* and aspect correction *on*). 
 
 ### Object/sprite wrap-around
 

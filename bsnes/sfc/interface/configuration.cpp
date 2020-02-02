@@ -14,8 +14,13 @@ auto Configuration::process(Markup::Node document, bool load) -> void {
   bind(natural, "System/PPU2/Version", system.ppu2.version);
   bind(text,    "System/Serialization/Method", system.serialization.method);
 
+  bind(boolean, "Video/AspectCorrection", video.aspectCorrection);
+  bind(boolean, "Video/Overscan", video.overscan);
   bind(boolean, "Video/BlurEmulation", video.blurEmulation);
   bind(boolean, "Video/ColorEmulation", video.colorEmulation);
+  bind(natural, "Video/Saturation", video.saturation);
+  bind(natural, "Video/Gamma", video.gamma);
+  bind(natural, "Video/Luminance", video.luminance);
 
   bind(boolean, "Hacks/Hotfixes", hacks.hotfixes);
   bind(text,    "Hacks/Entropy", hacks.entropy);

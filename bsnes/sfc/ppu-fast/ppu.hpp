@@ -19,9 +19,11 @@ struct PPU : PPUcounter {
   alwaysinline auto hdSupersample() const -> uint;
   alwaysinline auto hdMosaic() const -> uint;
   alwaysinline auto widescreen() const -> uint;
+  alwaysinline auto widescreenRaw() const -> uint;
   alwaysinline auto wsbg(uint bg) const -> uint;
   alwaysinline auto wsobj() const -> uint;
   alwaysinline auto winXad(uint x, bool bel) const -> uint;
+  alwaysinline auto winXadHd(uint x, bool bel) const -> uint;
   alwaysinline auto bgGrad() const -> uint;
   alwaysinline auto windRad() const -> uint;
   alwaysinline auto wsOverrideCandidate() const -> bool;
@@ -96,7 +98,6 @@ public:
     bool oamPriority = 0;
     bool bgPriority = 0;
     uint8 bgMode = 0;
-    uint8 mosaicSize = 0;
     bool vramIncrementMode = 0;
     uint8 vramMapping = 0;
     uint8 vramIncrementSize = 0;
@@ -109,6 +110,14 @@ public:
     bool overscan = 0;
     bool pseudoHires = 0;
     bool extbg = 0;
+
+    struct Mosaic {
+      //serialization.cpp
+      auto serialize(serializer&) -> void;
+
+      uint8 size = 1;
+      uint8 counter = 0;
+    } mosaic;
 
     struct Mode7 {
       //serialization.cpp
@@ -172,8 +181,6 @@ public:
       bool aboveEnable = 0;
       bool belowEnable = 0;
       bool mosaicEnable = 0;
-      uint16 mosaicCounter = 0;
-      uint16 mosaicOffset = 0;
       uint16 tiledataAddress = 0;
       uint16 screenAddress = 0;
       uint8 screenSize = 0;
@@ -286,6 +293,11 @@ public:
   //[unserialized]
   uint32* output = {};
   uint32* lightTable[16] = {};
+  uint luminance = 222;
+  uint saturation = 222;
+  uint gamma = 222;
+  uint wsExt = 0;
+
 
   uint ItemLimit = 0;
   uint TileLimit = 0;
@@ -307,7 +319,6 @@ public:
     alwaysinline auto avgBgC(uint dist, uint offset) const -> uint32;
 
     //background.cpp
-    auto cacheBackground(PPU::IO::Background&) -> void;
     auto renderBackground(PPU::IO::Background&, uint8 source) -> void;
     alwaysinline auto getTile(PPU::IO::Background&, uint hoffset, uint voffset) -> uint;
 

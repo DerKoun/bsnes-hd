@@ -23,8 +23,13 @@ struct Configuration {
   } system;
 
   struct Video {
+    bool aspectCorrection = false;
+    bool overscan = false;
     bool blurEmulation = true;
     bool colorEmulation = true;
+    uint saturation = 100;
+    uint gamma = 150;
+    uint luminance = 100;
   } video;
 
   struct Hacks {
@@ -53,7 +58,7 @@ struct Configuration {
         uint igwin = 1;
         uint igwinx = 128;
         uint bgGrad = 4;
-		uint windRad = 0;
+        uint windRad = 0;
         uint wsMode = 1;
         uint wsBgCol = 1;
         uint wsMarker = 0;

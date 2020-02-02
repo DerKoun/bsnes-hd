@@ -75,7 +75,6 @@ auto Program::load() -> void {
   if(auto& game = sufamiTurboB) games.append(game.option, ";", game.location, "|");
   presentation.addRecentGame(games.trimRight("|", 1L));
 
-  updateVideoPalette();
   updateVideoEffects();
   updateAudioEffects();
   updateAudioFrequency();

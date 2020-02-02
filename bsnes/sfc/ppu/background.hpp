@@ -9,13 +9,12 @@ struct Background {
   auto begin() -> void;
   auto fetchNameTable() -> void;
   auto fetchOffset(uint y) -> void;
-  auto fetchCharacter(uint index) -> void;
+  auto fetchCharacter(uint index, bool half = 0) -> void;
   auto run(bool screen) -> void;
   auto power() -> void;
 
   //mode7.cpp
   alwaysinline auto clip(int n) -> int;
-  auto beginMode7() -> void;
   auto runMode7() -> void;
 
   auto serialize(serializer&) -> void;
@@ -44,11 +43,6 @@ struct Background {
     uint16 voffset;
   } io;
 
-  struct Latch {
-    uint16 hoffset;
-    uint16 voffset;
-  } latch;
-
   struct Pixel {
     uint8 priority;  //0 = none (transparent)
     uint8 palette;
@@ -61,15 +55,9 @@ struct Background {
   } output;
 
   struct Mosaic {
-    static uint4 size;
      uint1 enable;
-
-    uint16 vcounter;
     uint16 hcounter;
-
-    uint16 voffset;
     uint16 hoffset;
-
     Pixel  pixel;
   } mosaic;
 
@@ -90,8 +78,6 @@ struct Background {
     uint16 data[4];
   } tiles[66];
 
-  uint7 nameTableIndex;
-  uint7 characterIndex;
   uint7 renderingIndex;
   uint3 pixelCounter;
 
