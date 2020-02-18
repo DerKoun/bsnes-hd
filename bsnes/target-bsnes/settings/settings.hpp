@@ -18,13 +18,13 @@ struct Settings : Markup::Node {
 
     uint luminance = 100;
     uint saturation = 100;
-    uint gamma = 150;
+    uint gamma = 100;
     bool dimming = true;
     bool snow = false;
 
     string output = "Scale";
     uint multiplier = 2;
-    bool aspectCorrection = true;
+    bool aspectCorrection = false;
     bool overscan = false;
     bool blur = false;
     string filter = "None";

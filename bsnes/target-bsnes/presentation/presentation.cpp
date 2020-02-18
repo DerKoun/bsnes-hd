@@ -40,7 +40,7 @@ auto Presentation::create() -> void {
   if(settings.video.output == "Center") centerViewport.setChecked();
   if(settings.video.output == "Scale") scaleViewport.setChecked();
   if(settings.video.output == "Stretch") stretchViewport.setChecked();
-  aspectCorrection.setText("Aspect Correction").setChecked(settings.video.aspectCorrection).onToggle([&] {
+  aspectCorrection.setText("Pixel Aspect Correction").setChecked(settings.video.aspectCorrection).onToggle([&] {
     settings.video.aspectCorrection = aspectCorrection.checked();
     emulator->configure("Video/AspectCorrection", settings.video.aspectCorrection);
     resizeWindow();

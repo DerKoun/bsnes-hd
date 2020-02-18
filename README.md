@@ -1,4 +1,4 @@
-# bsnes-hd *beta 10.2*
+# bsnes-hd *beta 10.3*
 
 - [downloads](https://github.com/DerKoun/bsnes-hd/releases) for the latest betas
 - [GitHub project](https://github.com/DerKoun/bsnes-hd) for source code, issues, feature requests, ...
@@ -166,19 +166,69 @@ The amount of neighboring lines used to smooth Window effects, like iris transit
 
 In *bsnes* the overscan setting allows switching between cropping 8 and 0 lines form top and bottom, which are unused due to the way TVs in the time of the SNES worked. In *bsnes-hd* it switches between 12 and 8 lines, defaulting to 12 (*off*). This cuts of 4 lines on both sides that technically contain content, but should not cut important information as these lines are still in an area that wasn't safe to use (12 lines is 5%). The reason to do is that the resulting height of 216 is exactly a 5th of 1080, so you can integer scale to HD and 4K resolutions, e.g. *5x* at *16:9* is exactly *1080 HD* with every Mode 7 pixel rendered specifically.
 
+### Settings / Output / (Pixel) Aspect Correction
+
+Renamed Aspect Correction to Pixel Aspect Correction to avoid confusion with the widescreen aspect ratio.
+
 ## Widescreen Technical
 
 ### Dimensions
 
 The amount of pixel columns added to both sides for the various aspect ratios are, depending on some settings:
-- overscan *off*, aspect correction *off*: (4:3, 16), (16:10, 44), (16:9, 64), (2:1, 88), (21:9, 124).
-- overscan *on*, aspect correction *off*: (4:3, 20), (16:10, 52), (16:9, 72), (2:1, 96), (21:9, 132).
-- overscan *on*, aspect correction *on*: (4:3, 0), (16:10, 24), (16:9, 44), (2:1, 64), (21:9, 96).
+- overscan *off*, pixel aspect correction *off*: (4:3, 16), (16:10, 44), (16:9, 64), (2:1, 88), (21:9, 124).
+- overscan *on*, pixel aspect correction *off*: (4:3, 20), (16:10, 52), (16:9, 72), (2:1, 96), (21:9, 132).
+- overscan *on*, pixel aspect correction *on*: (4:3, 0), (16:10, 24), (16:9, 44), (2:1, 64), (21:9, 96).
 
 ### Maximum width for objects/sprites
 
-The maximum width for widescreen areas that still can have places objects in them is *96* (exactly 2:1 AR with overscan *on* and aspect correction *off* or 21:9 with overscan *on* and aspect correction *on*). 
+The maximum width for widescreen areas that still can have places objects in them is *96* (exactly 2:1 AR with overscan *on* and pixel aspect correction *off* or 21:9 with overscan *on* and pixel aspect correction *on*). 
 
 ### Object/sprite wrap-around
 
 At that maximum width *352* is the only coordinate that places a large object (width 64) entirely off screen. Smaller value make it reach into the screen from the right, larger ones from the left.
+
+### Setting override files
+
+Along with widescreen patches you can override certain settings via a file with the same name as the ROM and the extension ".bso". It is searched in the same way as patches.
+
+The file must contain alternating letters and numbers, each pair overriding a setting.
+
+**Please note** that this does not work in the libretro core and that the overrides are not cleared when you change the ROM, so restarting the emulator is highly recommended.
+
+#### Settings
+
+| Description                         | Letter  | Values                                          |
+| ----------------------------------- | ------- | ----------------------------------------------- |
+| widescreen mode                     | w       | 0:off    1:on(always)           2:on(mode7)     |
+| widescreen sprites                  | s       | 0:safe   1:unsafe(widescreen)   2:clip          |
+| widescreen aspect ratio             | W       | 0-200:widescreen-extension 201+:AR(*see below*) |
+| widescreen background 1/2/3/4       | b/B/c/C | 0:off    1:on   2:auto(horizontal and vertical) |
+| pixel aspect ratio correction       | p       | 0:off    1:on                                   |
+| overscan                            | o       | 0:off(216 lines(5th HD))        1:on(224 lines) |
+| ignore window                       | i       | 0:none   1:outside   2:outside&always   3:all   |
+| ignore window fallback x-coordinate | I       | 0-255:x-coordinate                              |
+
+#### Widescreen values
+
+Values of 200 and less specify the widescreen extension on each side in pixel columns. It is recommended to use values dividable by as large a power of 2 as possible, at least by 4.
+
+Values larger than 200 specify the aspect ratio as (horizontal*100+vertical), e.g. 16:10, 16:9, 2:1 and 21:9 as 1610, 1609, 201 and 2109, respectively. From this AR the widescreen extension is computed in the same way as for ARs specified in the settings dialog, except that arbitrary ARs can be specified here.
+
+#### Sample
+
+To force enable widescreen, including for sprites and setting a widescreen extension of 64 the file can simply be: 
+```
+w1s1W64
+```
+Any character that is not a letter or digit is ignored. So you can also do:
+```
+w :  1
+s :  1
+W : 64
+```
+Only the last letter before a number is taken into account, basically allowing comments:
+```
+widescreen  always on:    w: 1
+widescreen sprites on:    s: 1
+widescreen extension :    W:64
+```

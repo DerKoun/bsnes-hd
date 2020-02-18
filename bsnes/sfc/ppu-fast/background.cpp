@@ -156,6 +156,9 @@ auto PPU::Line::renderBackground(PPU::IO::Background& self, uint8 source) -> voi
           // In hires mode non-hires backgrounds seem to be rendered on every second pixel (see water in Kirby)
           if(self.aboveEnable && !windowAbove[ppufast.winXad(x, false)]) plotHD(above, x, source, mosaicPriority, mctc, true, true);
           if(self.aboveEnable && !windowAbove[ppufast.winXad(x, false)]) plotHD(below, x, source, mosaicPriority, mctc, true, true);
+          // So we force low priority for half of every pixel
+          if(self.aboveEnable && !windowAbove[ppufast.winXad(x, false)]) plotHD(above, x, source, self.priority[0], mctc, true, false);
+          if(self.aboveEnable && !windowAbove[ppufast.winXad(x, false)]) plotHD(below, x, source, self.priority[0], mctc, true, false);
         } else {
           if(self.aboveEnable && !windowAbove[ppufast.winXad(x, false)]) plotAbove(x, source, mosaicPriority, mctc);
           if(self.belowEnable && !windowBelow[ppufast.winXad(x, true)]) plotBelow(x, source, mosaicPriority, mctc);

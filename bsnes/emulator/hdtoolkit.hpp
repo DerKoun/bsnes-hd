@@ -12,6 +12,9 @@ namespace HdToolkit {
       val *= 7;
       val /= 8;
     }
+    if (val <= 256) {
+      return 0;
+    }
     val -= 256;
     val /= 2;
     val /= 4;

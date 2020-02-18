@@ -724,7 +724,7 @@ static void set_environment_info(retro_environment_t cb)
 		{ "bsnes_mode7_bgGrad",        "HD Background Color Radius; 4|5|6|7|8|0|1|2|3" },
 		{ "bsnes_mode7_windRad",       "HD Windowing (experimental); 0|1|2|3|4|5|6|7|8" },	
 		{ "bsnes_ppu_show_overscan", "Show Overscan; OFF|ON" },
-		{ "bsnes_video_aspectcorrection", "Aspect Correction; OFF|ON" },
+		{ "bsnes_video_aspectcorrection", "Pixel Aspect Correction; OFF|ON" },
 		{ "bsnes_blur_emulation", "Blur emulation; OFF|ON" },
 		{ "bsnes_entropy", "Entropy (randomization); Low|High|None" },
 		{ "bsnes_hotfixes", "Hotfixes; OFF|ON" },
@@ -745,7 +745,7 @@ static void set_environment_info(retro_environment_t cb)
 		{ "bsnes_run_ahead_frames", "Amount of frames for run-ahead; OFF|1|2|3|4" },
 		{ "bsnes_video_luminance", "Luminance; 100|90|80|70|60|50|40|30|20|10|0" },
 		{ "bsnes_video_saturation", "Saturation; 100|90|80|70|60|50|40|30|20|10|0|200|190|180|170|160|150|140|130|120|110" },
-		{ "bsnes_video_gamma", "Gamma; 150|140|130|120|110|100|200|190|180|170|160" },
+		{ "bsnes_video_gamma", "Gamma; 100|110|120|130|140|150|160|170|180|190|200" },
 		{ nullptr },
 	};
 	cb(RETRO_ENVIRONMENT_SET_VARIABLES, const_cast<retro_variable *>(vars));

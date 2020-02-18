@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  Windows:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Build
+      run: mingw32-make -j $env:NUMBER_OF_PROCESSORS -C bsnes
+    - name: Prepare artifacts
+      run: |
+        mkdir bsnes/out/pack
+        unzip packraw.zip -d bsnes/out/pack
+        cp README.md bsnes/out/pack
+        cp bsnes/out/bsnes.exe bsnes/out/pack
+        mv bsnes/out/pack/bsnes.exe bsnes/out/pack/bsnes_hd.exe
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v1.0.0
+      with:
+        name: bsnes_hd_build-${{ runner.os }}
+        path: bsnes\out\pack
+
+  Linux:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Setup
+      run: |
+        sudo apt-get update
+        sudo apt-get -y install build-essential libgtk2.0-dev libpulse-dev mesa-common-dev libgtksourceview2.0-dev libcairo2-dev libsdl2-dev libxv-dev libao-dev libopenal-dev libudev-dev zip
+    - name: Build
+      run: make -j $(nproc) -C bsnes
+    - name: Prepare artifacts
+      run: |
+        mkdir bsnes/out/pack
+        unzip packraw.zip -d bsnes/out/pack
+        cp README.md bsnes/out/pack
+        cp -R bsnes/out/*bsnes* bsnes/out/pack
+        mv bsnes/out/pack/bsnes bsnes/out/pack/bsnes_hd
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v1.0.0
+      with:
+        name: bsnes_hd_build-${{ runner.os }}
+        path: bsnes/out/pack
+
+  macOS:
+    runs-on: macos
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Build
+      run: make -j $(sysctl -n hw.ncpu) -C bsnes
+    - name: Prepare artifacts
+      run: |
+        mkdir bsnes/out/pack
+        unzip packraw.zip -d bsnes/out/pack
+        cp README.md bsnes/out/pack
+        cp -R bsnes/out/*bsnes* bsnes/out/pack
+        mv bsnes/out/pack/bsnes.app bsnes/out/pack/bsnes_hd.app
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v1.0.0
+      with:
+        name: bsnes_hd_build-${{ runner.os }}
+        path: bsnes/out/pack
+
+  macOS-libretro:
+    runs-on: macos
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Build
+      run: make -j $(sysctl -n hw.ncpu) -C bsnes target=libretro
+    - name: Prepare artifacts
+      run: |
+        mkdir bsnes/out/pack
+        cp README.md bsnes/out/pack
+        cp LICENSE bsnes/out/pack
+        cp -R bsnes/out/*bsnes* bsnes/out/pack
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v1.0.0
+      with:
+        name: bsnes_hd_libretro_build-${{ runner.os }}
+        path: bsnes/out/pack

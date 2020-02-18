@@ -21,24 +21,24 @@ auto PPU::Line::flush() -> void {
       for(uint r : range(32)) {
         for(uint g : range(32)) {
           for(uint b : range(32)) {
-            double dr = r << 3;
-            double dg = g << 3;
-            double db = b << 3;
+            double dr = r * 255.0 / 31.0;
+            double dg = g * 255.0 / 31.0;
+            double db = b * 255.0 / 31.0;
   
             if(saturation != 100) {
               double satVal = saturation / 100.0;
-              double grayInv = (dr + dg + db) / 3 * max(0.0, 1.0 - saturation / 100.0);
+              double grayInv = (dr + dg + db) / 3 * max(0.0, 1.0 - satVal);
               dr = dr * satVal + grayInv;
               dg = dg * satVal + grayInv;
               db = db * satVal + grayInv;
             }
   
             if(gamma != 100) {
-              double reciprocal = 1.0 / 255.0;
               double gamVal = gamma / 100.0;
-              dr = 255.0 * pow(dr * reciprocal, gamVal);
-              dg = 255.0 * pow(dg * reciprocal, gamVal);
-              db = 255.0 * pow(db * reciprocal, gamVal);
+              double reciprocal = 1.0 / 127.0;
+              dr = dr > 127.0 ? dr : 127.0 * pow(dr * reciprocal, gamVal);
+              dg = dg > 127.0 ? dg : 127.0 * pow(dg * reciprocal, gamVal);
+              db = db > 127.0 ? db : 127.0 * pow(db * reciprocal, gamVal);
             }
 
             if(luminance != 100) {

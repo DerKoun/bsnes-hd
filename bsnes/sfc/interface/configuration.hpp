@@ -28,7 +28,7 @@ struct Configuration {
     bool blurEmulation = true;
     bool colorEmulation = true;
     uint saturation = 100;
-    uint gamma = 150;
+    uint gamma = 100;
     uint luminance = 100;
   } video;
 
