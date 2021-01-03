@@ -9,7 +9,8 @@
   variables:
     CORENAME: bsnes_hd_beta
     JNI_PATH: bsnes/target-libretro
-    MAKEFILE: bsnes/GNUmakefile
+    MAKEFILE_PATH: bsnes
+    MAKEFILE: GNUmakefile
     target: libretro
 
 # Inclusion templates, required for the build to work
