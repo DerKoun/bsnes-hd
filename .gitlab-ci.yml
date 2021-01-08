@@ -11,6 +11,7 @@
     JNI_PATH: bsnes/target-libretro
     MAKEFILE_PATH: bsnes
     MAKEFILE: GNUmakefile
+    binary: library
     target: libretro
 
 # Inclusion templates, required for the build to work
