@@ -14,6 +14,27 @@
     binary: library
     target: libretro
 
+.core-defs-windows:
+  extends: .core-defs
+  after_script:
+    - mv ${MAKEFILE_PATH}/out/${CORENAME}_libretro.dll ${CORENAME}_libretro.dll
+  variables:
+    platform: windows
+
+.core-defs-linux:
+  extends: .core-defs
+  after_script:
+    - mv ${MAKEFILE_PATH}/out/${CORENAME}_libretro.so ${CORENAME}_libretro.so
+  variables:
+    platform: linux
+
+.core-defs-osx:
+  extends: .core-defs
+  after_script:
+    - mv ${MAKEFILE_PATH}/out/${CORENAME}_libretro.dylib ${CORENAME}_libretro.dylib
+  variables:
+    platform: macos
+
 # Inclusion templates, required for the build to work
 include:
   ################################## DESKTOPS ################################
@@ -28,6 +49,10 @@ include:
   # Linux 64-bit
   - project: 'libretro-infrastructure/ci-templates'
     file: '/linux-x64.yml'
+
+  # Linux 32-bit
+  - project: 'libretro-infrastructure/ci-templates'
+    file: '/linux-i686.yml'
 
   # MacOS 64-bit
   - project: 'libretro-infrastructure/ci-templates'
@@ -58,25 +83,35 @@ stages:
 libretro-build-windows-x64:
   extends:
     - .libretro-windows-x64-mingw-make-default
-    - .core-defs
+    - .core-defs-windows
+  variables:
+    compiler: x86_64-w64-mingw32.static-g++
     
 # Windows 32-bit
 libretro-build-windows-i686:
   extends:
     - .libretro-windows-i686-mingw-make-default
-    - .core-defs
+    - .core-defs-windows
+  variables:
+    compiler: i686-w64-mingw32.static-g++
 
 # Linux 64-bit
 libretro-build-linux-x64:
   extends:
     - .libretro-linux-x64-make-default
-    - .core-defs
+    - .core-defs-linux
+
+# Linux 32-bit
+libretro-build-linux-i686:
+  extends:
+    - .libretro-linux-i686-make-default
+    - .core-defs-linux
 
 # MacOS 64-bit
 libretro-build-osx-x64:
   extends:
     - .libretro-osx-x64-make-default
-    - .core-defs
+    - .core-defs-osx
 
 ################################### CELLULAR #################################
 # Android ARMv7a
@@ -109,3 +144,11 @@ libretro-build-libnx-aarch64:
   extends:
     - .libretro-libnx-static-retroarch-master
     - .core-defs
+  script:
+    - make -C ${MAKEFILE_PATH} -f ${MAKEFILE} -j$NUMPROC platform=libnx
+    - mv ${MAKEFILE_PATH}/out/${CORENAME}_libretro_libnx.a retroarch-precompiled/libretro_libnx.a
+    - cd retroarch-precompiled/
+    - make -f Makefile.libnx -j10
+    - mv retroarch_switch.nro ../${CORENAME}_libretro_libnx.nro
+    - mv retroarch_switch.elf ../${CORENAME}_libretro_libnx.elf
+    - cd ../
