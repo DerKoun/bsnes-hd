@@ -41,8 +41,10 @@ static vector<string> cheatList;
 #define RETRO_DEVICE_LIGHTGUN_JUSTIFIERS   RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_LIGHTGUN, 2)
 
 #define RETRO_GAME_TYPE_SGB             0x101 | 0x1000
+#define RETRO_GAME_TYPE_BSX             0x110 | 0x1000
 #define RETRO_MEMORY_SGB_SRAM ((1 << 8) | RETRO_MEMORY_SAVE_RAM)
 #define RETRO_MEMORY_GB_SRAM ((2 << 8) | RETRO_MEMORY_SAVE_RAM)
+#define RETRO_MEMORY_BSX_SRAM ((3 << 8) | RETRO_MEMORY_SAVE_RAM)
 
 static bool flush_variables() // returns whether video dimensions have changed (overscan, aspectcorrection scale or widescreen AR)
 {
@@ -598,14 +600,24 @@ static void set_environment_info(retro_environment_t cb)
     static const struct retro_subsystem_memory_info gb_memory[] = {
         { "srm", RETRO_MEMORY_GB_SRAM },
     };
+	
+	static const struct retro_subsystem_memory_info bsx_memory[] = {
+		{ "srm", RETRO_MEMORY_BSX_SRAM },
+	};
 
     static const struct retro_subsystem_rom_info sgb_roms[] = {
         { "Game Boy ROM", "gb|gbc", true, false, true, gb_memory, 1 },
-        { "Super Game Boy ROM", "smc|sfc|swc|fig|bs", true, false, true, sgb_memory, 1 },
+        { "Super Game Boy ROM", "smc|sfc|swc|fig", true, false, true, sgb_memory, 1 },
     };
+	
+	static const struct retro_subsystem_rom_info bsx_roms[] = {
+		{ "BS-X ROM", "bs", true, false, true, bsx_memory, 1 },
+		{ "BS-X BIOS ROM", "smc|sfc|swc|fig", true, false, true, bsx_memory, 1 },
+	};
 
     static const struct retro_subsystem_info subsystems[] = {
         { "Super Game Boy", "sgb", sgb_roms, 2, RETRO_GAME_TYPE_SGB },
+		{ "BS-X Satellaview", "bsx", bsx_roms, 2, RETRO_GAME_TYPE_BSX },
         {}
     };
 
@@ -808,7 +820,7 @@ RETRO_API void retro_get_system_info(retro_system_info *info)
 	info->library_name     = Emulator::Name;
 	info->library_version  = Emulator::Version;
 	info->need_fullpath    = true;
-	info->valid_extensions = "smc|sfc";
+	info->valid_extensions = "smc|sfc|gb|gbc|bs";
 	info->block_extract = false;
 }
 
@@ -933,17 +945,54 @@ RETRO_API bool retro_load_game(const retro_game_info *game)
 
 	flush_variables();
 
-	if (string(game->path).endsWith(".gb") || string(game->path).endsWith(".gbc"))
+	if (string(game->path).endsWith(".gb"))
 	{
 		const char *system_dir;
 		environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &system_dir);
-		string sgb_full_path = string(system_dir, "/", sgb_bios).transform("\\", "/");
-		if (!file::exists(sgb_full_path)) {
+		string sgb_full_path = string(game->path).transform("\\", "/");
+		string sgb_full_path2 = string(sgb_full_path).replace(".gb", ".sfc");
+		if (!file::exists(sgb_full_path2)) {
+			string sgb_full_path = string(system_dir, "/", sgb_bios).transform("\\", "/");
+			program->superFamicom.location = sgb_full_path;
+		}
+        else {
+			program->superFamicom.location = sgb_full_path2;
+		}
+		program->gameBoy.location = string(game->path);
+		if (!file::exists(program->superFamicom.location)) {
+			return false;
+		}
+	}
+	else if (string(game->path).endsWith(".gbc"))
+	{
+		const char *system_dir;
+		environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &system_dir);
+		string sgb_full_path = string(game->path).transform("\\", "/");
+		string sgb_full_path2 = string(sgb_full_path).replace(".gbc", ".sfc");
+		if (!file::exists(sgb_full_path2)) {
+			string sgb_full_path = string(system_dir, "/", sgb_bios).transform("\\", "/");
+			program->superFamicom.location = sgb_full_path;
+		}
+        else {
+			program->superFamicom.location = sgb_full_path2;
+		}
+		program->gameBoy.location = string(game->path);
+		if (!file::exists(program->superFamicom.location)) {
 			return false;
 		}
 
-		program->superFamicom.location = sgb_full_path;
-		program->gameBoy.location = string(game->path);
+	}
+	else if (string(game->path).endsWith(".bs"))
+	{
+		const char *system_dir;
+		environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &system_dir);
+		string bs_full_path = string(system_dir, "/", "BS-X.bin").transform("\\", "/");
+		if (!file::exists(bs_full_path)) {
+			return false;
+		}
+
+		program->superFamicom.location = bs_full_path;
+		program->bsMemory.location = string(game->path);
 	}
 	else
 	{
@@ -976,6 +1025,14 @@ RETRO_API bool retro_load_game_special(unsigned game_type,
 			libretro_print(RETRO_LOG_INFO, "GB ROM: %s\n", info[0].path);
 			libretro_print(RETRO_LOG_INFO, "SGB ROM: %s\n", info[1].path);
 			program->gameBoy.location = info[0].path;
+			program->superFamicom.location = info[1].path;
+		}
+		break;
+		case RETRO_GAME_TYPE_BSX:
+		{
+			libretro_print(RETRO_LOG_INFO, "BS-X ROM: %s\n", info[0].path);
+			libretro_print(RETRO_LOG_INFO, "BS-X BIOS ROM: %s\n", info[1].path);
+			program->bsMemory.location = info[0].path;
 			program->superFamicom.location = info[1].path;
 		}
 		break;
