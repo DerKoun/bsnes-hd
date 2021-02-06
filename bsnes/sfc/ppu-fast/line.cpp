@@ -17,6 +17,7 @@ auto PPU::Line::flush() -> void {
     ppu.saturation = saturation;
     ppu.gamma = gamma;
     for(uint l : range(16)) {
+      if (ppu.lightTable[l]) delete [] ppu.lightTable[l];
       ppu.lightTable[l] = new uint32_t[32768];
       for(uint r : range(32)) {
         for(uint g : range(32)) {
@@ -331,6 +332,10 @@ auto PPU::Line::render(bool fieldID) -> void {
     *output++ = (prev + curr - ((prev ^ curr) & 0x00010101)) >> 1;
     prev = curr;
   }
+
+  delete [] bgFixedColors;
+  delete [] belowColors;
+
 }
 
 auto PPU::Line::pixel(uint x, Pixel above, Pixel below, uint wsm, uint wsma, uint32 bgFixedColor) const -> uint32 { 
