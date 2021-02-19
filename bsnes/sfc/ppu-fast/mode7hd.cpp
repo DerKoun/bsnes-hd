@@ -7,7 +7,7 @@ auto PPU::Line::cacheMode7HD() -> void {
     ))
     bool state = false;
     uint y;
-    //find the moe 7 groups
+    //find the mode 7 groups
     for(y = 0; y < Line::count; y++) {
       if(state != isLineMode7(ppu.lines[Line::start + y])) {
         state = !state;
@@ -156,10 +156,12 @@ auto PPU::Line::renderMode7HD(PPU::IO::Background& self, uint8 source) -> void {
     y_b = 255 - y_b;
   }
 
-  bool windowAbove[256];
-  bool windowBelow[256];
-  renderWindow(self.window, self.window.aboveEnable, windowAbove);
-  renderWindow(self.window, self.window.belowEnable, windowBelow);
+  bool windowAbove[1024];
+  bool windowBelow[1024];
+  renderWindow(self.window, self.window.aboveEnable, windowAbove,
+               ppufast.widescreen(), ppufast.strwin());
+  renderWindow(self.window, self.window.belowEnable, windowBelow,
+               ppufast.widescreen(), ppufast.strwin());
 
   auto luma = ppu.lightTable[io.displayBrightness];
   int pixelYp = INT_MIN;

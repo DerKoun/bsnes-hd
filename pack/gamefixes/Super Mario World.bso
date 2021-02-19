@@ -1,0 +1,5 @@
+  %  Super Mario World  %  
+w :    1    % permanent widescreen %
+s :    1    % sprites in widescreen areas %
+i :    0    % disable ignore window %
+m :    0    % no ws markers %

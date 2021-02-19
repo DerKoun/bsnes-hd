@@ -38,15 +38,16 @@ auto PPU::wsbg(uint bg) const -> uint {
   return 0; }
 auto PPU::wsobj() const -> uint { return configuration.hacks.ppu.mode7.wsobj; }
 auto PPU::winXad(uint x, bool bel) const -> uint {
-  return (configuration.hacks.ppu.mode7.igwin != 0 && (configuration.hacks.ppu.mode7.igwin >= 3
+  return ((configuration.hacks.ppu.mode7.igwin != 0 && (configuration.hacks.ppu.mode7.igwin >= 3
        || configuration.hacks.ppu.mode7.igwin >= 2 && ((bel ? io.col.window.belowMask : io.col.window.aboveMask) == 0)
        || configuration.hacks.ppu.mode7.igwin >= 1 && ((bel ? io.col.window.belowMask : io.col.window.aboveMask) == 2)))
-    ? configuration.hacks.ppu.mode7.igwinx : (x < 0 ? 0 : (x > 255 ? 255 : x)); }
+    ? configuration.hacks.ppu.mode7.igwinx : x) + widescreen(); }
 auto PPU::winXadHd(uint x, bool bel) const -> uint {
   return (configuration.hacks.ppu.mode7.igwin != 0 && (configuration.hacks.ppu.mode7.igwin >= 3
        || configuration.hacks.ppu.mode7.igwin >= 2 && ((bel ? io.col.window.belowMask : io.col.window.aboveMask) == 0)
        || configuration.hacks.ppu.mode7.igwin >= 1 && ((bel ? io.col.window.belowMask : io.col.window.aboveMask) == 2)))
     ? configuration.hacks.ppu.mode7.igwinx * PPU::hdScale() : x; }
+auto PPU::strwin() const -> bool { return configuration.hacks.ppu.mode7.strwin; }
 auto PPU::bgGrad() const -> uint { return !hd() ? 0 : configuration.hacks.ppu.mode7.bgGrad; }
 auto PPU::windRad() const -> uint { return !hd() ? 0 : configuration.hacks.ppu.mode7.windRad; }
 auto PPU::wsOverrideCandidate() const -> bool { return configuration.hacks.ppu.mode7.wsMode == 1; }

@@ -1,0 +1,4 @@
+  %  R-Type III  %  
+P :    0    % disable perspective correction:
+              avoid HD Mode 7 issues %
+w :    0    % disable widescreen %

@@ -165,7 +165,6 @@ auto Program::loadSuperFamicom(string location) -> bool {
   }
 
   // load and apply simple settings override file (if found)
-  vector<uint8_t> rso;
   if(location.endsWith("/")) {
     rso = file::read({location, "gamesettings.bso"});
   } else if(location.iendsWith(".zip")) {
@@ -182,71 +181,7 @@ auto Program::loadSuperFamicom(string location) -> bool {
   } else {
     rso = file::read(path("gamesettings", location, ".bso"));
   }
-  if(rso) {
-    int i = 0;
-    int v = 0;
-    int c = -1;
-    int n = 0;
-    while (i < rso.size()) {
-      v = rso[i];
-      if ((v >= 'a' && v <= 'z') || (v >= 'A' && v <= 'Z')) {
-        c = v;
-      } else if (c > -1 && v >= '0' && v <= '9') {
-        n = (n * 10) + (v - '0');
-        if (i+1 == rso.size() || rso[i+1] < '0' || rso[i+1] > '9') {
-          switch (c) {
-            case 'p': //pixelAspectCorrect 0:off 1:on
-              settings.video.aspectCorrection = n == 1;
-              emulator->configure("Video/AspectCorrection", settings.video.aspectCorrection);
-              break;
-            case 'o': //overscan 0:216 1:224 (2:240 3:240f)
-              settings.video.overscan = n == 1;
-              emulator->configure("Video/Overscan", settings.video.overscan);
-              break;
-            case 'w': //widescreenMode 0:none 1:on 2:mode7
-              settings.emulator.hack.ppu.mode7.wsMode = n == 1 ? 2 : (n == 2 ? 1 : 0);
-              emulator->configure("Hacks/PPU/Mode7/WsMode", settings.emulator.hack.ppu.mode7.wsMode);
-              break;
-            case 'W': //WSaspectRatio int [<=200:wsExt, >200:ar]
-              settings.emulator.hack.ppu.mode7.widescreen = n;
-              emulator->configure("Hacks/PPU/Mode7/Widescreen",  settings.emulator.hack.ppu.mode7.widescreen);
-              break;
-            case 's': //WSsprites 0:safe 1:unsafe 2:clip
-              settings.emulator.hack.ppu.mode7.wsobj = n == 1 ? 1 : (n == 2 ? 3 : 0);
-              emulator->configure("Hacks/PPU/Mode7/Wsobj", settings.emulator.hack.ppu.mode7.wsobj);
-              break;
-            case 'i': //igwin 0:none 1:outside 2:outside&always 3:all
-              settings.emulator.hack.ppu.mode7.igwin = n > 3 ? 0 : n;
-              emulator->configure("Hacks/PPU/Mode7/Igwin", settings.emulator.hack.ppu.mode7.igwin);
-              break;
-            case 'I': //igwinx int
-              settings.emulator.hack.ppu.mode7.igwinx = n > 255 ? 128 : n;
-              emulator->configure("Hacks/PPU/Mode7/Igwinx", settings.emulator.hack.ppu.mode7.igwinx);
-              break;
-            case 'b': //bg1WS 0:off 1:on 2:auto(h+v)
-              settings.emulator.hack.ppu.mode7.wsbg1 = n == 1 ? 1 : (n == 2 ? 16 : 0);
-              emulator->configure("Hacks/PPU/Mode7/Wsbg1", settings.emulator.hack.ppu.mode7.wsbg1);
-              break;
-            case 'B': //bg2WS 0:off 1:on 2:auto(h+v)
-              settings.emulator.hack.ppu.mode7.wsbg2 = n == 1 ? 1 : (n == 2 ? 16 : 0);
-              emulator->configure("Hacks/PPU/Mode7/Wsbg2", settings.emulator.hack.ppu.mode7.wsbg2);
-              break;
-            case 'c': //bg3WS 0:off 1:on 2:auto(h+v)
-              settings.emulator.hack.ppu.mode7.wsbg3 = n == 1 ? 1 : (n == 2 ? 16 : 0);
-              emulator->configure("Hacks/PPU/Mode7/Wsbg3", settings.emulator.hack.ppu.mode7.wsbg3);
-              break;
-            case 'C': //bg4WS 0:off 1:on 2:auto(h+v)
-              settings.emulator.hack.ppu.mode7.wsbg4 = n == 1 ? 1 : (n == 2 ? 16 : 0);
-              emulator->configure("Hacks/PPU/Mode7/Wsbg4", settings.emulator.hack.ppu.mode7.wsbg4);
-              break;
-          }
-          c = -1;
-          n = 0;
-        }
-      }
-      i++;
-    }
-  }
+
 
   return true;
 }

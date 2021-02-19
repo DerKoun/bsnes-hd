@@ -10,7 +10,7 @@ struct AudioWaveOut : AudioDriver {
   auto create() -> bool override {
     super.setChannels(2);
     super.setFrequency(44100);
-    super.setLatency(512);
+    super.setLatency(128);
     return initialize();
   }
 

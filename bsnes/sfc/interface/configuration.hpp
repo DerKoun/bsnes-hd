@@ -57,6 +57,7 @@ struct Configuration {
         uint wsobj = 0;
         uint igwin = 1;
         uint igwinx = 128;
+        bool strwin = false;
         uint bgGrad = 4;
         uint windRad = 0;
         uint wsMode = 1;

@@ -1,0 +1,5 @@
+  %  Super Punch Out  %  
+w :    1    % permanent widescreen %
+s :    1    % sprites in widescreen areas %
+i :    0    % disable ignore window %
+c :    0    % disable widescreen for background layer 3 %

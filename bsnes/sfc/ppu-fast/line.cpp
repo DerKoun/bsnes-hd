@@ -110,9 +110,18 @@ auto PPU::Line::avgBgC(uint dist, uint offset) const -> uint32 {
   auto luma = ppu.lightTable[io.displayBrightness];
   uint32 t = luma[io.col.fixedColor];
   if(dist < 1) return t;
-  uint32 a = (t >> 16) & 255;
-  uint32 b = (t >>  8) & 255;
-  uint32 c = (t >>  0) & 255;
+  int32 aBase = (t >> 16) & 255;
+  int32 bBase = (t >>  8) & 255;
+  int32 cBase = (t >>  0) & 255;
+  uint32 a = aBase;
+  uint32 b = bBase;
+  uint32 c = cBase;
+  int32 aU = 0;
+  int32 bU = 0;
+  int32 cU = 0;
+  int32 aD = 0;
+  int32 bD = 0;
+  int32 cD = 0;
   int scale = ppufast.hd() ? ppufast.hdScale() : 1;
   int hdY = y * scale + offset;
   int count = 1;
@@ -137,13 +146,18 @@ auto PPU::Line::avgBgC(uint dist, uint offset) const -> uint32 {
         io.bg3.tileMode  != dL.io.bg3.tileMode  || io.bg3.tileMode  != uL.io.bg3.tileMode  ||
         io.bg4.tileMode  != dL.io.bg4.tileMode  || io.bg4.tileMode  != uL.io.bg4.tileMode) break; 
     t = luma[uL.io.col.fixedColor];
-    a += (t >> 16) & 255;
-    b += (t >>  8) & 255;
-    c += (t >>  0) & 255;
+    aU = (t >> 16) & 255;
+    bU = (t >>  8) & 255;
+    cU = (t >>  0) & 255;
     t = luma[dL.io.col.fixedColor];
-    a += (t >> 16) & 255;
-    b += (t >>  8) & 255;
-    c += (t >>  0) & 255;
+    aD = (t >> 16) & 255;
+    bD = (t >>  8) & 255;
+    cD = (t >>  0) & 255;
+    if (((abs(aU - aBase) + abs(bU - bBase) + abs(cU - cBase)) > 76) ||
+        ((abs(aD - aBase) + abs(bD - bBase) + abs(cD - cBase)) > 76)) break;
+    a += aU + aD;
+    b += bU + bD;
+    c += cU + cD;
     count += 2;
   }
   a /= count;
@@ -219,10 +233,10 @@ auto PPU::Line::render(bool fieldID) -> void {
   y = this->y;
   uint windRad = ppufast.windRad();
   for (int offset = 0; offset < scale; offset++) {
-    uint oneLeft  = io.window.oneLeft;
-    uint oneRight = io.window.oneRight;
-    uint twoLeft  = io.window.twoLeft;
-    uint twoRight = io.window.twoRight;
+    int oneLeft  = io.window.oneLeft;
+    int oneRight = io.window.oneRight;
+    int twoLeft  = io.window.twoLeft;
+    int twoRight = io.window.twoRight;
 
     int hdY = y * scale + offset;
     int count = 1;
@@ -279,15 +293,56 @@ auto PPU::Line::render(bool fieldID) -> void {
 
       count += 2;
     }
-    oneLeft  = oneLeft  * scale / count;
-    oneRight = oneRight * scale / count + scale - 1;
-    twoLeft  = twoLeft  * scale / count;
-    twoRight = twoRight * scale / count + scale - 1;
+    if (ppu.strwin()) {
+      oneLeft  *= 2;
+      oneRight *= 2;
+      twoLeft  *= 2;
+      twoRight *= 2;
+    }
+    int ws = ppu.widescreen() * scale;
+    oneLeft  = oneLeft  * scale / count + ws;
+    oneRight = oneRight * scale / count + ws + scale - 1;
+    twoLeft  = twoLeft  * scale / count + ws;
+    twoRight = twoRight * scale / count + ws + scale - 1;
+
+    if (ppu.strwin()) {
+      oneLeft  -= 128 * scale;
+      oneRight -= 128 * scale;
+      twoLeft  -= 128 * scale;
+      twoRight -= 128 * scale;
+    } else {
+      int lw = 0 - scale * 10;
+      int l  = ws + scale;
+      int r  = ws + 255 * scale;
+      int rw = ws + 255 * scale + ws + scale * 10;
+      if (oneLeft < l) {
+        oneLeft = lw;
+      } else if (oneLeft >= r) {
+        oneLeft = rw;
+      }
+      if (oneRight < l) {
+        oneRight = lw;
+      } else if (oneRight >= r) {
+        oneRight = rw;
+      }
+      if (twoLeft < l) {
+        twoLeft = lw;
+      } else if (twoLeft >= r) {
+        twoLeft = rw;
+      }
+      if (twoRight < l) {
+        twoRight = lw;
+      } else if (twoRight >= r) {
+        twoRight = rw;
+      } 
+    }
 
     renderWindow(io.col.window, io.col.window.aboveMask, windowAbove,
-                oneLeft, oneRight, twoLeft, twoRight, scale, 256*scale*offset);
+                oneLeft, oneRight, twoLeft, twoRight, scale,
+                (256 + 2 * ppu.widescreen())*scale*offset, ppu.widescreen());
     renderWindow(io.col.window, io.col.window.belowMask, windowBelow,
-                oneLeft, oneRight, twoLeft, twoRight, scale, 256*scale*offset);
+                oneLeft, oneRight, twoLeft, twoRight, scale,
+                (256 + 2 * ppu.widescreen())*scale*offset, ppu.widescreen());
   }
 
   uint wsm = (ppu.widescreen() == 0 || ppu.wsOverride()) ? 0 : ppu.wsMarker();
@@ -295,40 +350,25 @@ auto PPU::Line::render(bool fieldID) -> void {
 
   uint curr = 0, prev = 0;
   if(hd) {
-    int x = 0;
-    int xWindow = 0;
     for(uint ySub : range(scale)) {
-      for(uint i : range(ppufast.widescreen() * scale)) {
-        *output++ = pixel(xWindow, above[x], below[x], wsm, wsma, bgFixedColors[ySub]);
-        x++;
+      for(uint x : range((256 + 2 * ppufast.widescreen() ) * scale)) {
+        *output++ = pixel(x, above[x], below[x], ppu.widescreen(), wsm, wsma, bgFixedColors[ySub]);
       }
-      for(uint i : range(256 * scale)) {
-        *output++ = pixel(xWindow, above[x], below[x], wsm, wsma, bgFixedColors[ySub]);
-        x++;
-        xWindow++;
-      }
-      xWindow--;
-      for(uint i : range(ppufast.widescreen() * scale)) {
-        *output++ = pixel(xWindow, above[x], below[x], wsm, wsma, bgFixedColors[ySub]);
-        x++;
-      }
-      xWindow++;
     }
-
   } else if(width == 256) for(uint x : range(256)) {
-    *output++ = pixel(x, above[x], below[x], wsm, wsma, bgFixedColors[0]);
+    *output++ = pixel(x, above[x], below[x], 0, 0, 0, bgFixedColors[0]);
   } else if(!hires) for(uint x : range(256)) {
-    auto color = pixel(x, above[x], below[x], wsm, wsma, bgFixedColors[0]);
+    auto color = pixel(x, above[x], below[x], 0, 0, 0, bgFixedColors[0]);
     *output++ = color;
     *output++ = color;
   } else if(!configuration.video.blurEmulation) for(uint x : range(256)) {
-    *output++ = pixel(x, below[x], above[x], wsm, wsma, bgFixedColors[0]);
-    *output++ = pixel(x, above[x], below[x], wsm, wsma, bgFixedColors[0]);
+    *output++ = pixel(x, below[x], above[x], 0, 0, 0, bgFixedColors[0]);
+    *output++ = pixel(x, above[x], below[x], 0, 0, 0, bgFixedColors[0]);
   } else for(uint x : range(256)) {
-    curr = pixel(x, below[x], above[x], wsm, wsm, bgFixedColors[0]);
+    curr = pixel(x, below[x], above[x], 0, 0, 0, bgFixedColors[0]);
     *output++ = (prev + curr - ((prev ^ curr) & 0x00010101)) >> 1;
     prev = curr;
-    curr = pixel(x, above[x], below[x], wsm, wsma, bgFixedColors[0]);
+    curr = pixel(x, above[x], below[x], 0, 0, 0, bgFixedColors[0]);
     *output++ = (prev + curr - ((prev ^ curr) & 0x00010101)) >> 1;
     prev = curr;
   }
@@ -338,7 +378,8 @@ auto PPU::Line::render(bool fieldID) -> void {
 
 }
 
-auto PPU::Line::pixel(uint x, Pixel above, Pixel below, uint wsm, uint wsma, uint32 bgFixedColor) const -> uint32 { 
+auto PPU::Line::pixel(uint x, Pixel above, Pixel below, uint ws, uint wsm,
+                      uint wsma, uint32 bgFixedColor) const -> uint32 { 
   uint32 r = 0;
   if(!windowAbove[ppufast.winXadHd(x, false)]) above.color = 0x0000;
   if(!windowBelow[ppufast.winXadHd(x, true)]) r = above.color;
@@ -346,9 +387,8 @@ auto PPU::Line::pixel(uint x, Pixel above, Pixel below, uint wsm, uint wsma, uin
   else if(!io.col.blendMode) r = blend(above.color, bgFixedColor, io.col.halve && windowAbove[x]);
   else r = blend(above.color, below.color, io.col.halve && windowAbove[x] && below.source != Source::COL);
   if(wsm > 0) {
-    x = (x / ppufast.hdScale()) % 256;
-    if(wsm == 1 && (x == 1 || x == 254)
-        || wsm == 2 && (x == 0 || x == 255)) {
+    x /= ppufast.hdScale();
+    if(x == ws - 1 || x == ws + 256 || wsm == 2 && (x <= ws - 1 || x >= ws + 256)) {
       int b = wsm == 2 ? 0 : ((y / 4) % 2 == 0) ? 0 : 255;
       r = ((((((r >> 16) & 255) * wsma) + b) / (wsma + 1)) << 16)
         + ((((((r >>  8) & 255) * wsma) + b) / (wsma + 1)) <<  8)

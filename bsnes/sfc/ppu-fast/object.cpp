@@ -4,10 +4,12 @@ auto PPU::Line::renderObject(PPU::IO::Object& self) -> void {
 
   uint wsobj = ppufast.wsOverride() ? 3 : ppufast.wsobj();
 
-  bool windowAbove[256];
-  bool windowBelow[256];
-  renderWindow(self.window, self.window.aboveEnable, windowAbove);
-  renderWindow(self.window, self.window.belowEnable, windowBelow);
+  bool windowAbove[1024];
+  bool windowBelow[1024];
+  renderWindow(self.window, self.window.aboveEnable, windowAbove,
+               ppufast.widescreen(), ppufast.strwin());
+  renderWindow(self.window, self.window.belowEnable, windowBelow,
+               ppufast.widescreen(), ppufast.strwin());
 
   uint itemCount = 0;
   uint tileCount = 0;
@@ -137,13 +139,13 @@ auto PPU::Line::renderObject(PPU::IO::Object& self) -> void {
     
     if(ppufast.hires() && ppufast.hd()) {
       // Match non-hires backgrounds in hires mode (see background)
-      if(self.aboveEnable && !windowAbove[ppufast.winXad(x, false)]) plotHD(above, xc, source, priority[x], mctc, true, false);
-      if(self.aboveEnable && !windowAbove[ppufast.winXad(x, false)]) plotHD(above, xc, source, priority[x], mctc, true, true);
-      if(self.aboveEnable && !windowAbove[ppufast.winXad(x, false)]) plotHD(below, xc, source, priority[x], mctc, true, false);
-      if(self.aboveEnable && !windowAbove[ppufast.winXad(x, false)]) plotHD(below, xc, source, priority[x], mctc, true, true);
+      if(self.aboveEnable && !windowAbove[ppufast.winXad(xc, false)]) plotHD(above, xc, source, priority[x], mctc, true, false);
+      if(self.aboveEnable && !windowAbove[ppufast.winXad(xc, false)]) plotHD(above, xc, source, priority[x], mctc, true, true);
+      if(self.aboveEnable && !windowAbove[ppufast.winXad(xc, false)]) plotHD(below, xc, source, priority[x], mctc, true, false);
+      if(self.aboveEnable && !windowAbove[ppufast.winXad(xc, false)]) plotHD(below, xc, source, priority[x], mctc, true, true);
     } else {
-      if(self.aboveEnable && !windowAbove[ppufast.winXad(x, false)]) plotAbove(xc, source, priority[x], mctc);
-      if(self.belowEnable && !windowBelow[ppufast.winXad(x, true)]) plotBelow(xc, source, priority[x], mctc);
+      if(self.aboveEnable && !windowAbove[ppufast.winXad(xc, false)]) plotAbove(xc, source, priority[x], mctc);
+      if(self.belowEnable && !windowBelow[ppufast.winXad(xc, true)])  plotBelow(xc, source, priority[x], mctc);
     }
   }
 }

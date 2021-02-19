@@ -1,10 +1,9 @@
-# bsnes-hd *beta 10.3*
+# bsnes-hd *beta 10.4*
 
-- [downloads](https://github.com/DerKoun/bsnes-hd/releases) for the latest betas
+- [downloads](https://github.com/DerKoun/bsnes-hd/releases) for the latest betas (there are only beta) / also on the libretro auto-updater
 - [GitHub project](https://github.com/DerKoun/bsnes-hd) for source code, issues, feature requests, ...
 - [Reddit](https://www.reddit.com/r/emulation/search/?q=bsnes-hd&restrict_sr=1&sort=new) for announcements and discussions on *r/emulation*
 - [Discord](https://discord.gg/7ahAzCV) if you prefer chatting (Thanks to everyone who set it up and keeps it running)
-- [Forum](https://www.retrowide.com/forums) for widescreen discussions, both ROM-hacking and technical
 
 1. [What is it?](#what-is-it)
 2. [Help wanted](#help-wanted)
@@ -54,10 +53,9 @@ Feel free to suggest features. Please remember that this fork focuses on HD and 
 
 It would be helpful to know how the framerates of different scale levels is on various devices, especially handhelds and consoles, Android and others.
 
+### OpenGL/Vulkan
 
-### Vulkan/OpenGL
-
-If someone could set me up a very basic libretro core, that can just display 3 textures, than can have their image data and 3D position changed each frame, I could try out some experiments to improve both performance and quality for most games.
+If anyone with OpenGL/Vulkan programming and/or shader knowledge would assit me, we could work on a fork that improves both quality and performance using the GPU. This is a long-term goal that I won't start on without help.
 
 ### Logo
 
@@ -202,17 +200,33 @@ The file must contain alternating letters and numbers, each pair overriding a se
 | widescreen mode                     | w       | 0:off    1:on(always)           2:on(mode7)     |
 | widescreen sprites                  | s       | 0:safe   1:unsafe(widescreen)   2:clip          |
 | widescreen aspect ratio             | W       | 0-200:widescreen-extension 201+:AR(*see below*) |
-| widescreen background 1/2/3/4       | b/B/c/C | 0:off    1:on   2:auto(horizontal and vertical) |
+| widescreen background 1/2/3/4       | b/B/c/C | 0+:WS 10+:crop 20:disab 1000+:line(*see below*) |
+| widescreen marker                   | m       | 0:off    1+:line    11+:darken    (*see below*) |
+| mode 7 perspective correction       | P       | 0:off    1-3:auto    4-6+:on      (*see below*) |
 | pixel aspect ratio correction       | p       | 0:off    1:on                                   |
 | overscan                            | o       | 0:off(216 lines(5th HD))        1:on(224 lines) |
 | ignore window                       | i       | 0:none   1:outside   2:outside&always   3:all   |
 | ignore window fallback x-coordinate | I       | 0-255:x-coordinate                              |
+| overclock CPU                       | O       | 100+:percentage(100 is normal)                  |
 
-#### Widescreen values
+#### Widescreen Aspect Ratio values
 
 Values of 200 and less specify the widescreen extension on each side in pixel columns. It is recommended to use values dividable by as large a power of 2 as possible, at least by 4.
 
 Values larger than 200 specify the aspect ratio as (horizontal*100+vertical), e.g. 16:10, 16:9, 2:1 and 21:9 as 1610, 1609, 201 and 2109, respectively. From this AR the widescreen extension is computed in the same way as for ARs specified in the settings dialog, except that arbitrary ARs can be specified here.
+
+#### Widescreen Background
+
+0:off, 1:on, 2:auto(horizanotal+vertical), 2:auto(horizanotal), 10:crop, 11:crop(auto), 20:disable. 
+To enable widescreen for the background only above or below a certain line the value must be the line number plus 1000 or 2000 respectively.
+
+#### Widescreen Marker 
+
+Values from 1-10 and 11-20 enable lines and darkening respectively. The values in the respective ranges vary the opacity.
+
+#### Perspective Correction
+
+1-3 and 4-6 trigger auto an on respectively. In both cases the 3 settings are in the order: wide, medium, narrow.
 
 #### Sample
 
@@ -226,9 +240,11 @@ w :  1
 s :  1
 W : 64
 ```
-Only the last letter before a number is taken into account, basically allowing comments:
+The percent character ("%") disabled and enables interpretation, allowing comments:
 ```
-widescreen  always on:    w: 1
-widescreen sprites on:    s: 1
-widescreen extension :    W:64
+  %  HyperZone  %  
+B : 2100    % bg 2 includes dashboard (non-ws) and far away bg (ws):
+              enable widescreen for line 100 and below %
+s :    1    % unlimited sprites (not perfect, but worth trying) %
+m :    0    % no ws markers %
 ```

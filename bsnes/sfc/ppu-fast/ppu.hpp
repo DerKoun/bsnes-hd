@@ -24,6 +24,7 @@ struct PPU : PPUcounter {
   alwaysinline auto wsobj() const -> uint;
   alwaysinline auto winXad(uint x, bool bel) const -> uint;
   alwaysinline auto winXadHd(uint x, bool bel) const -> uint;
+  alwaysinline auto strwin() const -> bool;
   alwaysinline auto bgGrad() const -> uint;
   alwaysinline auto windRad() const -> uint;
   alwaysinline auto wsOverrideCandidate() const -> bool;
@@ -309,7 +310,8 @@ public:
     auto cache() -> void;
     auto render(bool field) -> void;
 
-    alwaysinline auto pixel(uint x, Pixel above, Pixel below, uint wsm, uint wsma, uint32 bgFixedColor) const -> uint32;
+    alwaysinline auto pixel(uint x, Pixel above, Pixel below, uint ws, uint wsm,
+                            uint wsma, uint32 bgFixedColor) const -> uint32;
     alwaysinline auto blend(uint x, uint y, bool halve) const -> uint32;
     alwaysinline auto directColor(uint paletteIndex, uint paletteColor) const -> uint32;
     alwaysinline auto plotAbove(int x, uint8 source, uint8 priority, uint32 color) -> void;
@@ -330,23 +332,15 @@ public:
     auto renderMode7HD(PPU::IO::Background&, uint8 source) -> void;
     alwaysinline auto lerp(float pa, float va, float pb, float vb, float pr) -> float;
 
-    //mode7hd-avx2.cpp
-    auto renderMode7HD_AVX2(
-      PPU::IO::Background&, uint8 source,
-      Pixel* above, Pixel* below,
-      bool* windowAbove, bool* windowBelow,
-      float originX, float a,
-      float originY, float c
-    ) -> void;
-
     //object.cpp
     auto renderObject(PPU::IO::Object&) -> void;
 
     //window.cpp
-    alwaysinline auto renderWindow(PPU::IO::WindowLayer&, bool enable, bool output[256]) -> void;
+    alwaysinline auto renderWindow(PPU::IO::WindowLayer&, bool enable,
+                                   bool output[1024], uint ws, bool stretch) -> void;
     alwaysinline auto renderWindow(PPU::IO::WindowColor&, uint mask, bool *output,
-                                   uint oneLeft, uint oneRight, uint twoLeft, uint twoRight,
-                                   uint scale, uint offset) -> void;
+                                   int oneLeft, int oneRight, int twoLeft, int twoRight,
+                                   uint scale, uint offset, uint ws) -> void;
 
   //unserialized:
     uint y;  //constant
@@ -361,8 +355,8 @@ public:
     Pixel *above = new Pixel[61440];
     Pixel *below = new Pixel[61440];
 
-    bool *windowAbove = new bool[25600] ;
-    bool *windowBelow = new bool[25600] ;
+    bool *windowAbove = new bool[61440] ;
+    bool *windowBelow = new bool[61440] ;
 
     //flush()
     static uint start;

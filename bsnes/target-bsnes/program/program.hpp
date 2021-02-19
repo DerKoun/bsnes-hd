@@ -27,6 +27,8 @@ struct Program : Lock, Emulator::Platform {
   auto unload() -> void;
   auto verified() const -> bool;
 
+  vector<uint8_t> rso;
+
   //game-pak.cpp
   auto openPakSuperFamicom(string name, vfs::file::mode mode) -> shared_pointer<vfs::file>;
   auto openPakGameBoy(string name, vfs::file::mode mode) -> shared_pointer<vfs::file>;

@@ -1,0 +1,4 @@
+  %  Top Gear 2  %  
+w :    1    % permanent widescreen %
+b :   10    % crop black edges of background layer 1
+              for uninterrupted widescreen %

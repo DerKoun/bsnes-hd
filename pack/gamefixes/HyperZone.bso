@@ -1,0 +1,5 @@
+  %  HyperZone  %  
+B : 2100    % bg 2 includes dashboard (non-ws) and far away bg (ws):
+              enable widescreen for line 100 and below %
+s :    1    % unlimited sprites (not perfect, but worth trying) %
+m :    0    % no ws markers %

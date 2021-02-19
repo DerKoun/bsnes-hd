@@ -27,10 +27,12 @@ auto PPU::Line::renderMode7(PPU::IO::Background& self, uint8 source) -> void {
   int originX = (a * clip(hoffset - hcenter) & ~63) + (b * clip(voffset - vcenter) & ~63) + (b * y & ~63) + (hcenter << 8);
   int originY = (c * clip(hoffset - hcenter) & ~63) + (d * clip(voffset - vcenter) & ~63) + (d * y & ~63) + (vcenter << 8);
 
-  bool windowAbove[256];
-  bool windowBelow[256];
-  renderWindow(self.window, self.window.aboveEnable, windowAbove);
-  renderWindow(self.window, self.window.belowEnable, windowBelow);
+  bool windowAbove[1024];
+  bool windowBelow[1024];
+  renderWindow(self.window, self.window.aboveEnable, windowAbove,
+               ppufast.widescreen(), ppufast.strwin());
+  renderWindow(self.window, self.window.belowEnable, windowBelow,
+               ppufast.widescreen(), ppufast.strwin());
 
   auto luma = ppu.lightTable[io.displayBrightness];
   for(int X : range(256)) {

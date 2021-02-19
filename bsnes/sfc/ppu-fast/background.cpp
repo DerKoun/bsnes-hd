@@ -21,15 +21,20 @@ auto PPU::Line::renderBackground(PPU::IO::Background& self, uint8 source) -> voi
       if (self.tileSize == 0 && self.hoffset == 0) ws = 0;
     } else if(wsConf == 16) {
       if (self.tileSize == 0 && self.hoffset == 0 && self.voffset == 0) ws = 0;
-    } else if(wsConf == 0 || (wsConf != 1 && (((wsConf % 2) != 0) == (y < (((int)(wsConf / 2)) * 40))))) {
+    } else if(wsConf == 0
+        || (wsConf >= 2 && wsConf <= 11 && (((wsConf % 2) != 0) == (y < (((int)(wsConf / 2)) * 40))))
+        || (wsConf >= 1000 && wsConf < 3000 && ((wsConf < 2000) != (y < ((int)(wsConf % 1000)))))
+        ) {
       ws = 0;
     }
   } 
 
-  bool windowAbove[256];
-  bool windowBelow[256];
-  renderWindow(self.window, self.window.aboveEnable, windowAbove);
-  renderWindow(self.window, self.window.belowEnable, windowBelow);
+  bool windowAbove[1024];
+  bool windowBelow[1024];
+  renderWindow(self.window, self.window.aboveEnable, windowAbove,
+               ppufast.widescreen(), ppufast.strwin());
+  renderWindow(self.window, self.window.belowEnable, windowBelow,
+               ppufast.widescreen(), ppufast.strwin());
 
   bool hires = io.bgMode == 5 || io.bgMode == 6;
   bool offsetPerTileMode = io.bgMode == 2 || io.bgMode == 4 || io.bgMode == 6;
