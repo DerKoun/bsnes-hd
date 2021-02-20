@@ -1,5 +1,5 @@
-target := bsnes
-binary := application
+target ?= bsnes
+binary ?= application
 build := performance
 openmp := true
 local := false
