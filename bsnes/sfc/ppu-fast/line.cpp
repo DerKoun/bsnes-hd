@@ -351,8 +351,9 @@ auto PPU::Line::render(bool fieldID) -> void {
   uint curr = 0, prev = 0;
   if(hd) {
     for(uint ySub : range(scale)) {
-      for(uint x : range((256 + 2 * ppufast.widescreen() ) * scale)) {
+      for(uint i : range((256 + 2 * ppufast.widescreen() ) * scale)) {
         *output++ = pixel(x, above[x], below[x], ppu.widescreen(), wsm, wsma, bgFixedColors[ySub]);
+        x++;
       }
     }
   } else if(width == 256) for(uint x : range(256)) {
