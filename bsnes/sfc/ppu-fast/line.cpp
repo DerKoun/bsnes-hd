@@ -390,6 +390,7 @@ auto PPU::Line::pixel(uint x, Pixel above, Pixel below, uint ws, uint wsm,
   else r = blend(above.color, below.color, io.col.halve && windowAbove[x] && below.source != Source::COL);
   if(wsm > 0) {
     x /= ppufast.hdScale();
+    x %= 256 + 2 * ws;
     if(x == ws - 1 || x == ws + 256 || wsm == 2 && (x <= ws - 1 || x >= ws + 256)) {
       int b = wsm == 2 ? 0 : ((y / 4) % 2 == 0) ? 0 : 255;
       r = ((((((r >> 16) & 255) * wsma) + b) / (wsma + 1)) << 16)
