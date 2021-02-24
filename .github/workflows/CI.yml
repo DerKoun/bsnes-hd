@@ -160,7 +160,7 @@ jobs:
         fetch-depth: 0
     - uses: nttld/setup-ndk@v1
       with:
-        ndk-version: r22
+        ndk-version: r20b
     - name: Build
       run: |
         cd bsnes/target-libretro/jni
