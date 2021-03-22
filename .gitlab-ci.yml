@@ -161,9 +161,9 @@ ios-arm64:
     - .libretro-ios-arm64-make-default
     - .core-defs-ios-arm64
   variables:
-    - local: false
-    - openmp: false
-    - compiler: "clang++ -std=c++17 -stdlib=libc++ -arch arm64 -isysroot $(xcodebuild -version -sdk iphoneos Path)"
+    local: false
+    openmp: false
+    compiler: "clang++ -std=c++17 -stdlib=libc++ -arch arm64 -isysroot $(xcodebuild -version -sdk iphoneos Path)"
   only:
     - ios_gitlab
 
