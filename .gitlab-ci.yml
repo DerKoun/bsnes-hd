@@ -156,17 +156,21 @@ android-x86:
     - .libretro-android-jni-x86
     - .core-defs
 
-ios-arm64:
+# iOS
+libretro-build-ios-arm64:
   extends:
     - .libretro-ios-arm64-make-default
     - .core-defs-ios-arm64
   script:
     - make -C ${MAKEFILE_PATH} -f ${MAKEFILE} -j$NUMPROC platform=ios-arm64 target=libretro binary=library local=false openmp=false compiler="clang++ -std=c++17 -stdlib=libc++ -arch arm64 -isysroot $(xcodebuild -version -sdk iphoneos Path)"
 
-# tvos-arm64:
-#   extends:
-#     - .libretro-tvos-arm64-make-default
-#     - .core-defs-tvos-arm64
+# tvOS
+libretro-build-tvos-arm64:
+  extends:
+    - .libretro-tvos-arm64-make-default
+    - .core-defs-tvos-arm64
+  script:
+    - make -C ${MAKEFILE_PATH} -f ${MAKEFILE} -j$NUMPROC platform=tvos-arm64 target=libretro binary=library local=false openmp=false compiler="clang++ -std=c++17 -stdlib=libc++ -arch arm64 -isysroot $(xcodebuild -version -sdk appletvos Path)"
 
 
 ################################### CONSOLES #################################
