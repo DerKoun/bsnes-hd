@@ -35,6 +35,16 @@
   variables:
     platform: macos
 
+.core-defs-ios-arm64:
+  extends: .core-defs
+  after_script:
+    - mv ${MAKEFILE_PATH}/out/${CORENAME}_libretro_ios.dylib ${CORENAME}_libretro_ios.dylib
+
+.core-defs-tvos-arm64:
+  extends: .core-defs
+  after_script:
+    - mv ${MAKEFILE_PATH}/out/${CORENAME}_libretro_tvos.dylib ${CORENAME}_libretro_tvos.dylib
+
 # Inclusion templates, required for the build to work
 include:
   ################################## DESKTOPS ################################
@@ -63,10 +73,18 @@ include:
   - project: 'libretro-infrastructure/ci-templates'
     file: '/android-jni.yml'
 
+  # iOS
+  - project: 'libretro-infrastructure/ci-templates'
+    file: '/ios-arm64.yml'
+
   ################################## CONSOLES ################################
   # Nintendo Switch
   - project: 'libretro-infrastructure/ci-templates'
     file: '/libnx-static.yml'
+
+  # AppleTV / tvOS
+  - project: 'libretro-infrastructure/ci-templates'
+    file: '/tvos-arm64.yml'  
 
 # Stages for building
 stages:
@@ -137,6 +155,23 @@ android-x86:
   extends:
     - .libretro-android-jni-x86
     - .core-defs
+
+ios-arm64:
+  extends:
+    - .libretro-ios-arm64-make-default
+    - .core-defs-ios-arm64
+  variables:
+    - local: false
+    - openmp: false
+    - compiler: compiler="clang++ -std=c++17 -stdlib=libc++ -arch arm64 -isysroot $(xcodebuild -version -sdk iphoneos Path)"
+  only:
+    - ios_gitlab
+
+# tvos-arm64:
+#   extends:
+#     - .libretro-tvos-arm64-make-default
+#     - .core-defs-tvos-arm64
+
 
 ################################### CONSOLES #################################
 # Nintendo Switch
