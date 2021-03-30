@@ -18,6 +18,7 @@
   extends: .core-defs
   after_script:
     - mv ${MAKEFILE_PATH}/out/${CORENAME}_libretro.dll ${CORENAME}_libretro.dll
+    - if [ $STRIP_CORE_LIB -eq 1 ]; then strip --strip-unneeded ${CORENAME}_libretro.dll; fi
   variables:
     platform: windows
 
@@ -25,6 +26,7 @@
   extends: .core-defs
   after_script:
     - mv ${MAKEFILE_PATH}/out/${CORENAME}_libretro.so ${CORENAME}_libretro.so
+    - if [ $STRIP_CORE_LIB -eq 1 ]; then strip --strip-unneeded ${CORENAME}_libretro.so; fi
   variables:
     platform: linux
 
