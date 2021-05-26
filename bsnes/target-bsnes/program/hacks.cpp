@@ -114,12 +114,12 @@ auto Program::hackCompatibility() -> void {
         n = (n * 10) + (v - '0');
         if (i == rso.size() || rso[i] < '0' || rso[i] > '9') {
           switch (c) {
-            case 'p': //pixelAspectCorrect 0:off 1:on
-              emulator->configure("Video/AspectCorrection", n == 1);
-              break;
-            case 'o': //overscan 0:216 1:224 (2:240 3:240f)
-              emulator->configure("Video/Overscan", n == 1);
-              break;
+          //  case 'p': //pixelAspectCorrect 0:off 1:on
+          //    emulator->configure("Video/AspectCorrection", n == 1);
+          //    break;
+          //  case 'o': //overscan 0:216 1:224 (2:240 3:240f)
+          //    emulator->configure("Video/Overscan", n == 1);
+          //    break;
             case 'w': //widescreenMode 0:none 1:on 2:mode7
               emulator->configure("Hacks/PPU/Mode7/WsMode", n == 1 ? 2 : (n == 2 ? 1 : 0));
               break;
@@ -193,7 +193,7 @@ auto Program::hackCompatibility() -> void {
             case 'O': //Overlock CPU percentage
               emulator->configure("Hacks/CPU/Overclock", n );
               break;
-            case 'S': //Stretch Window [EXPERIMENTAL!! DO NOT USE!!]
+            case 'S': //Stretch Window [for widescreen patches only]
               emulator->configure("Hacks/PPU/Mode7/Strwin", n == 2 );
               break;
           }

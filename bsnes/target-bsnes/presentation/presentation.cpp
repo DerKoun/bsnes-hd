@@ -181,7 +181,7 @@ auto Presentation::create() -> void {
 
   helpMenu.setText(tr("Help"));
   documentation.setIcon(Icon::Application::Browser).setText({tr("bsnes documentation"), " ..."}).onActivate([&] {
-    invoke("https://byuu.org/doc/bsnes");
+    invoke("https://bsnes.dev");
   });
   documentationHd.setIcon(Icon::Application::Browser).setText({tr("bsnes-hd documentation"), " ..."}).onActivate([&] {
     invoke("https://github.com/DerKoun/bsnes-hd");
@@ -204,9 +204,9 @@ auto Presentation::create() -> void {
     .setLogo(Resource::Logo)
     .setDescription("Super Nintendo emulator")
     .setVersion("114.3")//bsnes/emulator/emulator.hpp:Emulator:Version
-    .setAuthor("byuu")
+    .setAuthor("Near")
     .setLicense("GPLv3")
-    .setWebsite("https://byuu.org")
+    .setWebsite("https://near.sh/")
     .setAlignment(*this)
     .show();
   });

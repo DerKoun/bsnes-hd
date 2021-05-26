@@ -202,7 +202,7 @@ auto PPU::Line::render(bool fieldID) -> void {
   if (hd && ppu.wsBgCol() && ppu.widescreen() > 0) {
     for(uint x = xa; x < xb; x++) {
       int cx = (x % ((256+2*ppu.widescreen()) * scale)) - (ppu.widescreen() * scale);
-      if (cx >= 0 && cx <= (256 * scale)) {
+      if (cx >= 0 && cx < (256 * scale)) {
         above[x] = {Source::COL, 0, aboveColor};
         below[x] = {Source::COL, 0, belowColors[x / ((256+2*ppufast.widescreen()) * scale)]};
       } else {

@@ -5,9 +5,10 @@ W : 1609    % aspect ratio 16:9 %
 P :    0    % disable pixel aspect ratio correction %
 s :    1    % widescreen sprites/objects %
 b :    2    % background layer 1 auto widescreen %
-B :    2    % background layer 2 auto widescreen %
+B :    1    % background layer 2 on %
 c : 2032    % background layer 3 widescreen below line 32 %
 C :    2    % background layer 4 auto widescreen %
 i :    0    % disable ignore window %
 m :    0    % disable widescreen markers %
-O :  120    % overclock CPU to 120 percent %
+O :  200    % overclock CPU to 200 percent %
+S :    2    % stretch windowing effects %

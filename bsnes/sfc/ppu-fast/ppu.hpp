@@ -375,10 +375,10 @@ public:
 
   struct Mode7LineGroups {
     int count = -1;
-    int startLine[32];
-    int endLine[32];
-    int startLerpLine[32];
-    int endLerpLine[32];
+    int startLine[240];
+    int endLine[240];
+    int startLerpLine[240];
+    int endLerpLine[240];
   } mode7LineGroups;
 };
 

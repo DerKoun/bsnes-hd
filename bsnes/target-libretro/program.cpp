@@ -9,6 +9,7 @@
 #include <nall/encode/rle.hpp>
 #include <nall/encode/zip.hpp>
 #include <nall/hash/crc16.hpp>
+#include <nall/beat/single/apply.hpp>
 using namespace nall;
 
 #include <heuristics/heuristics.hpp>
@@ -40,12 +41,15 @@ struct Program : Emulator::Platform
 	auto loadBSMemory(string location) -> bool;
 
 	auto save() -> void;
-
+	
 	auto openRomSuperFamicom(string name, vfs::file::mode mode) -> shared_pointer<vfs::file>;
 	auto openRomGameBoy(string name, vfs::file::mode mode) -> shared_pointer<vfs::file>;
 	auto openRomBSMemory(string name, vfs::file::mode mode) -> shared_pointer<vfs::file>;
 	
 	auto hackPatchMemory(vector<uint8_t>& data) -> void;
+
+	auto applyPatchBPS(vector<uint8_t>& data, string location) -> bool;
+	vector<uint8_t> rso;
 	
 	string base_name;
 
@@ -224,6 +228,118 @@ auto Program::load() -> void {
 		//Frisky Tom attract sequence sometimes hangs when WRAM is initialized to pseudo-random patterns
 		if (title == "ニチブツ・アーケード・クラシックス") emulator->configure("Hacks/Entropy", "None");
 	}
+
+  // setting override processing (copied from standalone target)
+  if(rso) {
+    int i = 0;
+    int v = 0;
+    int c = -1;
+    int n = 0;
+    bool e = true;
+    while (i < rso.size()) {
+      v = rso[i++];
+      if (v == '%') {
+        e = !e;
+      }
+      if (!e) {
+        continue;
+      }
+      if ((v >= 'a' && v <= 'z') || (v >= 'A' && v <= 'Z')) {
+        c = v;
+      } else if (c > -1 && v >= '0' && v <= '9') {
+        n = (n * 10) + (v - '0');
+        if (i == rso.size() || rso[i] < '0' || rso[i] > '9') {
+          switch (c) {
+          //  case 'p': //pixelAspectCorrect 0:off 1:on
+          //    emulator->configure("Video/AspectCorrection", n == 1);
+          //    break;
+          //  case 'o': //overscan 0:216 1:224 (2:240 3:240f)
+          //    emulator->configure("Video/Overscan", n == 1);
+          //    break;
+            case 'w': //widescreenMode 0:none 1:on 2:mode7
+              emulator->configure("Hacks/PPU/Mode7/WsMode", n == 1 ? 2 : (n == 2 ? 1 : 0));
+              break;
+            case 'W': //WSaspectRatio int [<=200:wsExt, >200:ar]
+              emulator->configure("Hacks/PPU/Mode7/Widescreen",  n);
+              break;
+            case 's': //WSsprites 0:safe 1:unsafe 2:clip
+              emulator->configure("Hacks/PPU/Mode7/Wsobj", n == 1 ? 1 : (n == 2 ? 3 : 0));
+              break;
+            case 'i': //igwin 0:none 1:outside 2:outside&always 3:all
+              emulator->configure("Hacks/PPU/Mode7/Igwin", n > 3 ? 0 : n);
+              break;
+            case 'I': //igwinx int
+              emulator->configure("Hacks/PPU/Mode7/Igwinx", n > 255 ? 128 : n);
+              break;
+            case 'b': //bg1WS 0:off 1:on 2:auto(h+v)
+              emulator->configure("Hacks/PPU/Mode7/Wsbg1", 
+                  n >= 1000 ? n : //above/below line (processed later)
+                    (n ==  1 ?  1 : //on
+                    (n ==  2 ? 16 : //auto H+V
+                    (n ==  3 ? 15 : //auto H
+                    (n == 10 ? 12 : //crop
+                    (n == 11 ? 13 : //crop auto
+                    (n == 20 ? 14 : //disable
+                  0)))))) //off
+               );
+              break;
+            case 'B': //bg2WS 0:off 1:on 2:auto(h+v)
+              emulator->configure("Hacks/PPU/Mode7/Wsbg2", 
+                  n >= 1000 ? n : //above/below line (processed later)
+                    (n ==  1 ?  1 : //on
+                    (n ==  2 ? 16 : //auto H+V
+                    (n ==  3 ? 15 : //auto H
+                    (n == 10 ? 12 : //crop
+                    (n == 11 ? 13 : //crop auto
+                    (n == 20 ? 14 : //disable
+                  0)))))) //off
+               );
+              break;
+            case 'c': //bg3WS 0:off 1:on 2:auto(h+v)
+              emulator->configure("Hacks/PPU/Mode7/Wsbg3", 
+                  n >= 1000 ? n : //above/below line (processed later)
+                    (n ==  1 ?  1 : //on
+                    (n ==  2 ? 16 : //auto H+V
+                    (n ==  3 ? 15 : //auto H
+                    (n == 10 ? 12 : //crop
+                    (n == 11 ? 13 : //crop auto
+                    (n == 20 ? 14 : //disable
+                  0)))))) //off
+               );
+              break;
+            case 'C': //bg4WS 0:off 1:on 2:auto(h+v)
+              emulator->configure("Hacks/PPU/Mode7/Wsbg4", 
+                  n >= 1000 ? n : //above/below line (processed later)
+                    (n ==  1 ?  1 : //on
+                    (n ==  2 ? 16 : //auto H+V
+                    (n ==  3 ? 15 : //auto H
+                    (n == 10 ? 12 : //crop
+                    (n == 11 ? 13 : //crop auto
+                    (n == 20 ? 14 : //disable
+                  0)))))) //off
+               );
+              break;
+            case 'm': //wsMarker 0:off 1-10:lines 11-20:darken, wsMarkerAlpha 1-10/11-20:opaque-transparent
+              emulator->configure("Hacks/PPU/Mode7/WsMarker", n < 1 || n > 20 ? 0 : (n - 1) / 10 + 1);
+              emulator->configure("Hacks/PPU/Mode7/WsMarkerAlpha", (n - 1) % 10 + 1);
+              break;
+            case 'P': //Perspective 0:off 1-3:auto 4-6+:on (wide, medium, narrow)
+              emulator->configure("Hacks/PPU/Mode7/Perspective", n < 1 || n > 6 ? 0 : n );
+              break;
+            case 'O': //Overlock CPU percentage
+              emulator->configure("Hacks/CPU/Overclock", n );
+              break;
+            case 'S': //Stretch Window [for widescreen patches only]
+              emulator->configure("Hacks/PPU/Mode7/Strwin", n == 2 );
+              break;
+          }
+          c = -1;
+          n = 0;
+        }
+      }
+    }
+  }
+  // END OF setting override processing (copied from standalone target)
 
 	emulator->power();
 }
@@ -492,8 +608,33 @@ auto Program::loadSuperFamicom(string location) -> bool
 
 	if(rom.size() < 0x8000) return false;
 
-	//assume ROM and IPS agree on whether a copier header is present
-	//superFamicom.patched = applyPatchIPS(rom, location);
+	// soft patching (copied from standalone target)
+	// note: soft patching should be done via the libretro frontend
+	//       so this is only a workaround until that is possible
+    if(!superFamicom.patched) superFamicom.patched = applyPatchBPS(rom, location);
+	// END OF soft patching (copied from standalone target)
+
+	// setting override loading (copied from standalone target)
+	if(location.endsWith("/")) {
+		rso = file::read({location, "gamesettings.bso"});
+	} else if(location.iendsWith(".zip")) {
+		Decode::ZIP archive;
+		if(archive.open(location)) {
+			for(auto& file : archive.file) {
+				if(file.name.iendsWith(".bso")) {
+				rso = archive.extract(file);
+				break;
+				}
+			}
+		}
+		if(!rso) rso = file::read({Location::path(location),
+                  Location::prefix(Location::file(location)), ".bso"});
+	} else {
+		rso = file::read({Location::path(location),
+         Location::prefix(Location::file(location)), ".bso"});
+	}
+	// END OF setting override loading (copied from standalone target)
+
 	if((rom.size() & 0x7fff) == 512) {
 		//remove copier header
 		memory::move(&rom[0], &rom[512], rom.size() - 512);
@@ -753,3 +894,41 @@ auto decodeGB(string& code) -> bool {
   //unrecognized code format
   return false;
 }
+
+// soft patching (copied from standalone target), note: soft patching should be done via the libretro frontend, so this is only a workaround until that is possible
+auto Program::applyPatchBPS(vector<uint8_t>& input, string location) -> bool {
+  vector<uint8_t> patch;
+
+  if(location.endsWith("/")) {
+    patch = file::read({location, "patch.bps"});
+  } else if(location.iendsWith(".zip")) {
+    Decode::ZIP archive;
+    if(archive.open(location)) {
+      for(auto& file : archive.file) {
+        if(file.name.iendsWith(".bps")) {
+          patch = archive.extract(file);
+          break;
+        }
+      }
+    }
+    if(!patch) patch = file::read({Location::path(location),
+                  Location::prefix(Location::file(location)), ".bps"});
+  } else {
+    patch = file::read({Location::path(location),
+       Location::prefix(Location::file(location)), ".bps"});
+  }
+
+  if(!patch) return false;
+
+  string manifest;
+  string error;
+  if(auto output = Beat::Single::apply(input, patch, manifest, error)) {
+    if(!error) {
+      input = move(*output);
+      return true;
+    }
+  }
+
+  return false;
+}
+// END OF soft patching (copied from standalone target)
