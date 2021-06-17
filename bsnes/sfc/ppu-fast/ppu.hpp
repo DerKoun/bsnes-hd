@@ -3,7 +3,6 @@
 //limitations:
 //* mid-scanline effects not support
 //* vertical mosaic coordinates are not exact
-//* (hardware-mod) 128KB VRAM mode not supported
 
 #define PPU PPUfast
 
@@ -25,6 +24,7 @@ struct PPU : PPUcounter {
   alwaysinline auto winXad(uint x, bool bel) const -> uint;
   alwaysinline auto winXadHd(uint x, bool bel) const -> uint;
   alwaysinline auto strwin() const -> bool;
+  alwaysinline auto vramExt(uint addr) const -> uint;
   alwaysinline auto bgGrad() const -> uint;
   alwaysinline auto windRad() const -> uint;
   alwaysinline auto wsOverrideCandidate() const -> bool;
@@ -287,7 +287,7 @@ public:
   Latch latch;
   IO io;
 
-  uint16 vram[32 * 1024] = {};
+  uint16 vram[32 * 1024 * 2] = {}; //0-ffff
   uint16 cgram[256] = {};
   Object objects[128] = {};
 

@@ -43,6 +43,7 @@ auto Configuration::process(Markup::Node document, bool load) -> void {
   bind(natural, "Hacks/PPU/Mode7/Igwin", hacks.ppu.mode7.igwin);
   bind(natural, "Hacks/PPU/Mode7/Igwinx", hacks.ppu.mode7.igwinx);
   bind(boolean, "Hacks/PPU/Mode7/Strwin", hacks.ppu.mode7.strwin);
+  bind(natural, "Hacks/PPU/Mode7/VramExt", hacks.ppu.mode7.vramExt);
   bind(natural, "Hacks/PPU/Mode7/BgGrad", hacks.ppu.mode7.bgGrad);
   bind(natural, "Hacks/PPU/Mode7/WindRad", hacks.ppu.mode7.windRad);
   bind(natural, "Hacks/PPU/Mode7/WsMode", hacks.ppu.mode7.wsMode);

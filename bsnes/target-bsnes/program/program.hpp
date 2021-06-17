@@ -124,8 +124,8 @@ struct Program : Lock, Emulator::Platform {
 
   //patch.cpp
   auto appliedPatch() const -> bool;
-  auto applyPatchIPS(vector<uint8_t>& data, string location) -> bool;
-  auto applyPatchBPS(vector<uint8_t>& data, string location) -> bool;
+  auto applyPatchIPS(vector<uint8_t>& data, string location, string suffix) -> bool;
+  auto applyPatchBPS(vector<uint8_t>& data, string location, string suffix) -> bool;
 
   //hacks.cpp
   auto hackCompatibility() -> void;

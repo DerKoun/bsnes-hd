@@ -88,7 +88,7 @@ auto PPU::Line::renderObject(PPU::IO::Object& self) -> void {
 
       uint mirrorX = !object.hflip ? tileX : tileWidth - 1 - tileX;
       uint address = tiledataAddress + ((characterY + (characterX + mirrorX & 15)) << 4);
-      address = (address & 0x7ff0) + (y & 7);
+      address = ppu.vramExt((address & 0xfff0 /*0x7ff0*/) + (y & 7));
       tile.data  = ppu.vram[address + 0] <<  0;
       tile.data |= ppu.vram[address + 8] << 16;
 

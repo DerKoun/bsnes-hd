@@ -13,10 +13,10 @@ auto PPU::latchCounters() -> void {
 auto PPU::vramAddress() const -> uint {
   uint address = io.vramAddress;
   switch(io.vramMapping) {
-  case 0: return address & 0x7fff;
-  case 1: return address & 0x7f00 | address << 3 & 0x00f8 | address >> 5 & 7;
-  case 2: return address & 0x7e00 | address << 3 & 0x01f8 | address >> 6 & 7;
-  case 3: return address & 0x7c00 | address << 3 & 0x03f8 | address >> 7 & 7;
+  case 0: return ppu.vramExt(address & 0xffff /*0x7fff*/);
+  case 1: return ppu.vramExt(address & 0xff00 /*0x7f00*/| address << 3 & 0x00f8 | address >> 5 & 7);
+  case 2: return ppu.vramExt(address & 0xfe00 /*0x7e00*/| address << 3 & 0x01f8 | address >> 6 & 7);
+  case 3: return ppu.vramExt(address & 0xfc00 /*0x7c00*/| address << 3 & 0x03f8 | address >> 7 & 7);
   }
   unreachable;
 }
@@ -263,37 +263,37 @@ auto PPU::writeIO(uint address, uint8 data) -> void {
 
   case 0x2107: {  //BG1SC
     io.bg1.screenSize    = data >> 0 & 3;
-    io.bg1.screenAddress = data << 8 & 0x7c00;
+    io.bg1.screenAddress = ppu.vramExt(data << 8 & 0xfc00) /*0x7c00*/;
     return;
   }
 
   case 0x2108: {  //BG2SC
     io.bg2.screenSize    = data >> 0 & 3;
-    io.bg2.screenAddress = data << 8 & 0x7c00;
+    io.bg2.screenAddress = ppu.vramExt(data << 8 & 0xfc00) /*0x7c00*/;
     return;
   }
 
   case 0x2109: {  //BG3SC
     io.bg3.screenSize    = data >> 0 & 3;
-    io.bg3.screenAddress = data << 8 & 0x7c00;
+    io.bg3.screenAddress = ppu.vramExt(data << 8 & 0xfc00) /*0x7c00*/;
     return;
   }
 
   case 0x210a: {  //BG4SC
     io.bg4.screenSize    = data >> 0 & 3;
-    io.bg4.screenAddress = data << 8 & 0x7c00;
+    io.bg4.screenAddress = ppu.vramExt(data << 8 & 0xfc00) /*0x7c00*/;
     return;
   }
 
   case 0x210b: {  //BG12NBA
-    io.bg1.tiledataAddress = data << 12 & 0x7000;
-    io.bg2.tiledataAddress = data <<  8 & 0x7000;
+    io.bg1.tiledataAddress = ppu.vramExt(data << 12 & 0xf000) /*0x7000*/;
+    io.bg2.tiledataAddress = ppu.vramExt(data <<  8 & 0xf000) /*0x7000*/;
     return;
   }
 
   case 0x210c: {  //BG34NBA
-    io.bg3.tiledataAddress = data << 12 & 0x7000;
-    io.bg4.tiledataAddress = data <<  8 & 0x7000;
+    io.bg3.tiledataAddress = ppu.vramExt(data << 12 & 0xf000) /*0x7000*/;
+    io.bg4.tiledataAddress = ppu.vramExt(data <<  8 & 0xf000) /*0x7000*/;
     return;
   }
 

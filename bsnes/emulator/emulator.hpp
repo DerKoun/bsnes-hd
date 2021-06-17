@@ -31,7 +31,7 @@ using namespace nall;
 
 namespace Emulator {
   static const string Name      = "bsnes-hd beta";
-  static const string Version   = "10.5";//bsnes/target-bsnes/presentation/presentation.cpp:create:about:setVersion
+  static const string Version   = "10.6";//bsnes/target-bsnes/presentation/presentation.cpp:create:about:setVersion
   static const string Author    = "DerKoun(Near)";
   static const string License   = "GPLv3";
   static const string Website   = "https://github.com/DerKoun/bsnes-hd";

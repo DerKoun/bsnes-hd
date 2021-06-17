@@ -504,6 +504,15 @@ static bool flush_variables() // returns whether video dimensions have changed (
 		emulator->configure("Hacks/PPU/Mode7/WindRad", val);
 	}
 
+	variable = { "bsnes_mode7_strWin", nullptr };
+	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &variable) && variable.value)
+	{
+		if (strcmp(variable.value, "ON") == 0)
+			emulator->configure("Hacks/PPU/Mode7/Strwin", true);
+		else if (strcmp(variable.value, "OFF") == 0)
+			emulator->configure("Hacks/PPU/Mode7/StrwinE", false);
+	}
+
 	bool aspectcorrection = program->aspectcorrection;
 	variable = { "bsnes_video_aspectcorrection", nullptr };
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &variable) && variable.value)
@@ -535,6 +544,18 @@ static bool flush_variables() // returns whether video dimensions have changed (
 		int val = atoi(variable.value);
 		emulator->configure("Video/Gamma", val);
 	}
+
+	variable = { "bsnes_ips_headered", nullptr };
+	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &variable) && variable.value)
+	{
+		if (strcmp(variable.value, "ON") == 0)
+			program->ipsHeadered = true;
+		else if (strcmp(variable.value, "OFF") == 0)
+			program->ipsHeadered = false;
+	}
+
+	//override with setting overrides (BSO) if any
+	program->applySettingOverrides();
 
 	bool vc = program->overscan != overscan; // overscan changed
 	program->overscan = overscan;	
@@ -758,6 +779,8 @@ static void set_environment_info(retro_environment_t cb)
 		{ "bsnes_video_luminance", "Luminance; 100|90|80|70|60|50|40|30|20|10|0" },
 		{ "bsnes_video_saturation", "Saturation; 100|90|80|70|60|50|40|30|20|10|0|200|190|180|170|160|150|140|130|120|110" },
 		{ "bsnes_video_gamma", "Gamma; 100|110|120|130|140|150|160|170|180|190|200" },
+		{ "bsnes_mode7_strWin", "Stretch Window (For WideScreen Hacks Only!); OFF|ON" },
+		{ "bsnes_ips_headered", "IPS Patches expect headered ROMs; OFF|ON" },
 		{ nullptr },
 	};
 	cb(RETRO_ENVIRONMENT_SET_VARIABLES, const_cast<retro_variable *>(vars));

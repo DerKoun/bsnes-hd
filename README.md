@@ -1,4 +1,4 @@
-# bsnes-hd *beta 10.5*
+# bsnes-hd *beta 10.6*
 
 - [downloads](https://github.com/DerKoun/bsnes-hd/releases) for the latest betas (there are only beta) / also on the libretro auto-updater
 - [GitHub project](https://github.com/DerKoun/bsnes-hd) for source code, issues, feature requests, ...
@@ -19,8 +19,8 @@ bsnes-hd (called "*HD Mode 7 mod, for bsnes*" in early betas) is a fork of bsnes
 ### HD Mode 7
 
 Rendering the rotated, scaled or pseudo perspective backgrounds at higher resolutions. This does not involve new custom imagery or upscaling algorithms. It is a higher resolution version of the process the SNES uses.
-- [image comparison](http://www.framecompare.com/image-compare/screenshotcomparison/EB9MNNNU) (framecompare)
 - [video comparison](https://www.youtube.com/watch?v=6VrzJ6Y1kjQ) by *reznoire* (youtube)
+- [video demo](https://www.youtube.com/watch?v=IW7VOQKxtUQ) by *Emulators & Gameplay HD* (youtube)
 
 ### Widescreen
 
@@ -193,18 +193,22 @@ The file must contain alternating letters and numbers, each pair overriding a se
 
 #### Settings
 
-| Description                         | Letter  | Values                                          |
-| ----------------------------------- | ------- | ----------------------------------------------- |
-| widescreen mode                     | w       | 0:off    1:on(always)           2:on(mode7)     |
-| widescreen sprites                  | s       | 0:safe   1:unsafe(widescreen)   2:clip          |
-| widescreen aspect ratio             | W       | 0-200:widescreen-extension 201+:AR(*see below*) |
-| widescreen background 1/2/3/4       | b/B/c/C | 0+:WS 10+:crop 20:disab 1000+:line(*see below*) |
-| widescreen marker                   | m       | 0:off    1+:line    11+:darken    (*see below*) |
-| mode 7 perspective correction       | P       | 0:off    1-3:auto    4-6+:on      (*see below*) |
-| ignore window                       | i       | 0:none   1:outside   2:outside&always   3:all   |
-| ignore window fallback x-coordinate | I       | 0-255:x-coordinate                              |
-| overclock CPU                       | O       | 100+:percentage(100 is normal)                  |
-| stretch windowing                   | S       | (*for widescreen patches only*,    *see below*) |
+| Description                         | Letter  | Values                                           |
+| ----------------------------------- | ------- | ------------------------------------------------ |
+| widescreen mode                     | w       | 0:off    1:on(always)           2:on(mode7)      |
+| widescreen sprites                  | s       | 0:safe   1:unsafe(widescreen)   2:clip           |
+| widescreen aspect ratio             | W       | 0-200:widescreen-extension 201+:AR (*see below*) |
+| widescreen background 1/2/3/4       | b/B/c/C | 0+:WS 10+:crop 20:disab 1000+:line (*see below*) |
+| widescreen marker                   | m       | 0:off    1+:line    11+:darken     (*see below*) |
+| mode 7 perspective correction       | P       | 0:off    1-3:auto    4-6+:on       (*see below*) |
+| scale factor                        | f       | 0:off    1-10:factor                             |
+| disable sprite limit                | l       | 0:off    1:on                                    |
+| ignore window                       | i       | 0:none   1:outside   2:outside&always   3:all    |
+| ignore window fallback x-coordinate | I       | 0-255:x-coordinate                               |
+| overclock CPU                       | O       | 100+:percentage(100 is normal)                   |
+| stretch windowing                   | S       | (*for widescreen patches only*,    *see below*)  |
+| pixel aspect ratio correction       | p       | 0:off    1:on                  (*libretro only*) |
+| overscan                            | o       | 0:off(216 / 5th HD) 1:on(224)  (*libretro only*) |
 
 #### Widescreen Aspect Ratio values
 

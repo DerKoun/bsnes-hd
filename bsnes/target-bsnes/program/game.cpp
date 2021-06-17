@@ -123,8 +123,23 @@ auto Program::loadSuperFamicom(string location) -> bool {
     rom.resize(rom.size() - 512);
   }
 
-  if(!superFamicom.patched) superFamicom.patched = applyPatchIPS(rom, location);
-  if(!superFamicom.patched) superFamicom.patched = applyPatchBPS(rom, location);
+  if (!superFamicom.patched) {
+    bool p = applyPatchBPS(rom, location, "") || applyPatchIPS(rom, location, "");
+    superFamicom.patched = p;
+    if (p) {
+      p = applyPatchBPS(rom, location, "1") || applyPatchIPS(rom, location, "1");
+      if (p) {
+        p = applyPatchBPS(rom, location, "2") || applyPatchIPS(rom, location, "2");
+        if (p) {
+          p = applyPatchBPS(rom, location, "3") || applyPatchIPS(rom, location, "3");
+          if (p) {
+            p = applyPatchBPS(rom, location, "4") || applyPatchIPS(rom, location, "4");
+          }
+        }
+      }
+    }
+  }
+
   auto heuristics = Heuristics::SuperFamicom(rom, location);
   auto sha256 = Hash::SHA256(rom).digest();
   superFamicom.title = heuristics.title();
@@ -199,7 +214,7 @@ auto Program::loadGameBoy(string location) -> bool {
   }
   if(rom.size() < 0x4000) return false;
 
-  gameBoy.patched = applyPatchIPS(rom, location) || applyPatchBPS(rom, location);
+  gameBoy.patched = applyPatchIPS(rom, location, "") || applyPatchBPS(rom, location, "");
   auto heuristics = Heuristics::GameBoy(rom, location);
   auto sha256 = Hash::SHA256(rom).digest();
   if(auto document = BML::unserialize(string::read(locate("Database/Game Boy.bml")))) {
@@ -236,7 +251,7 @@ auto Program::loadBSMemory(string location) -> bool {
   }
   if(rom.size() < 0x8000) return false;
 
-  bsMemory.patched = applyPatchIPS(rom, location) || applyPatchBPS(rom, location);
+  bsMemory.patched = applyPatchIPS(rom, location, "") || applyPatchBPS(rom, location, "");
   auto heuristics = Heuristics::BSMemory(rom, location);
   auto sha256 = Hash::SHA256(rom).digest();
   if(auto document = BML::unserialize(string::read(locate("Database/BS Memory.bml")))) {
@@ -266,7 +281,7 @@ auto Program::loadSufamiTurboA(string location) -> bool {
   }
   if(rom.size() < 0x20000) return false;
 
-  sufamiTurboA.patched = applyPatchIPS(rom, location) || applyPatchBPS(rom, location);
+  sufamiTurboA.patched = applyPatchIPS(rom, location, "") || applyPatchBPS(rom, location, "");
   auto heuristics = Heuristics::SufamiTurbo(rom, location);
   auto sha256 = Hash::SHA256(rom).digest();
   if(auto document = BML::unserialize(string::read(locate("Database/Sufami Turbo.bml")))) {
@@ -296,7 +311,7 @@ auto Program::loadSufamiTurboB(string location) -> bool {
   }
   if(rom.size() < 0x20000) return false;
 
-  sufamiTurboB.patched = applyPatchIPS(rom, location) || applyPatchBPS(rom, location);
+  sufamiTurboB.patched = applyPatchIPS(rom, location, "") || applyPatchBPS(rom, location, "");
   auto heuristics = Heuristics::SufamiTurbo(rom, location);
   auto sha256 = Hash::SHA256(rom).digest();
   if(auto document = BML::unserialize(string::read(locate("Database/Sufami Turbo.bml")))) {

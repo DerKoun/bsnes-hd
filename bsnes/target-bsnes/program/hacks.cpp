@@ -82,6 +82,7 @@ auto Program::hackCompatibility() -> void {
   emulator->configure("Hacks/PPU/Mode7/Igwin", settings.emulator.hack.ppu.mode7.igwin);	
   emulator->configure("Hacks/PPU/Mode7/Igwinx", settings.emulator.hack.ppu.mode7.igwinx);	
   emulator->configure("Hacks/PPU/Mode7/Strwin", false);
+  emulator->configure("Hacks/PPU/Mode7/VramExt", 0x7fff);
   emulator->configure("Hacks/PPU/Mode7/BgGrad", settings.emulator.hack.ppu.mode7.bgGrad);	
   emulator->configure("Hacks/PPU/Mode7/WindRad", settings.emulator.hack.ppu.mode7.windRad);	
   emulator->configure("Hacks/PPU/Mode7/WsMode", settings.emulator.hack.ppu.mode7.wsMode);	
@@ -114,12 +115,12 @@ auto Program::hackCompatibility() -> void {
         n = (n * 10) + (v - '0');
         if (i == rso.size() || rso[i] < '0' || rso[i] > '9') {
           switch (c) {
-          //  case 'p': //pixelAspectCorrect 0:off 1:on
-          //    emulator->configure("Video/AspectCorrection", n == 1);
-          //    break;
-          //  case 'o': //overscan 0:216 1:224 (2:240 3:240f)
-          //    emulator->configure("Video/Overscan", n == 1);
-          //    break;
+            //  case 'p': //pixelAspectCorrect 0:off 1:on [libretro exclusive]
+            //    aspectcorrection = n == 1;
+            //    break;
+            //  case 'o': //overscan 0:216 1:224 (2:240 3:240f) [libretro exclusive]
+            //    overscan = n == 1;
+            //    break;
             case 'w': //widescreenMode 0:none 1:on 2:mode7
               emulator->configure("Hacks/PPU/Mode7/WsMode", n == 1 ? 2 : (n == 2 ? 1 : 0));
               break;
@@ -195,6 +196,15 @@ auto Program::hackCompatibility() -> void {
               break;
             case 'S': //Stretch Window [for widescreen patches only]
               emulator->configure("Hacks/PPU/Mode7/Strwin", n == 2 );
+              break;
+            case 'v': //VRAM extension
+              emulator->configure("Hacks/PPU/Mode7/VramExt", n > 0 ? 0xffff : 0x7fff );
+              break;
+            case 'f': //Scale factor 0:disable 1-10:scale
+              emulator->configure("Hacks/PPU/Mode7/Scale", n >= 0 && n <= 10 ? n : 2);
+              break;
+            case 'l': //Disable sprite limit
+              emulator->configure("Hacks/PPU/NoSpriteLimit", n == 1);
               break;
           }
           c = -1;

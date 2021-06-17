@@ -58,6 +58,7 @@ struct Configuration {
         uint igwin = 1;
         uint igwinx = 128;
         bool strwin = false;
+        uint vramExt = 0x7fff;
         uint bgGrad = 4;
         uint windRad = 0;
         uint wsMode = 1;

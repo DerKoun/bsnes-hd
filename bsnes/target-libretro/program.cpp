@@ -48,7 +48,9 @@ struct Program : Emulator::Platform
 	
 	auto hackPatchMemory(vector<uint8_t>& data) -> void;
 
-	auto applyPatchBPS(vector<uint8_t>& data, string location) -> bool;
+	auto applyPatchBPS(vector<uint8_t>& data, string location, string suffix) -> bool;
+	auto applyPatchIPS(vector<uint8_t>& data, string location, string suffix) -> bool;
+	auto applySettingOverrides() -> void;
 	vector<uint8_t> rso;
 	
 	string base_name;
@@ -57,7 +59,7 @@ struct Program : Emulator::Platform
 	bool aspectcorrection = false;
 	uint ws = 0;
 	uint scale = 1;
-
+	bool ipsHeadered = false;
 
 public:	
 	struct Game {
@@ -229,6 +231,12 @@ auto Program::load() -> void {
 		if (title == "ニチブツ・アーケード・クラシックス") emulator->configure("Hacks/Entropy", "None");
 	}
 
+	Program::applySettingOverrides();
+
+	emulator->power();
+}
+
+auto Program::applySettingOverrides() -> void {
   // setting override processing (copied from standalone target)
   if(rso) {
     int i = 0;
@@ -250,12 +258,12 @@ auto Program::load() -> void {
         n = (n * 10) + (v - '0');
         if (i == rso.size() || rso[i] < '0' || rso[i] > '9') {
           switch (c) {
-          //  case 'p': //pixelAspectCorrect 0:off 1:on
-          //    emulator->configure("Video/AspectCorrection", n == 1);
-          //    break;
-          //  case 'o': //overscan 0:216 1:224 (2:240 3:240f)
-          //    emulator->configure("Video/Overscan", n == 1);
-          //    break;
+            case 'p': //pixelAspectCorrect 0:off 1:on [libretro exclusive]
+              aspectcorrection = n == 1;
+              break;
+            case 'o': //overscan 0:216 1:224 (2:240 3:240f) [libretro exclusive]
+              overscan = n == 1;
+              break;
             case 'w': //widescreenMode 0:none 1:on 2:mode7
               emulator->configure("Hacks/PPU/Mode7/WsMode", n == 1 ? 2 : (n == 2 ? 1 : 0));
               break;
@@ -332,6 +340,15 @@ auto Program::load() -> void {
             case 'S': //Stretch Window [for widescreen patches only]
               emulator->configure("Hacks/PPU/Mode7/Strwin", n == 2 );
               break;
+            case 'v': //VRAM extension
+              emulator->configure("Hacks/PPU/Mode7/VramExt", n > 0 ? 0xffff : 0x7fff );
+              break;
+            case 'f': //Scale factor 0:disable 1-10:scale
+              emulator->configure("Hacks/PPU/Mode7/Scale", n >= 0 && n <= 10 ? n : 2);
+              break;
+            case 'l': //Disable sprite limit
+              emulator->configure("Hacks/PPU/NoSpriteLimit", n == 1);
+              break;
           }
           c = -1;
           n = 0;
@@ -340,8 +357,6 @@ auto Program::load() -> void {
     }
   }
   // END OF setting override processing (copied from standalone target)
-
-	emulator->power();
 }
 
 auto Program::load(uint id, string name, string type, vector<string> options) -> Emulator::Platform::Load {
@@ -611,7 +626,22 @@ auto Program::loadSuperFamicom(string location) -> bool
 	// soft patching (copied from standalone target)
 	// note: soft patching should be done via the libretro frontend
 	//       so this is only a workaround until that is possible
-    if(!superFamicom.patched) superFamicom.patched = applyPatchBPS(rom, location);
+	if (!superFamicom.patched) {
+		bool p = applyPatchBPS(rom, location, "") || applyPatchIPS(rom, location, "");
+		superFamicom.patched = p;
+		if (p) {
+		  p = applyPatchBPS(rom, location, "1") || applyPatchIPS(rom, location, "1");
+		  if (p) {
+			p = applyPatchBPS(rom, location, "2") || applyPatchIPS(rom, location, "2");
+			if (p) {
+			  p = applyPatchBPS(rom, location, "3") || applyPatchIPS(rom, location, "3");
+			  if (p) {
+				p = applyPatchBPS(rom, location, "4") || applyPatchIPS(rom, location, "4");
+			  }
+			}
+		  }
+		}
+	}
 	// END OF soft patching (copied from standalone target)
 
 	// setting override loading (copied from standalone target)
@@ -896,26 +926,26 @@ auto decodeGB(string& code) -> bool {
 }
 
 // soft patching (copied from standalone target), note: soft patching should be done via the libretro frontend, so this is only a workaround until that is possible
-auto Program::applyPatchBPS(vector<uint8_t>& input, string location) -> bool {
+auto Program::applyPatchBPS(vector<uint8_t>& input, string location, string suffix) -> bool {
   vector<uint8_t> patch;
 
   if(location.endsWith("/")) {
-    patch = file::read({location, "patch.bps"});
+    patch = file::read({location, "patch.bps", suffix});
   } else if(location.iendsWith(".zip")) {
     Decode::ZIP archive;
     if(archive.open(location)) {
       for(auto& file : archive.file) {
-        if(file.name.iendsWith(".bps")) {
+        if(file.name.iendsWith({".bps", suffix})) {
           patch = archive.extract(file);
           break;
         }
       }
     }
     if(!patch) patch = file::read({Location::path(location),
-                  Location::prefix(Location::file(location)), ".bps"});
+                  Location::prefix(Location::file(location)), ".bps", suffix});
   } else {
     patch = file::read({Location::path(location),
-       Location::prefix(Location::file(location)), ".bps"});
+       Location::prefix(Location::file(location)), ".bps", suffix});
   }
 
   if(!patch) return false;
@@ -930,5 +960,92 @@ auto Program::applyPatchBPS(vector<uint8_t>& input, string location) -> bool {
   }
 
   return false;
+}
+
+auto Program::applyPatchIPS(vector<uint8_t>& data, string location, string suffix) -> bool {
+  vector<uint8_t> patch;
+
+  if(location.endsWith("/")) {
+    patch = file::read({location, "patch.ips", suffix});
+  } else if(location.iendsWith(".zip")) {
+    Decode::ZIP archive;
+    if(archive.open(location)) {
+      for(auto& file : archive.file) {
+        if(file.name.iendsWith({".ips", suffix})) {
+          patch = archive.extract(file);
+          break;
+        }
+      }
+    }
+    if(!patch) patch = file::read({Location::path(location),
+                  Location::prefix(Location::file(location)), ".ips", suffix});
+  } else {
+    patch = file::read({Location::path(location),
+       Location::prefix(Location::file(location)), ".ips", suffix});
+  }
+
+  if(!patch) return false;
+
+  //sanity checks
+  if(patch.size() < 8) return false;
+  if(patch[0] != 'P') return false;
+  if(patch[1] != 'A') return false;
+  if(patch[2] != 'T') return false;
+  if(patch[3] != 'C') return false;
+  if(patch[4] != 'H') return false;
+
+  for(uint index = 5;;) {
+    if(index == patch.size() - 6) {
+      if(patch[index + 0] == 'E' && patch[index + 1] == 'O' && patch[index + 2] == 'F') {
+        uint32_t truncate = 0;
+        truncate |= patch[index + 3] << 16;
+        truncate |= patch[index + 4] <<  8;
+        truncate |= patch[index + 5] <<  0;
+        data.resize(truncate);
+        return true;
+      }
+    }
+
+    if(index == patch.size() - 3) {
+      if(patch[index + 0] == 'E' && patch[index + 1] == 'O' && patch[index + 2] == 'F') {
+        return true;
+      }
+    }
+
+    if(index >= patch.size()) break;
+
+    int32_t offset = 0;
+    offset |= patch(index++, 0) << 16;
+    offset |= patch(index++, 0) <<  8;
+    offset |= patch(index++, 0) <<  0;
+    if(ipsHeadered) offset -= 512;
+
+    uint16_t length = 0;
+    length |= patch(index++, 0) << 8;
+    length |= patch(index++, 0) << 0;
+
+    if(length == 0) {
+      uint16_t repeat = 0;
+      repeat |= patch(index++, 0) << 8;
+      repeat |= patch(index++, 0) << 0;
+
+      uint8_t fill = patch(index++, 0);
+
+      while(repeat--) {
+        if(offset >= 0) data(offset) = fill;
+        offset++;
+      }
+    } else {
+      while(length--) {
+        if(offset >= 0) data(offset) = patch(index, 0);
+        offset++;
+        index++;
+      }
+    }
+  }
+
+  //"EOF" marker not found in correct place
+  //technically should return false, but be permissive (data was already modified)
+  return true;
 }
 // END OF soft patching (copied from standalone target)

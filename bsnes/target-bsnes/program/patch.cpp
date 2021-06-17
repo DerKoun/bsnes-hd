@@ -8,29 +8,29 @@ auto Program::appliedPatch() const -> bool {
   );
 }
 
-auto Program::applyPatchIPS(vector<uint8_t>& data, string location) -> bool {
+auto Program::applyPatchIPS(vector<uint8_t>& data, string location, string suffix) -> bool {
   vector<uint8_t> patch;
 
   if(location.endsWith("/")) {
-    patch = file::read({location, "patch.ips"});
+    patch = file::read({location, "patch.ips", suffix});
   } else if(location.iendsWith(".zip")) {
     Decode::ZIP archive;
     if(archive.open(location)) {
       for(auto& file : archive.file) {
-        if(file.name.iendsWith(".ips")) {
+        if(file.name.iendsWith({".ips", suffix})) {
           patch = archive.extract(file);
           break;
         }
       }
     }
-    if(!patch) patch = file::read(path("Patches", location, ".ips"));
+    if(!patch) patch = file::read(path("Patches", location, {".ips", suffix}));
   } else {
-    patch = file::read(path("Patches", location, ".ips"));
+    patch = file::read(path("Patches", location, {".ips", suffix}));
   }
   if(!patch) return false;
 
   bool headered = false;
-  if(MessageDialog().setAlignment(*presentation).setTitle({Location::prefix(location), ".ips"}).setText({
+  if(MessageDialog().setAlignment(*presentation).setTitle({Location::prefix(location), ".ips", suffix}).setText({
     "(You're seeing this prompt because IPS is a terrible patch file format,\n"
     " and nobody can agree on whether SNES ROMs should be headered or not.\n"
     " Please consider asking the patch author to use BPS patches instead.)\n\n"
@@ -103,24 +103,24 @@ auto Program::applyPatchIPS(vector<uint8_t>& data, string location) -> bool {
 
 #include <nall/beat/single/apply.hpp>
 
-auto Program::applyPatchBPS(vector<uint8_t>& input, string location) -> bool {
+auto Program::applyPatchBPS(vector<uint8_t>& input, string location, string suffix) -> bool {
   vector<uint8_t> patch;
 
   if(location.endsWith("/")) {
-    patch = file::read({location, "patch.bps"});
+    patch = file::read({location, "patch.bps", suffix});
   } else if(location.iendsWith(".zip")) {
     Decode::ZIP archive;
     if(archive.open(location)) {
       for(auto& file : archive.file) {
-        if(file.name.iendsWith(".bps")) {
+        if(file.name.iendsWith({".bps", suffix})) {
           patch = archive.extract(file);
           break;
         }
       }
     }
-    if(!patch) patch = file::read(path("Patches", location, ".bps"));
+    if(!patch) patch = file::read(path("Patches", location, {".bps", suffix}));
   } else {
-    patch = file::read(path("Patches", location, ".bps"));
+    patch = file::read(path("Patches", location, {".bps", suffix}));
   }
   if(!patch) return false;
 

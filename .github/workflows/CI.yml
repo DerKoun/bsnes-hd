@@ -57,7 +57,7 @@ jobs:
     - name: Setup
       run: |
         sudo apt-get update
-        sudo apt-get -y install build-essential libgtk2.0-dev libpulse-dev mesa-common-dev libgtksourceview2.0-dev libcairo2-dev libsdl2-dev libxv-dev libao-dev libopenal-dev libudev-dev
+        sudo apt-get -y install build-essential libgtk2.0-dev libpulse-dev mesa-common-dev libcairo2-dev libsdl2-dev libxv-dev libao-dev libopenal-dev libudev-dev
     - name: Build
       run: make -j $(nproc) -C bsnes
     - name: Prepare artifacts
@@ -85,7 +85,7 @@ jobs:
     - name: Setup
       run: |
         sudo apt-get update
-        sudo apt-get -y install build-essential libgtk2.0-dev libpulse-dev mesa-common-dev libgtksourceview2.0-dev libcairo2-dev libsdl2-dev libxv-dev libao-dev libopenal-dev libudev-dev
+        sudo apt-get -y install build-essential libgtk2.0-dev libpulse-dev mesa-common-dev libcairo2-dev libsdl2-dev libxv-dev libao-dev libopenal-dev libudev-dev
     - name: Build
       run: make -j $(nproc) -C bsnes target=libretro
     - name: Prepare artifacts

@@ -115,7 +115,7 @@ auto PPU::Line::renderBackground(PPU::IO::Background& self, uint8 source) -> voi
     tileNumber = (tileNumber & 0x03ff) + tiledataIndex & tileMask;
 
     uint16 address;
-    address = (tileNumber << colorShift) + (voffset & 7 ^ mirrorY) & 0x7fff;
+    address = ppu.vramExt((tileNumber << colorShift) + (voffset & 7 ^ mirrorY)) /*& 0x7fff*/;
 
     uint64 data;
     data  = (uint64)ppu.vram[address +  0] <<  0;
@@ -196,5 +196,5 @@ auto PPU::Line::getTile(PPU::IO::Background& self, uint hoffset, uint voffset) -
   uint offset = (tileY & 0x1f) << 5 | (tileX & 0x1f);
   if(tileX & 0x20) offset += screenX;
   if(tileY & 0x20) offset += screenY;
-  return ppu.vram[self.screenAddress + offset & 0x7fff];
+  return ppu.vram[ppu.vramExt(self.screenAddress + offset) /*& 0x7fff*/];
 }

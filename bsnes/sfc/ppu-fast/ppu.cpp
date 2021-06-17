@@ -48,6 +48,7 @@ auto PPU::winXadHd(uint x, bool bel) const -> uint {
        || configuration.hacks.ppu.mode7.igwin >= 1 && ((bel ? io.col.window.belowMask : io.col.window.aboveMask) == 2)))
     ? configuration.hacks.ppu.mode7.igwinx * PPU::hdScale() : x; }
 auto PPU::strwin() const -> bool { return configuration.hacks.ppu.mode7.strwin; }
+auto PPU::vramExt(uint addr) const -> uint { return addr & configuration.hacks.ppu.mode7.vramExt; }
 auto PPU::bgGrad() const -> uint { return !hd() ? 0 : configuration.hacks.ppu.mode7.bgGrad; }
 auto PPU::windRad() const -> uint { return !hd() ? 0 : configuration.hacks.ppu.mode7.windRad; }
 auto PPU::wsOverrideCandidate() const -> bool { return configuration.hacks.ppu.mode7.wsMode == 1; }
