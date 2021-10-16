@@ -1,14 +1,17 @@
   %            SUPER METROID            %  
   % ! with widescreen patch by ocesse ! %  
-w :    1    % enabled widescreen permanently %
-W : 1609    % aspect ratio 16:9 %
-P :    0    % disable pixel aspect ratio correction %
-s :    1    % widescreen sprites/objects %
-b :    2    % background layer 1 auto widescreen %
-B :    1    % background layer 2 on %
-c : 2032    % background layer 3 widescreen below line 32 %
-C :    2    % background layer 4 auto widescreen %
-i :    0    % disable ignore window %
-m :    0    % disable widescreen markers %
-O :  200    % overclock CPU to 200 percent %
-S :    2    % stretch windowing effects %
+w :    1    % Widescreen : all %
+W : 1609    % Aspect ratio : 16:9 %
+s :    1    % Widescreen sprites/objects : unsafe %
+b :    2    % Background layer 1 : autoHor&Ver %
+B :    1    % Background layer 2 : on %
+c : 2032    % Background layer 3 : widescreen below line 32 %
+C :    2    % Background layer 4 : autoHor&Ver %
+i :    0    % Ignore window : None %
+m :    0    % Widescreen markers : off %
+O :  200    % Overclock CPU : 200 percent %
+S :    2    % Stretch windowing effects : on %
+o :    0    % Show Overscan Area : off (affects RetroArch only) %
+p :    0    % Pixel Aspect Ratio Correction : off (affects RetroArch only) %
+l :    1    % PPU No sprite limit : on %
+f :    1    % HD Mode 7 Scale : 1x (this is only an optimization) %
