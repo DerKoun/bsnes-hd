@@ -101,6 +101,49 @@ jobs:
         path: bsnes/out/pack
         if-no-files-found: error
 
+  Linux-ARM-libretro:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: add foreign arch
+      run: |
+        sudo dpkg --add-architecture arm64
+        sudo rm -rf /etc/apt/sources.list
+        echo "deb [arch=amd64] http://us.archive.ubuntu.com/ubuntu focal main restricted" | sudo tee -a /etc/apt/sources.list
+        echo "deb [arch=amd64] http://us.archive.ubuntu.com/ubuntu focal-updates main restricted" | sudo tee -a /etc/apt/sources.list
+        echo "deb [arch=amd64] http://us.archive.ubuntu.com/ubuntu focal universe" | sudo tee -a /etc/apt/sources.list
+        echo "deb [arch=amd64] http://us.archive.ubuntu.com/ubuntu focal-updates universe" | sudo tee -a /etc/apt/sources.list
+        echo "deb [arch=amd64] http://us.archive.ubuntu.com/ubuntu focal multiverse" | sudo tee -a /etc/apt/sources.list
+        echo "deb [arch=amd64] http://us.archive.ubuntu.com/ubuntu focal-updates multiverse" | sudo tee -a /etc/apt/sources.list
+        echo "deb [arch=amd64] http://us.archive.ubuntu.com/ubuntu focal-backports main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list
+        echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports focal main restricted" | sudo tee -a /etc/apt/sources.list
+        echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports focal-updates main restricted" | sudo tee -a /etc/apt/sources.list
+        echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports focal universe" | sudo tee -a /etc/apt/sources.list
+        echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports focal-updates universe" | sudo tee -a /etc/apt/sources.list
+        echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports focal multiverse" | sudo tee -a /etc/apt/sources.list
+        echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports focal-updates multiverse" | sudo tee -a /etc/apt/sources.list
+        echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports focal-backports main restricted universe multiverse"  | sudo tee -a /etc/apt/sources.list
+    - name: Install needed packages
+      run: sudo apt update && sudo apt install wget:amd64 git:amd64 build-essential:amd64 gcc:amd64 make:amd64 g++-aarch64-linux-gnu:amd64 gcc-aarch64-linux-gnu:amd64 binutils-aarch64-linux-gnu:amd64 libx11-dev:arm64 libxext-dev:arm64
+    - name: Build
+      run: |
+        make -j $(nproc) -C bsnes target=libretro compiler=/usr/bin/aarch64-linux-gnu-g++
+        wget https://raw.githubusercontent.com/libretro/libretro-super/master/retrolink.sh && chmod +x retrolink.sh && ./retrolink.sh bsnes/out/bsnes_hd_beta_libretro.so
+    - name: Prepare artifacts
+      run: |
+        mkdir bsnes/out/pack
+        cp README.md bsnes/out/pack
+        cp LICENSE bsnes/out/pack
+        cp -R bsnes/out/*bsnes* bsnes/out/pack
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: bsnes_hd_beta_X_linux_arm_libretro
+        path: bsnes/out/pack
+        if-no-files-found: error
+
   macOS:
     runs-on: macos-latest
     steps:
