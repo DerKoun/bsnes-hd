@@ -34,7 +34,7 @@ else ifeq ($(platform),macos)
     flags += -fPIC
     options += -dynamiclib
   endif
-else ifneq ($(filter $(platform),linux bsd),)
+else ifneq ($(filter $(platform),linux bsd unix unix-armv7-hardfloat-neon),)
   ifeq ($(binary),application)
     options += -Wl,-export-dynamic
     options += -lX11 -lXext

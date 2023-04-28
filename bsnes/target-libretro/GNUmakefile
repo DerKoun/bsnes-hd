@@ -22,7 +22,7 @@ objects := $(patsubst %,obj/%.o,$(objects))
 obj/libretro.o: target-libretro/libretro.cpp
 
 all: $(objects)
-ifeq ($(platform),linux)
+ifneq ($(filter $(platform),linux bsd unix unix-armv7-hardfloat-neon),)
 	$(strip $(compiler) -o out/bsnes_hd_beta_libretro.so -shared $(objects) -Wl,--no-undefined -Wl,--version-script=target-libretro/link.T -lgomp -Wl,-Bdynamic $(options))
 else ifeq ($(platform),windows)
 	$(strip $(compiler) -o out/bsnes_hd_beta_libretro.dll -shared $(objects) -Wl,--no-undefined -Wl,--version-script=target-libretro/link.T -lgomp -Wl,-Bdynamic $(options))
