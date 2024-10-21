@@ -143,7 +143,7 @@ libretro-build-osx-arm64:
     - .libretro-osx-arm64-make-default
     - .core-defs-osx
   script:
-    - make -C ${MAKEFILE_PATH} -f ${MAKEFILE} -j$NUMPROC platform=macos target=libretro binary=library local=false openmp=false compiler="c++ -std=c++17 -stdlib=libc++ -target arm64-apple-macos10.15 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk"
+    - make -C ${MAKEFILE_PATH} -f ${MAKEFILE} -j$NUMPROC platform=macos target=libretro binary=library local=false openmp=false compiler="c++ -std=c++17 -stdlib=libc++ -target ${LIBRETRO_APPLE_PLATFORM} -isysroot $(xcodebuild -version -sdk macosx  Path)"
 
 ################################### CELLULAR #################################
 # Android ARMv7a
