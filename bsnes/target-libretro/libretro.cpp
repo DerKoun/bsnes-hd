@@ -32,6 +32,7 @@ static void audio_queue(int16_t left, int16_t right)
 }
 
 #include "program.cpp"
+#include <sfc/sfc.hpp>
 
 static string sgb_bios;
 static vector<string> cheatList;
@@ -1129,10 +1130,26 @@ unsigned retro_get_region()
 // Rely on higan to load and save SRAM until there is really compelling reason not to.
 void *retro_get_memory_data(unsigned id)
 {
-	return nullptr;
+	switch(id) 
+	{
+	case RETRO_MEMORY_SAVE_RAM:
+		return SuperFamicom::cartridge.getSaveRAM();
+	case RETRO_MEMORY_SYSTEM_RAM:
+		return SuperFamicom::cpu.wram;
+	}
+
+    return nullptr;
 }
 
 size_t retro_get_memory_size(unsigned id)
 {
-	return 0;
+	switch(id) 
+	{
+	case RETRO_MEMORY_SAVE_RAM:
+		return SuperFamicom::cartridge.getSaveRAMSize();
+	case RETRO_MEMORY_SYSTEM_RAM:
+		return 128 * 1024;
+	}
+
+    return 0;
 }

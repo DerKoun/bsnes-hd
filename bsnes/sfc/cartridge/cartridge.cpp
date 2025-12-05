@@ -158,4 +158,12 @@ auto Cartridge::unload() -> void {
   ram.reset();
 }
 
+auto Cartridge::getSaveRAM() -> uint8_t* {
+  return ram.data();
+}
+
+auto Cartridge::getSaveRAMSize() -> size_t {
+  return ram.size();
+}
+
 }
