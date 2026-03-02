@@ -32,6 +32,7 @@ static void audio_queue(int16_t left, int16_t right)
 }
 
 #include "program.cpp"
+#include <sfc/sfc.hpp>
 
 static string sgb_bios;
 static vector<string> cheatList;
@@ -642,6 +643,18 @@ static bool update_variables() // returns whether video dimensions have changed 
 			emulator->configure("Hacks/PPU/Mode7/StrwinE", false);
 	}
 
+	strcpy(key, "bsnes_sndchan_volume_x");
+	var.key = key;
+	for (int i=0;i<8;i++)
+	{
+		key[strlen("bsnes_sndchan_volume_")] = '1'+i;
+		var.value = NULL;
+		if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var))
+		{
+			SuperFamicom::dsp.get_spc_dsp()->set_user_volume( i, atoi(var.value) );
+		}
+	}
+
 	//override with setting overrides (BSO) if any
 	program->applySettingOverrides();
 
@@ -966,6 +979,7 @@ size_t retro_serialize_size()
 bool retro_serialize(void *data, size_t size)
 {
 	memcpy(data, emulator->serialize().data(), size);
+	update_variables();  // needed for custom volumes init
 	return true;
 }
 
@@ -1068,6 +1082,8 @@ bool retro_load_game(const retro_game_info *game)
 	program->base_name = string(game->path);
 
 	program->load();
+	
+	update_variables();  // needed for custom volumes init
 
 	emulator->connect(SuperFamicom::ID::Port::Controller1, SuperFamicom::ID::Device::Gamepad);
 	emulator->connect(SuperFamicom::ID::Port::Controller2, SuperFamicom::ID::Device::Gamepad);
@@ -1129,10 +1145,37 @@ unsigned retro_get_region()
 // Rely on higan to load and save SRAM until there is really compelling reason not to.
 void *retro_get_memory_data(unsigned id)
 {
-	return nullptr;
+	switch(id) 
+	{
+	case RETRO_MEMORY_SAVE_RAM:
+		return SuperFamicom::cartridge.getSaveRAM();
+	case RETRO_MEMORY_SYSTEM_RAM:
+		return SuperFamicom::cpu.wram;
+	case RETRO_MEMORY_VIDEO_RAM:
+		if(emulator->configuration("Hacks/PPU/Fast") == "true")
+			return SuperFamicom::ppufast.getVRAM();
+		else
+			return SuperFamicom::ppu.getVRAM();
+	case RETRO_MEMORY_ROM:
+		return SuperFamicom::cartridge.getROM();
+	}
+
+    return nullptr;
 }
 
 size_t retro_get_memory_size(unsigned id)
 {
-	return 0;
+	switch(id) 
+	{
+	case RETRO_MEMORY_SAVE_RAM:
+		return SuperFamicom::cartridge.getSaveRAMSize();
+	case RETRO_MEMORY_SYSTEM_RAM:
+		return 128 * 1024;
+	case RETRO_MEMORY_VIDEO_RAM:
+		return 64 * 1024;
+	case RETRO_MEMORY_ROM:
+		return SuperFamicom::cartridge.getROMSize();
+	}
+
+    return 0;
 }

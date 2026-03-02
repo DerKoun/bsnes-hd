@@ -11,6 +11,10 @@ struct Cartridge {
   auto load() -> bool;
   auto save() -> void;
   auto unload() -> void;
+  auto getSaveRAM() -> uint8_t*;
+  auto getSaveRAMSize() -> size_t;
+  auto getROM() -> uint8_t*;
+  auto getROMSize() -> size_t;
 
   auto serialize(serializer&) -> void;
 

@@ -15,6 +15,8 @@ struct DSP {
   auto serialize(serializer&) -> void;
 
   int64 clock = 0;
+  
+  auto get_spc_dsp() -> SPC_DSP* { return &spc_dsp ; }
 
 private:
   bool fastDSP = false;

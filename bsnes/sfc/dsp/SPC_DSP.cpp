@@ -510,11 +510,16 @@ VOICE_CLOCK( V3c )
 	if ( !v->kon_delay )
 		run_envelope( v );
 }
+
 inline void SPC_DSP::voice_output( voice_t const* v, int ch )
 {
 	// Apply left/right volume
 	int amp = (m.t_output * (int8_t) VREG(v->regs,voll + ch)) >> 7;
-	
+
+	// Apply user volume if set
+	if (v->user_volume < 100)  // 16384 / 100 is approx 163.84.
+		amp = (amp * v->user_volume * 164) >> 14;
+
 	// Add to output total
 	m.t_main_out [ch] += amp;
 	CLAMP16( m.t_main_out [ch] );
@@ -892,6 +897,7 @@ void SPC_DSP::load( uint8_t const regs [register_count] )
 		v->brr_offset = 1;
 		v->vbit       = 1 << i;
 		v->regs       = &m.regs [i * 0x10];
+		v->user_volume = 100;
 	}
 	m.new_kon = REG(kon);
 	m.t_dir   = REG(dir);

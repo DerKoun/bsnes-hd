@@ -50,6 +50,8 @@ public:
 	// Reduces emulation accuracy.
 	enum { voice_count = 8 };
 	void mute_voices( int mask );
+	
+	void set_user_volume( int voice_no, int volume_percent ){ m.voices[voice_no].user_volume = volume_percent; }
 
 // State
 	
@@ -118,6 +120,7 @@ public:
 		int env;                // current envelope level
 		int hidden_env;         // used by GAIN mode 7, very obscure quirk
 		uint8_t t_envx_out;
+		int user_volume;        // range: 0-100%
 	};
 private:
 	enum { brr_block_size = 9 };

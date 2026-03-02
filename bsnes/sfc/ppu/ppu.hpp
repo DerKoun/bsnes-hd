@@ -25,6 +25,7 @@ struct PPU : Thread, PPUcounter {
   //io.cpp
   auto latchCounters(uint hcounter, uint vcounter) -> void;
   auto latchCounters() -> void;
+  auto getVRAM() -> uint16*;
 
   //serialization.cpp
   auto serialize(serializer&) -> void;

@@ -40,6 +40,10 @@ auto PPU::writeVRAM(uint8 data) -> void {
   }
 }
 
+auto PPU::getVRAM() -> uint16* {
+  return vram;
+}
+
 auto PPU::readOAM(uint10 address) -> uint8 {
   if(!io.displayDisable && cpu.vcounter() < vdisp()) address = latch.oamAddress;
   return readObject(address);
