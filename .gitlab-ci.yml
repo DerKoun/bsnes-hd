@@ -92,6 +92,12 @@ include:
   - project: 'libretro-infrastructure/ci-templates'
     file: '/tvos-arm64.yml'  
 
+  #################################### MISC ##################################
+
+  # webOS 32-bit (LGTV)
+  - project: 'libretro-infrastructure/ci-templates'
+    file: '/webos-make.yml'
+
 # Stages for building
 stages:
   - build-prepare
@@ -201,3 +207,10 @@ libretro-build-libnx-aarch64:
     - mv retroarch_switch.nro ../${CORENAME}_libretro_libnx.nro
     - mv retroarch_switch.elf ../${CORENAME}_libretro_libnx.elf
     - cd ../
+
+#################################### MISC ##################################
+# webOS 32-bit
+libretro-build-webos-armv7a:
+  extends:
+    - .libretro-webos-armv7a-make-default
+    - .core-defs

@@ -1,7 +1,13 @@
 name := bsnes_libretro
 local := false
-openmp := true
+openmp ?= true
 flags += -Wno-narrowing -Wno-multichar -g -fPIC
+
+ifeq ($(openmp),true)
+  openmp_libs := -lgomp
+else
+  openmp_libs :=
+endif
 
 ifeq ($(platform), ios-arm64)
 	flags += -fPIC -miphoneos-version-min=11.0 -Wno-error=implicit-function-declaration -DHAVE_POSIX_MEMALIGN
@@ -22,10 +28,10 @@ objects := $(patsubst %,obj/%.o,$(objects))
 obj/libretro.o: target-libretro/libretro.cpp
 
 all: $(objects)
-ifeq ($(platform),linux)
-	$(strip $(compiler) -o out/bsnes_hd_beta_libretro.so -shared $(objects) -Wl,--no-undefined -Wl,--version-script=target-libretro/link.T -lgomp -Wl,-Bdynamic $(options))
+ifneq ($(filter $(platform),linux unix),)
+	$(strip $(compiler) -o out/bsnes_hd_beta_libretro.so -shared $(objects) -Wl,--no-undefined -Wl,--version-script=target-libretro/link.T $(openmp_libs) -Wl,-Bdynamic $(options))
 else ifeq ($(platform),windows)
-	$(strip $(compiler) -o out/bsnes_hd_beta_libretro.dll -shared $(objects) -Wl,--no-undefined -Wl,--version-script=target-libretro/link.T -lgomp -Wl,-Bdynamic $(options))
+	$(strip $(compiler) -o out/bsnes_hd_beta_libretro.dll -shared $(objects) -Wl,--no-undefined -Wl,--version-script=target-libretro/link.T $(openmp_libs) -Wl,-Bdynamic $(options))
 else ifeq ($(platform),libnx)
 	$(strip $(AR) rcs out/bsnes_hd_beta_libretro_libnx.a $(objects))
 else ifeq ($(platform),macos)

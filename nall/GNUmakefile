@@ -83,6 +83,13 @@ ifeq ($(compiler),)
   endif
 endif
 
+# cross compilation
+ifneq (,$(findstring webos,$(CROSS_COMPILE)))
+  ifeq (,$(wildcard $(STAGING_DIR)/usr/lib/libgomp.so))
+    openmp = false
+  endif
+endif
+
 # build optimization levels
 ifeq ($(build),debug)
   flags += -Og -g -DBUILD_DEBUG
