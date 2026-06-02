@@ -72,7 +72,7 @@ auto PPU::Line::flush() -> void {
   }
 
   if(Line::count) {
-    if(ppu.hdScale() > 1) cacheMode7HD();
+    if(ppu.hdScale()) cacheMode7HD();
     #pragma omp parallel for if(Line::count >= 8)
     for(uint y = 0; y < Line::count; y++) {
       if(ppu.deinterlace()) {
