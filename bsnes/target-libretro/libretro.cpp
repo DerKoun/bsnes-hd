@@ -347,20 +347,19 @@ static bool update_variables() // returns whether video dimensions have changed 
 		emulator->configure("Hacks/PPU/Mode7/Perspective", val);
 	}
 
-	// supersample: none|2x|3x|4x|5x|6x|7x|8x|9x|10x
+	// supersample: none|2|3|4|5|6|7|8|9|10|12|14|16|18|20|24|28|32
 	var.key = "bsnes_mode7_supersample";
 	var.value = NULL;
 
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var))
 	{
 		int val = 1;
-	  	if (strlen(var.value)      == 4) val =  1; //"none"
-      	else if (strlen(var.value) == 3) val = 10; //"10x"
-      	else //"2x"-"9x"
-	  	{
-		  	int v = var.value[0] - '0';
-		  	if (v >= 2 && v <= 9) val = v;
-	  	}
+		if (strlen(var.value) == 4) val =  1; //"none"
+		else //"2"-"32"
+		{
+			int x = atoi(var.value);
+			if (x >= 2 && x <= 32) val = x;
+		}
 		emulator->configure("Hacks/PPU/Mode7/Supersample", val);
 	}
 

@@ -123,12 +123,24 @@ auto EnhancementSettings::create() -> void {
   mode7Supersample.append(ComboButtonItem().setText("8x"));
   mode7Supersample.append(ComboButtonItem().setText("9x"));
   mode7Supersample.append(ComboButtonItem().setText("10x"));
-  for(uint n = 0; n < 10; n++) {
+  mode7Supersample.append(ComboButtonItem().setText("12x"));
+  mode7Supersample.append(ComboButtonItem().setText("14x"));
+  mode7Supersample.append(ComboButtonItem().setText("16x"));
+  mode7Supersample.append(ComboButtonItem().setText("18x"));
+  mode7Supersample.append(ComboButtonItem().setText("20x"));
+  mode7Supersample.append(ComboButtonItem().setText("24x"));
+  mode7Supersample.append(ComboButtonItem().setText("28x"));
+  mode7Supersample.append(ComboButtonItem().setText("32x"));
+  for(uint n = 0; n < 18; n++) {
     if(mode7Supersample.item(n).offset() + 1 == settings.emulator.hack.ppu.mode7.supersample)
        mode7Supersample.item(n).setSelected();
   }
   mode7Supersample.onChange([&] {
-    settings.emulator.hack.ppu.mode7.supersample = mode7Supersample.selected().offset() + 1;
+    uint menuPosition = mode7Supersample.selected().offset() + 1;
+    settings.emulator.hack.ppu.mode7.supersample = menuPosition <= 10 ?  menuPosition
+                                                 : menuPosition <= 15 ? (menuPosition -  5) * 2
+                                                 : menuPosition <= 18 ? (menuPosition - 10) * 4
+                                                 : 1;
     emulator->configure("Hacks/PPU/Mode7/Supersample", settings.emulator.hack.ppu.mode7.supersample);
   });
   mode7MosaicLabel.setText("Mosaic:");
