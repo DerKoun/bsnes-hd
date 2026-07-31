@@ -39,9 +39,11 @@ namespace nall {
   using std::true_type;
 }
 
+#if !defined(__clang__) || __clang_major__ < 20
 namespace std {
   #if INTMAX_BITS >= 128
   template<> struct is_signed<int128_t> : true_type {};
   template<> struct is_unsigned<uint128_t> : true_type {};
   #endif
 }
+#endif
