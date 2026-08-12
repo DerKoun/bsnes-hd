@@ -47,6 +47,8 @@ static vector<string> cheatList;
 #define RETRO_MEMORY_GB_SRAM ((2 << 8) | RETRO_MEMORY_SAVE_RAM)
 #define RETRO_MEMORY_BSX_SRAM ((3 << 8) | RETRO_MEMORY_SAVE_RAM)
 
+struct retro_vfs_interface *libretro_vfs_interface = nullptr;
+
 static bool update_variables() // returns whether video dimensions have changed (overscan, aspectcorrection scale or widescreen AR)
 {
 	char key[256];
@@ -833,6 +835,14 @@ void retro_set_environment(retro_environment_t cb)
 		libretro_print = log.log;
 
 	set_environment_info(cb);
+
+	struct retro_vfs_interface_info vfs_iface_info;
+	vfs_iface_info.required_interface_version = 3;
+	vfs_iface_info.iface = nullptr;
+	if (environ_cb(RETRO_ENVIRONMENT_GET_VFS_INTERFACE, &vfs_iface_info) && vfs_iface_info.iface)
+		libretro_vfs_interface = vfs_iface_info.iface;
+	else
+		libretro_vfs_interface = nullptr;
 }
 
 void retro_set_video_refresh(retro_video_refresh_t cb)

@@ -20,6 +20,8 @@ using namespace nall;
 
 #include "resources.hpp"
 
+#include "libretro_vfs.hpp"
+
 static Emulator::Interface *emulator;
 
 struct Program : Emulator::Platform
@@ -532,7 +534,7 @@ auto Program::openRomSuperFamicom(string name, vfs::file::mode mode) -> shared_p
 		else
 			save_path = { base_name.trimRight(suffix, 1L), ".srm" };
 
-		return vfs::fs::file::open(save_path, mode);
+		return vfs::libretro::file::open(save_path, mode);
 	}
 
 	return {};
@@ -557,7 +559,7 @@ auto Program::openRomGameBoy(string name, vfs::file::mode mode) -> shared_pointe
 		else
 			save_path = { base_name.trimRight(suffix, 1L), ".srm" };
 
-		return vfs::fs::file::open(save_path, mode);
+		return vfs::libretro::file::open(save_path, mode);
 	}
 
 	if(name == "time.rtc")
@@ -573,7 +575,7 @@ auto Program::openRomGameBoy(string name, vfs::file::mode mode) -> shared_pointe
 		else
 			save_path = { base_name.trimRight(suffix, 1L), ".rtc" };
 
-		return vfs::fs::file::open(save_path, mode);
+		return vfs::libretro::file::open(save_path, mode);
 	}
 
 	return {};
@@ -612,6 +614,9 @@ auto Program::loadFile(string location) -> vector<uint8_t>
 		return LZMA::extract(location);
 	}
 	else {
+		if(auto fp = vfs::libretro::file::openTyped(location, vfs::file::mode::read)) {
+			return fp->readAll();
+		}
 		return file::read(location);
 	}
 }
