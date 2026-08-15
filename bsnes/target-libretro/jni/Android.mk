@@ -50,6 +50,7 @@ SRCFILES := $(SRCDIR)/bsnes/target-libretro/libretro.cpp \
 
 include $(CLEAR_VARS)
 LOCAL_MODULE       := retro
+LOCAL_ARM_MODE     := arm
 LOCAL_SRC_FILES    := $(SRCFILES)
 LOCAL_CPPFLAGS     := -std=c++17 $(COREFLAGS)
 LOCAL_CFLAGS       := $(COREFLAGS)
