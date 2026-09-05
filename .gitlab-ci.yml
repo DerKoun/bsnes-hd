@@ -30,6 +30,19 @@
   variables:
     platform: linux
 
+# webOS builds the Linux target with the SDK's toolchain, so it wants the Linux
+# platform and the Linux output name - but not the host strip that
+# .core-defs-linux uses, and the environment has to be sourced again because
+# after_script runs in a shell of its own.
+.core-defs-webos:
+  extends: .core-defs
+  after_script:
+    - . "$SDK_ENV"
+    - mv ${MAKEFILE_PATH}/out/${CORENAME}_libretro.so ${CORENAME}_libretro.so
+    - if [ $STRIP_CORE_LIB -eq 1 ]; then "$STRIP" --strip-unneeded ${CORENAME}_libretro.so; fi
+  variables:
+    platform: linux
+
 .core-defs-osx:
   extends: .core-defs
   after_script:
@@ -62,6 +75,10 @@ include:
   - project: 'libretro-infrastructure/ci-templates'
     file: '/linux-x64.yml'
 
+  # Linux ARM 64-bit
+  - project: 'libretro-infrastructure/ci-templates'
+    file: '/linux-aarch64.yml'
+
   # Linux 32-bit
   - project: 'libretro-infrastructure/ci-templates'
     file: '/linux-i686.yml'
@@ -73,6 +90,10 @@ include:
   # MacOS ARM 64-bit
   - project: 'libretro-infrastructure/ci-templates'
     file: '/osx-arm64.yml'
+
+  # webOS
+  - project: 'libretro-infrastructure/ci-templates'
+    file: '/webos-make.yml'
 
   ################################## CELLULAR ################################
   # Android
@@ -125,6 +146,12 @@ libretro-build-linux-x64:
     - .libretro-linux-x64-make-default
     - .core-defs-linux
 
+# Linux ARM 64-bit
+libretro-build-linux-aarch64:
+  extends:
+    - .libretro-linux-aarch64-make-default
+    - .core-defs-linux
+
 # Linux 32-bit
 libretro-build-linux-i686:
   extends:
@@ -144,6 +171,12 @@ libretro-build-osx-arm64:
     - .core-defs-osx
   script:
     - make -C ${MAKEFILE_PATH} -f ${MAKEFILE} -j$NUMPROC platform=macos target=libretro binary=library local=false openmp=false compiler="c++ -std=c++17 -stdlib=libc++ -target ${LIBRETRO_APPLE_PLATFORM} -isysroot $(xcodebuild -version -sdk macosx  Path)"
+
+# webOS ARMv7a
+libretro-build-webos-armv7a:
+  extends:
+    - .libretro-webos-armv7a-make-default
+    - .core-defs-webos
 
 ################################### CELLULAR #################################
 # Android ARMv7a
