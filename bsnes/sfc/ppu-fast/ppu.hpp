@@ -358,6 +358,16 @@ public:
     bool *windowAbove = new bool[61440] ;
     bool *windowBelow = new bool[61440] ;
 
+    Line() = default;
+    Line(const Line&) = delete;
+    auto operator=(const Line&) -> Line& = delete;
+    ~Line() {
+      delete[] above;
+      delete[] below;
+      delete[] windowAbove;
+      delete[] windowBelow;
+    }
+
     //flush()
     static uint start;
     static uint count;
