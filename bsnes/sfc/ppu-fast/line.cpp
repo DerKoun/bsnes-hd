@@ -129,8 +129,8 @@ auto PPU::Line::avgBgC(uint dist, uint offset) const -> uint32 {
     int uY = (hdY-i)/scale;
     int dY = (hdY+i)/scale;
     if(uY < 0 || dY >= 224) break; /////////////////////////////
-    auto uL = ppufast.lines[uY];
-    auto dL = ppufast.lines[dY];
+    const auto& uL = ppufast.lines[uY];
+    const auto& dL = ppufast.lines[dY];
     if( io.col.halve     != dL.io.col.halve     || io.col.halve     != uL.io.col.halve     ||
         io.col.mathMode  != dL.io.col.mathMode  || io.col.mathMode  != uL.io.col.mathMode  ||
         io.col.blendMode != dL.io.col.blendMode || io.col.blendMode != uL.io.col.blendMode ||
@@ -244,8 +244,8 @@ auto PPU::Line::render(bool fieldID) -> void {
       int uY = (hdY-i)/scale;
       int dY = (hdY+i)/scale;
       if(uY <= 0 || dY >= 224) break;
-      auto uL = ppufast.lines[uY];
-      auto dL = ppufast.lines[dY];
+      const auto& uL = ppufast.lines[uY];
+      const auto& dL = ppufast.lines[dY];
 
       if( io.col.halve     != dL.io.col.halve     || io.col.halve     != uL.io.col.halve     ||
           io.col.mathMode  != dL.io.col.mathMode  || io.col.mathMode  != uL.io.col.mathMode  ||

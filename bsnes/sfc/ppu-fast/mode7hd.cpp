@@ -134,13 +134,13 @@ auto PPU::Line::renderMode7HD(PPU::IO::Background& self, uint8 source) -> void {
   }
   #undef isLineMode7
 
-  Line line_a = ppu.lines[y_a];
+  const Line& line_a = ppu.lines[y_a];
   float a_a = (int16)line_a.io.mode7.a;
   float b_a = (int16)line_a.io.mode7.b;
   float c_a = (int16)line_a.io.mode7.c;
   float d_a = (int16)line_a.io.mode7.d;
 
-  Line line_b = ppu.lines[y_b];
+  const Line& line_b = ppu.lines[y_b];
   float a_b = (int16)line_b.io.mode7.a;
   float b_b = (int16)line_b.io.mode7.b;
   float c_b = (int16)line_b.io.mode7.c;
